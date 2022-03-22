@@ -22,9 +22,5 @@ void setup() {
   Serial.begin(SERIAL_BAUD);
   Serial.setDebugOutput(true);
 
-  Serial.println("PSRAM");
-  Serial.print(psramFound());
-  Serial.println("PSRAM");
-
   initialized = true;
 }

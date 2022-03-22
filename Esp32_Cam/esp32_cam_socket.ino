@@ -24,6 +24,7 @@ void loop() {
   if (!initialized)
     return;
 
+  return;
   Serial.println(WiFi.status());
   Serial.println(WiFi.localIP());
   WiFiClient client;
