@@ -1,5 +1,3 @@
-#include <WiFi.h>
-
 #define AP_SSID "RANDOM";
 
 bool startAP() {

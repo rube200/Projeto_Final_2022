@@ -1,5 +1,3 @@
-#include <Preferences.h>
-
 #define PROG_NAME "Video-Doorbell"
 #define PREF_SSID "WIFI_SSID"
 #define PREF_PASS "WIFI_PASSWORD"

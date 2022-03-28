@@ -1,19 +1,23 @@
-#include <WiFi.h>
+#define WIFI_RETRY_TIMES 3
+
+
 
 //todo remove
 #define temp_ssid "HouseOfConas";
 #define temp_pass "smellslikepussy";
 //todo remove
 
-bool isValidWifiConfig(wifi_config_st wifi_config) {
+
+
+bool isSsidSetted(wifi_config_st wifi_config) {
   return wifi_config.ssid && strlen(wifi_config.ssid) > 0;
 }
 
-bool connectToNetwork() {
+bool tryConnectToNetwork() {
   Serial.println("Connect to network requested.");
   wifi_config_st wifi_config = readWifiPreferences();
 
-  if (!isValidWifiConfig(wifi_config)) {
+  if (!isSsidSetted(wifi_config)) {
     Serial.println("Preferences have no ssid.");
 
     //make it hotspot and request inputs
@@ -24,8 +28,5 @@ bool connectToNetwork() {
     //startAp()
   }
 
-  if (!connectToSta(wifi_config))
-    return false;
-
-  return true;
+  return tryConnectToSta(wifi_config);
 }
