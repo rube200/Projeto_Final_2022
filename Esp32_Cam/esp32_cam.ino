@@ -1,5 +1,4 @@
 #include <AsyncTCP.h>
-#include <Preferences.h>
 #include <WiFiManager.h>
 
 #define ACCESS_POINT_NAME "Video-Doorbell"
@@ -9,11 +8,11 @@
 /*
   ESP.restart();
   ESP.eraseConfig()
+  
   #include <nvs_flash.h>
-  nvs_flash_erase();
   nvs_flash_init();
-  preferences.clear();
-  preferences.putString("password", password);
+  nvs_flash_erase();
+  
 */
 
 void setupSerial() {
