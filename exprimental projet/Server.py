@@ -42,7 +42,7 @@ def stats():
     #headTag.insert_after(divTag)
     #print(soup) #This should print the new, modified html
 
-    #Func.write("<a href="{{ url_for('main') }}">Return To Homepage</a>")
+    Func.write("<a href=\"{{ url_for('main') }}\">Return To Homepage</a>")
     return render_template('stats.html')
 
 if __name__ == "__main__":
