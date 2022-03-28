@@ -1,11 +1,9 @@
-#include <WiFi.h>
-
 #define REMOTE_HOST "192.168.1.50"
 #define REMOTE_PORT 45000
 
-WiFiClient socket_client;
+AsyncClient tcp_client;
 
-bool connectSocket() {
+bool tryConnectToSocket() {
   WiFiClient socket_client;
   Serial.println("Connecting to socket...");
   if (!socket_client.connect(REMOTE_HOST, REMOTE_PORT)) {
