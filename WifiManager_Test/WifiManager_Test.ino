@@ -1,12 +1,16 @@
 #include <WiFiManager.h>
 
+#define WM_FIXERASECONFIG
+#define WM_ERASE_NVS
+
+
 WiFiManager wifiManager;
 
 void setup() {
-  wifiManager.debugPlatformInfo();
+  Serial.begin(115200);
   wifiManager.setDarkMode(true);
   Serial.println("Before autoconnect");
-  bool connected = wifiManager.autoConnect("AP-NAME");
+  bool connected = wifiManager.autoConnect("Video-Doorbell");
   if (connected) {
     Serial.println("Connected");
   }
@@ -15,7 +19,7 @@ void setup() {
   }
   Serial.println("After autoconnect");
   /* std::vector<const char *> menu = {"wifi","wifinoscan","info","param","close","sep","erase","update","restart","exit"};
-  wm.setMenu(menu); // custom menu, pass vector*/
+    wm.setMenu(menu); // custom menu, pass vector*/
 }
 
 void loop() {
