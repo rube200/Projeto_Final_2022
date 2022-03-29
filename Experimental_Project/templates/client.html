@@ -2,8 +2,15 @@
 <html lang="en">
 <head>
     <title>Client</title>
+    <link rel="stylesheet" href="/static/style.css"/>
 </head>
 <body>
+    <div class = "topNav"></div>
+        <a href="{{ url_for('index') }}"><img class ="btnImage" src="/static/home.jpg"></a>
+        <img class = "btnImage" scr="/static/camera.png">
+        <a href="{{ url_for('images') }}"><img class = "btnImage" scr="/static/pfp1.jpg"></a>
+        <a href="{{ url_for('stats') }}"><img class = "btnImage" scr="/static/stats.png"></a>
+    </div>
 <!--suppress HtmlRequiredAltAttribute -->
 <img id="esp32-stream"/>
 <script>

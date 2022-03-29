@@ -6,6 +6,12 @@
     <link rel="stylesheet" href="/static/style.css"/>
 </head>
 <body class="background">
+    <div class = "topNav">
+        <a href="{{ url_for('index') }}"> <img class ="btnImage" src="/static/home.jpg"></a>
+        <a href="{{ url_for('client') }}"> <img class = "btnImage" scr="/static/camera.png"></a>
+        <img class = "btnImage" scr="/static/pfp1.jpg">
+        <a href="{{ url_for('stats') }}"> <img class = "btnImage" scr="/static/stats.png"></a>
+    </div>
 <div class="image">
     <img id = "big" src="/static/pfp1.jpg"/>
 </div>
@@ -38,7 +44,4 @@
 
     </script>
 </h3>
-<div id="center">
-    <a id="bottom" href="{{ url_for('index') }}">Return To Homepage</a>
-</div>
 </body>
