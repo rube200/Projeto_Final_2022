@@ -1,27 +1,30 @@
 body {
     color: white;
 }
+
 img {
     max-width: 100%;
     max-height: 100%;
-   }
+}
 
 
-
-h1{
+h1 {
     text-align: center;
     text-decoration: underline;
     text-transform: uppercase;
     text-shadow: 3px 2px black;
 }
-h2{
+
+h2 {
     position: absolute;
     bottom: 0;
 }
-h3{
+
+h3 {
     left: 0;
 }
-.video{
+
+.video {
     display: block;
     overflow: hidden;
     border-radius: 10px;
@@ -31,39 +34,41 @@ h3{
 }
 
 
-.aligncenter {
+.alignCenter {
     text-align: center;
 }
 
-.background{
+.background {
     background-position: 47%;
     background-size: auto;
-    background-repeat:no-repeat;
-    background-image:url("suitFinal.png");
+    background-repeat: no-repeat;
+    background-image: url("suitFinal.png");
 }
 
-.image{
+.image {
     width: 500px;
     margin-left: auto;
     margin-right: auto;
 }
 
-.smallImage{
+.smallImage {
     width: 200px;
     margin-left: auto;
     margin-right: auto;
 }
 
-#bottom{
+#bottom {
     vertical-align: bottom;
 }
 
-#left {    
-    text-align: left;  
-    }  
-#center {    
-    text-align: center;  
-    }  
-#right{    
+#left {
+    text-align: left;
+}
+
+#center {
+    text-align: center;
+}
+
+#right {
     text-align: right;
 }
