@@ -39,23 +39,51 @@ static bool startCamera() {
 }
 
 static void enable_flash(bool enable) {
-/*
-  ledc_set_duty(CONFIG_LED_LEDC_SPEED_MODE, CONFIG_LED_LEDC_CHANNEL, CONFIG_LED_MAX_INTENSITY);
-  ledc_update_duty(CONFIG_LED_LEDC_SPEED_MODE, CONFIG_LED_LEDC_CHANNEL);
-  CONFIG_LED_LEDC_LOW_SPEED_MODE
-  LEDC_LOW_SPEED_MODE
-  LEDC_HIGH_SPEED_MODE
+  /*
+    ledc_set_duty(CONFIG_LED_LEDC_SPEED_MODE, CONFIG_LED_LEDC_CHANNEL, CONFIG_LED_MAX_INTENSITY);
+    ledc_update_duty(CONFIG_LED_LEDC_SPEED_MODE, CONFIG_LED_LEDC_CHANNEL);
+    CONFIG_LED_LEDC_LOW_SPEED_MODE
+    LEDC_LOW_SPEED_MODE
+    LEDC_HIGH_SPEED_MODE
 
-  vTaskDelay(150 / portTICK_PERIOD_MS); // The LED needs to be turned on ~150ms before the call to esp_camera_fb_get()
+    vTaskDelay(150 / portTICK_PERIOD_MS); // The LED needs to be turned on ~150ms before the call to esp_camera_fb_get()
   */
 }
+
+/*uint8_t * buf = NULL;
+    size_t buf_len = 0;
+    fb = esp_camera_fb_get();
+    bool converted = frame2bmp(fb, &buf, &buf_len);
+    free(buf);
+        sensor_t *s = esp_camera_sensor_get();
+    int res = s->set_res_raw(s, startX, startY, endX, endY, offsetX, offsetY, totalX, totalY, outputX, outputY, scale, binning);
+        sensor_t *s = esp_camera_sensor_get();
+    int res = s->set_pll(s, bypass, mul, sys, root, pre, seld5, pclken, pclk);
+
+        sensor_t *s = esp_camera_sensor_get();
+    int res = s->get_reg(s, reg, mask);
+    int res = s->set_reg(s, reg, mask, val);
+    int res = s->set_xclk(s, LEDC_TIMER_0, xclk);
+            if (fb->format == PIXFORMAT_JPEG)
+        {
+            fb->len;
+            fb->buf
+        }
+        else
+        {
+            frame2jpg_cb(fb, 80, jpg_encode_stream, &jchunk)
+        }
+        bool jpeg_converted = frame2jpg(fb, 80, &_jpg_buf, &_jpg_buf_len);
+                    _timestamp.tv_sec = fb->timestamp.tv_sec;
+            _timestamp.tv_usec = fb->timestamp.tv_usec;
+*/
 
 static void captureCamera() {
   sensor_t * sensor = esp_camera_sensor_get();
   if (sensor != NULL) {
     return;
   }
-  
+
   if (sensor->id.PID == OV3660_PID) {
     sensor->set_vflip(sensor, 1); // flip it back
     sensor->set_brightness(sensor, 1); // up the brightness just a bit
