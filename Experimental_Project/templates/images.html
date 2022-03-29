@@ -7,13 +7,36 @@
 </head>
 <body class="background">
 <div class="image">
-    <img src="/static/pfp1.jpg"/>
+    <img id = "big" src="/static/pfp1.jpg"/>
 </div>
 <h1>Other Images</h1>
 <h3 id="center">
-    <img class="smallImage" src="/static/pfp1.jpg"/>
-    <img class="smallImage" src="/static/pfp1.jpg"/>
-    <img class="smallImage" src="/static/pfp1.jpg"/>
+    <button onclick="changeImage1()"><img id="small1" class="smallImage" src="/static/pfp2.jpg"/></button>
+    <button onclick="changeImage2()"><img id="small2" class="smallImage" src="/static/pfp3.jpg"/></button>
+    <button onclick="changeImage3()"><img id="small3" class="smallImage" src="/static/pfp4.jpg"/></button>
+
+    <script>
+        currentImage = {myGlobal: "/static/pfp1.jpg"}
+        function changeImage1(){
+            tmp = document.getElementById('small1').src;
+            document.getElementById('big').src = document.getElementById('small1').src;
+            document.getElementById('small1').src = currentImage.myGlobal;
+            currentImage.myGlobal = tmp;
+        }
+        function changeImage2(){
+            tmp = document.getElementById('small2').src;
+            document.getElementById('big').src = document.getElementById('small2').src;
+            document.getElementById('small2').src = currentImage.myGlobal;
+            currentImage.myGlobal = tmp;
+        }
+        function changeImage3(){
+            tmp = document.getElementById('small3').src;
+            document.getElementById('big').src = document.getElementById('small3').src;
+            document.getElementById('small3').src = currentImage.myGlobal;
+            currentImage.myGlobal = tmp;
+        }
+
+    </script>
 </h3>
 <div id="center">
     <a id="bottom" href="{{ url_for('index') }}">Return To Homepage</a>

@@ -28,8 +28,9 @@ def images():
 
 @app.route('/stats')
 def stats():
-    # Func = open('templates/stats.html','w')
-    # Func.write('<!DOCTYPE html><body>')
+    #Func = open('templates/stats.html','w')
+    #Func.write('<!DOCTYPE html><body>\n')
+    path = 'templates/stats.html'
     df = pd.DataFrame({
         'Days': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
         # 'Days': [['Monday', 4], ['Tuesday', 1], ['Wednesday', 2], ['Thursday', 2], ['Friday', 3], ['Saturday', 5], ['Sunday', 9]],
@@ -38,7 +39,9 @@ def stats():
         # 'Colours': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday','Saturday','Sunday', 'Last Week's Average','Last Week's Average','Last Week's Average','Last Week's Average', 'This Week's Average', 'This Week's Average','This Week's Average'],
     })
 
-    df.to_html('templates/stats.html')
+    html = df.to_html()
+    #Func = open('templates/stats.html','a')
+    #Func.write("\n<a href=\"{{ url_for('index') }}\">Return To Homepage</a>\n</body>")
     return render_template('stats.html')
 
 
