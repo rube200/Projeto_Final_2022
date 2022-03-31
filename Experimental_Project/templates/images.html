@@ -14,6 +14,9 @@
     </div>
 <div class="image">
     <img id = "big" src="/static/pfp1.jpg"/>
+    <div class="alignRight">
+        <button onclick="takePicture()"><img class="btnImage" src="/static/camera.png"/></button>
+    </div>
 </div>
 <h1>Other Images</h1>
 <h3 id="center">
@@ -23,6 +26,9 @@
 
     <script>
         currentImage = {myGlobal: "/static/pfp1.jpg"}
+        function takePicture(){
+            document.getElementById('big').src ="http://192.168.8.100:81";
+        }
         function changeImage1(){
             tmp = document.getElementById('small1').src;
             document.getElementById('big').src = document.getElementById('small1').src;
