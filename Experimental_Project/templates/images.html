@@ -6,16 +6,16 @@
     <link rel="stylesheet" href="/static/style.css"/>
 </head>
 <body class="background">
-    <div class = "topNav">
-        <a href="{{ url_for('index') }}"> <img class ="btnImage" src="/static/home.jpg"></a>
-        <a href="{{ url_for('client') }}"> <img class = "btnImage" scr="/static/camera.png"></a>
-        <img class = "btnImage" scr="/static/pfp1.jpg">
-        <a href="{{ url_for('stats') }}"> <img class = "btnImage" scr="/static/stats.png"></a>
-    </div>
+<div class="topNav">
+    <a href="{{ url_for('index') }}"> <img class="btnImage" src="/static/home.jpg"></a>
+    <a href="{{ url_for('client') }}"> <img class="btnImage" src="/static/camera.png"></a>
+    <img class="btnImage" src="/static/pfp1.jpg">
+    <a href="{{ url_for('stats') }}"> <img class="btnImage" src="/static/stats.png"></a>
+</div>
 <div class="image">
-    <img id = "big" src="/static/pfp1.jpg"/>
+    <img id="big" src="/static/pfp1.jpg"/>
     <div class="alignRight">
-        <button onclick="takePicture()"><img class="btnImage" src="/static/camera.png"/></button>
+        <button id="toggle-stream"><img class="btnImage" src="/static/camera.png"/></button>
     </div>
 </div>
 <h1>Other Images</h1>
@@ -25,23 +25,35 @@
     <button onclick="changeImage3()"><img id="small3" class="smallImage" src="/static/pfp4.jpg"/></button>
 
     <script>
+        document.addEventListener('DOMContentLoaded', function (event) {
+          function takePicture(){
+            const view = document.getElementById('big')
+            view.src = `http://192.168.137.71/capture?_cb=${Date.now()}`
+          }
+            const streamButton = document.getElementById('toggle-stream')
+          streamButton.onclick = () => {
+            takePicture()
+          }
+
+        })
+
         currentImage = {myGlobal: "/static/pfp1.jpg"}
-        function takePicture(){
-            document.getElementById('big').src ="http://192.168.8.100:81";
-        }
+
         function changeImage1(){
             tmp = document.getElementById('small1').src;
             document.getElementById('big').src = document.getElementById('small1').src;
             document.getElementById('small1').src = currentImage.myGlobal;
             currentImage.myGlobal = tmp;
         }
-        function changeImage2(){
+
+        function changeImage2() {
             tmp = document.getElementById('small2').src;
             document.getElementById('big').src = document.getElementById('small2').src;
             document.getElementById('small2').src = currentImage.myGlobal;
             currentImage.myGlobal = tmp;
         }
-        function changeImage3(){
+
+        function changeImage3() {
             tmp = document.getElementById('small3').src;
             document.getElementById('big').src = document.getElementById('small3').src;
             document.getElementById('small3').src = currentImage.myGlobal;
