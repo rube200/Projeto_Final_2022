@@ -2,18 +2,12 @@
 #include <WiFiManager.h>
 
 #define ACCESS_POINT_NAME "Video-Doorbell"
-#define DEFAULT_TIMEOUT 5000
+#define DEFAULT_TIMEOUT 3000//not used yet
 #define SERIAL_BAUD 115200
 
-/*
-  ESP.restart();
-  ESP.eraseConfig()
-
-  #include <nvs_flash.h>
-  nvs_flash_init();
-  nvs_flash_erase();
-
-*/
+//Need to declared here or in a .h file
+typedef void (*captureCameraCb)(uint8_t *, size_t);
+typedef void (*emptyCallback)(void);
 
 static void setupSerial() {
   Serial.begin(SERIAL_BAUD);
@@ -37,17 +31,50 @@ static bool setupWifi() {
   return true;
 }
 
+static void image_captured_cb(uint8_t * buf, size_t len) {
+  Serial.println("Image captured");
+}
+
 static bool initialized = false;
+static void setupCompleted() {
+  /*if (initialized) {
+    return;
+    }*/
+
+  Serial.println("Setup Completed");
+  initialized = true;
+}
+
 void setup() {
-  Serial.println("SETUP STARTED");
   setupSerial();
 
   if (!setupWifi()) {
-    Serial.println("Restarting ESP...");
+    Serial.println("Restarting ESP in 3s...");
+    delay(3000);
     ESP.restart();
     return;
   }
 
   setupCamera();
-  initialized = true;
+
+  if (!setupSocket(setupCompleted)) {
+    Serial.println("Restarting ESP in 3s...");
+    delay(3000);
+    ESP.restart();
+    return;
+  }
 }
+/*  Serial.println(tcp_client.connecting());
+  Serial.println(tcp_client.connected());*/
+
+void loop() {
+  delay(1000);
+  if (!initialized)
+    return;
+
+  return;
+}
+
+/*  startCamera();
+  Serial.println("Capture Camera");
+  captureCamera(image_captured_cb);*/

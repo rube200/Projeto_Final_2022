@@ -1,39 +1,39 @@
-#define REMOTE_HOST "192.168.1.50"
+#define REMOTE_HOST "192.168.1.30"
 #define REMOTE_PORT 45000
 
-AsyncClient tcp_client;
+static AsyncClient tcp_client;
 
-bool tryConnectToSocket() {
-  WiFiClient socket_client;
-  Serial.println("Connecting to socket...");
-  if (!socket_client.connect(REMOTE_HOST, REMOTE_PORT)) {
+static bool setupSocketClient() {
+  Serial.println("Connecting to host...");
+  if (!tcp_client.connect(REMOTE_HOST, REMOTE_PORT)) {
     Serial.println("Fail to connect socket.");
-    delay(1000);
     return false;
   }
-  else {
-    Serial.println("connect");
-  }
-  delay(1000);
+
+  Serial.println("Connection requested...");
   return true;
 }
 
-void loop() {
-  if (!initialized)
-    return;
-
-  return;
-  Serial.println(WiFi.status());
-  Serial.println(WiFi.localIP());
-  WiFiClient client;
-
-  if (!client.connect(REMOTE_HOST, REMOTE_PORT)) {
-    Serial.println("Falha de conexao");
-    delay(1000);
-    return;
+static bool tcp_events_subscribed = false;
+static bool setupTcpEvents(emptyCallback connectedCb) {
+  Serial.println("Subscribing tcp events...");
+  if (tcp_events_subscribed) {
+    Serial.println("Tcp events are already subscribed.");
+    return false;
   }
 
-  Serial.println("Conectado!");
-  client.stop();
-  delay(1000);
+  tcp_client.onConnect(onTcpConnect, (void *)connectedCb);
+  /*tcp_client.onDisconnect();
+    tcp_client.onError();
+    tcp_client.onData();
+    tcp_client.onPacket();
+    tcp_client.onTimeout();*/
+
+  Serial.println("Tcp events subscribed.");
+  tcp_events_subscribed = true;
+  return true;
+}
+
+static bool setupSocket(emptyCallback connectedCb) {
+  return setupSocketClient() && setupTcpEvents(connectedCb);
 }

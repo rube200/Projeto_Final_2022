@@ -2,7 +2,43 @@
 
 static camera_config_t camera_config;
 
-static void setupCamera() {
+static bool isCameraOn = false;
+static bool startCamera() {
+  if (isCameraOn) {
+    Serial.println("Camera is already on.");
+    return true;
+  }
+
+  esp_err_t err = esp_camera_init(&camera_config);
+  if (err != ESP_OK) {
+    Serial.printf("Fail to start camera error 0x%x", err);
+    return false;
+  }
+
+  Serial.println("Camera started.");
+  isCameraOn = true;
+  return true;
+}
+
+static bool stopCamera() {
+  if (!isCameraOn) {
+    Serial.println("Camera is already off.");
+    return true;
+  }
+
+
+  esp_err_t err = esp_camera_deinit();
+  if (err != ESP_OK) {
+    Serial.printf("Fail to stop camera error 0x%x", err);
+    return false;
+  }
+
+  Serial.println("Camera stoped.");
+  isCameraOn = false;
+  return true;
+}
+
+static bool setupCamera() {
   camera_config.ledc_channel = LEDC_CHANNEL_0;
   camera_config.ledc_timer = LEDC_TIMER_0;
   camera_config.pin_d0 = 5;
@@ -23,21 +59,16 @@ static void setupCamera() {
   camera_config.pin_reset = -1;
   camera_config.xclk_freq_hz = 20000000;
   camera_config.pixel_format = PIXFORMAT_JPEG;
-  camera_config.frame_size = FRAMESIZE_UXGA;
+  camera_config.frame_size = FRAMESIZE_SVGA;
   camera_config.jpeg_quality = 10;
   camera_config.fb_count = 2;
+
+  //this test camera
+  return startCamera() && stopCamera();
 }
 
-static bool startCamera() {
-  esp_err_t err = esp_camera_init(&camera_config);
-  if (err != ESP_OK) {
-    Serial.printf("Fail to start camera error 0x%x", err);
-    return false;
-  }
 
-  return true;
-}
-
+//todo
 static void enable_flash(bool enable) {
   /*
     ledc_set_duty(CONFIG_LED_LEDC_SPEED_MODE, CONFIG_LED_LEDC_CHANNEL, CONFIG_LED_MAX_INTENSITY);
@@ -50,49 +81,50 @@ static void enable_flash(bool enable) {
   */
 }
 
-/*uint8_t * buf = NULL;
-    size_t buf_len = 0;
-    fb = esp_camera_fb_get();
+/*
     bool converted = frame2bmp(fb, &buf, &buf_len);
-    free(buf);
-        sensor_t *s = esp_camera_sensor_get();
     int res = s->set_res_raw(s, startX, startY, endX, endY, offsetX, offsetY, totalX, totalY, outputX, outputY, scale, binning);
-        sensor_t *s = esp_camera_sensor_get();
     int res = s->set_pll(s, bypass, mul, sys, root, pre, seld5, pclken, pclk);
-
-        sensor_t *s = esp_camera_sensor_get();
     int res = s->get_reg(s, reg, mask);
     int res = s->set_reg(s, reg, mask, val);
     int res = s->set_xclk(s, LEDC_TIMER_0, xclk);
-            if (fb->format == PIXFORMAT_JPEG)
-        {
-            fb->len;
-            fb->buf
-        }
-        else
-        {
-            frame2jpg_cb(fb, 80, jpg_encode_stream, &jchunk)
-        }
-        bool jpeg_converted = frame2jpg(fb, 80, &_jpg_buf, &_jpg_buf_len);
-                    _timestamp.tv_sec = fb->timestamp.tv_sec;
-            _timestamp.tv_usec = fb->timestamp.tv_usec;
+    _timestamp.tv_sec = fb->timestamp.tv_sec;
+    _timestamp.tv_usec = fb->timestamp.tv_usec;
 */
 
-static void captureCamera() {
-  sensor_t * sensor = esp_camera_sensor_get();
-  if (sensor != NULL) {
-    return;
+static bool captureCamera(captureCameraCb capture_cb) {
+  if (!capture_cb) {
+    Serial.println("Capture camera callback can not be null.");
+    return false;
   }
 
-  if (sensor->id.PID == OV3660_PID) {
-    sensor->set_vflip(sensor, 1); // flip it back
-    sensor->set_brightness(sensor, 1); // up the brightness just a bit
-    sensor->set_saturation(sensor, -2); // lower the saturation
+  if (!isCameraOn && !startCamera()) {
+    Serial.println("Fail to capture camera frame. Camera is off");
+    return false;
   }
 
-  sensor->set_framesize(sensor, FRAMESIZE_QVGA);
-  Serial.println(sensor->id.PID);
-  Serial.println(OV3660_PID);
-  Serial.println("Capture");
-  Serial.println("Capture2");
+  camera_fb_t * fb = esp_camera_fb_get();
+  if (!fb) {
+    Serial.println("Fail to capture camera frame. FB is null.");
+    return false;
+  }
+
+  if (fb->format == PIXFORMAT_JPEG) {
+    capture_cb(fb->buf, fb->len);
+    esp_camera_fb_return(fb);
+    return true;
+  }
+
+  uint8_t * img_buf;
+  size_t img_len;
+  if (!frame2jpg(fb, 80, &img_buf, &img_len)) {
+    Serial.println("Fail to convert frame to jpg.");
+    esp_camera_fb_return(fb);
+    return false;
+  }
+
+  capture_cb(img_buf, img_len);
+  free(img_buf);
+  esp_camera_fb_return(fb);
+  return true;
 }
