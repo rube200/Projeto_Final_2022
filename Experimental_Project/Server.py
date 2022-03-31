@@ -1,10 +1,14 @@
-from flask import Flask, render_template
-import pandas
 import selectors
-import struct
 import socket
 import traceback
 
+import pandas
+from flask import Flask, render_template
+
+from message import Message
+
+HOST = "0.0.0.0"
+PORT = 45000
 
 app = Flask(__name__)
 
@@ -58,34 +62,39 @@ def accept_socket_client(sv_socket):
     print(f"Accepted a connection from {address}")
 
     connection.setblocking(False)
-    #message = Message(connection, address)
-    #selector.register(connection, selectors.EVENT_READ, data=message)
+    message = Message(selector, connection, address)
+    selector.register(connection, selectors.EVENT_READ, data=message)
 
 
 def socket_server():
-    s = socket.socket()
+    with socket.socket() as sv_socket:
+        try:
+            sv_socket.bind((HOST, PORT))
+            sv_socket.listen()
+            sv_socket.setblocking(False)
 
-    s.bind(('0.0.0.0', 45000))
-    s.listen(5)
+            selector.register(sv_socket, selectors.EVENT_READ)
+            print("Server ready! Waiting connections...")
+            while True:
+                events = selector.select()
+                for key, mask in events:
+                    if key.data:
+                        message = key.data
+                        try:
+                            key.data.process_events(mask)
+                        except Exception as ex:
+                            print(f"Exception while processing event for {message.client_address}: {ex!r}")
+                            print(f"{traceback.format_exc()}")
+                            message.close()
+                    else:
+                        # noinspection PyTypeChecker
+                        accept_socket_client(key.fileobj)
 
-    print('waiting clients')
-    while True:
-        print('accepting...')
-        clt_socket, adr_socket = s.accept()
-        print('accepted')
-        print(clt_socket)
-        print(adr_socket)
-
-        while True:
-            content = clt_socket.recv(32)
-            if content:
-                print(content)
-            else:
-                break
-
-        print('Closing connection')
-        clt_socket.close()
+        except KeyboardInterrupt:
+            print("Caught keyboard interrupt, exiting...")
 
 
 if __name__ == '__main__':
+    with selectors.DefaultSelector() as selector:
+        socket_server()
     app.run(debug=True, host='0.0.0.0', port=80)
