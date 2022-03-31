@@ -5,13 +5,20 @@
     <link rel="stylesheet" href="/static/style.css"/>
 </head>
 <body class="background">
-    <div class = "topNav">
-        <img class ="btnImage" src="/static/home.jpg">
-        <a href="{{ url_for('client') }}"> <img class = "btnImage" scr="/static/camera.png"></a>
-        <a href="{{ url_for('images') }}"> <img class = "btnImage" scr="/static/pfp1.jpg"></a>
-        <a href="{{ url_for('stats') }}"> <img class = "btnImage" scr="/static/stats.png"></a>
-    </div>
+<div class="topNav">
+    <img alt="" class="btnImage" src="/static/home.jpg">
+    <a href="{{ url_for('client') }}">
+        <img alt="" class="btnImage" src="/static/camera.png">
+    </a>
+    <a href="{{ url_for('images') }}">
+        <img alt="" class="btnImage" src="/static/pfp1.jpg">
+    </a>
+    <a href="{{ url_for('stats') }}">
+        <img alt="" class="btnImage" src="/static/stats.png">
+    </a>
+</div>
 <div class="video">
-    <iframe width="500" height="315" src="/static/Best_coocing_show.mp4" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+    <iframe width="500" height="315" src="/static/Best_cooking_show.mp4" allow="autoplay; encrypted-media"
+            allowfullscreen></iframe>
 </div>
 </body>
