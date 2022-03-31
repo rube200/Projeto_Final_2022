@@ -13,3 +13,7 @@ static void onTcpConnect(void * arg, AsyncClient * client) {
 
   callback();
 }
+
+static void onTcpTimeout(void * arg, AsyncClient * client, uint32_t time) {
+  Serial.println("Timeout reached");
+}

@@ -23,11 +23,12 @@ static bool setupTcpEvents(emptyCallback connectedCb) {
   }
 
   tcp_client.onConnect(onTcpConnect, (void *)connectedCb);
+  tcp_client.onTimeout(onTcpTimeout);
   /*tcp_client.onDisconnect();
     tcp_client.onError();
     tcp_client.onData();
     tcp_client.onPacket();
-    tcp_client.onTimeout();*/
+    ;*/
 
   Serial.println("Tcp events subscribed.");
   tcp_events_subscribed = true;
