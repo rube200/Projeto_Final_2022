@@ -1,14 +1,10 @@
 import selectors
 import struct
-import socket
-import traceback
-
-HOST = "0.0.0.0"
-PORT = 45000
 
 
 class Message:
-    def __init__(self, client_socket, client_address):
+    def __init__(self, selector, client_socket, client_address):
+        self.selector = selector
         self.client_socket = client_socket
         self.client_address = client_address
         self._recv_buffer = b""
@@ -18,7 +14,7 @@ class Message:
     def close(self):
         print(f"Closing connection to {self.client_address}")
         try:
-            selector.unregister(self.client_socket)
+            self.selector.unregister(self.client_socket)
         except Exception as ex:
             print(f"Exception while unregister socket for {self.client_address}: {ex!r}")
 
@@ -81,45 +77,3 @@ class Message:
 
     def write(self):
         self._write()
-
-
-def accept_client(sv_socket):
-    connection, address = sv_socket.accept()
-    print(f"Accepted a connection from {address}")
-
-    connection.setblocking(False)
-    message = Message(connection, address)
-    selector.register(connection, selectors.EVENT_READ, data=message)
-
-
-def socket_server():
-    with socket.socket() as sv_socket:
-        try:
-            sv_socket.bind((HOST, PORT))
-            sv_socket.listen()
-            sv_socket.setblocking(False)
-
-            selector.register(sv_socket, selectors.EVENT_READ)
-            print("Server ready! Waiting connections...")
-            while True:
-                events = selector.select()
-                for key, mask in events:
-                    if key.data:
-                        message = key.data
-                        try:
-                            key.data.process_events(mask)
-                        except Exception as ex:
-                            print(f"Exception while processing event for {message.client_address}: {ex!r}")
-                            print(f"{traceback.format_exc()}")
-                            message.close()
-                    else:
-                        # noinspection PyTypeChecker
-                        accept_client(key.fileobj)
-
-        except KeyboardInterrupt:
-            print("Caught keyboard interrupt, exiting...")
-
-
-if __name__ == "__main__":
-    with selectors.DefaultSelector() as selector:
-        socket_server()

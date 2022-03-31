@@ -1,7 +1,10 @@
-import socket
-
-import pandas as pd
 from flask import Flask, render_template
+import pandas
+import selectors
+import struct
+import socket
+import traceback
+
 
 app = Flask(__name__)
 
@@ -28,10 +31,10 @@ def images():
 
 @app.route('/stats')
 def stats():
-    #Func = open('templates/stats.html','w')
-    #Func.write('<!DOCTYPE html><body>\n')
+    # Func = open('templates/stats.html','w')
+    # Func.write('<!DOCTYPE html><body>\n')
     path = 'templates/stats.html'
-    df = pd.DataFrame({
+    df = pandas.DataFrame({
         'Days': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
         # 'Days': [['Monday', 4], ['Tuesday', 1], ['Wednesday', 2], ['Thursday', 2], ['Friday', 3], ['Saturday', 5], ['Sunday', 9]],
         'Photos': [4, 1, 2, 2, 3, 5, 9],
@@ -40,9 +43,23 @@ def stats():
     })
 
     html = df.to_html()
-    #Func = open('templates/stats.html','a')
-    #Func.write("\n<a href=\"{{ url_for('index') }}\">Return To Homepage</a>\n</body>")
+    # Func = open('templates/stats.html','a')
+    # Func.write("\n<a href=\"{{ url_for('index') }}\">Return To Homepage</a>\n</body>")
     return render_template('stats.html')
+
+
+@app.route("/stream")
+def stream():
+    pass
+
+
+def accept_socket_client(sv_socket):
+    connection, address = sv_socket.accept()
+    print(f"Accepted a connection from {address}")
+
+    connection.setblocking(False)
+    #message = Message(connection, address)
+    #selector.register(connection, selectors.EVENT_READ, data=message)
 
 
 def socket_server():
