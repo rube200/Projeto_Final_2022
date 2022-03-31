@@ -5,7 +5,7 @@ import traceback
 from threading import Thread
 
 import pandas
-from flask import Flask, render_template
+from flask import Flask, render_template, stream_with_context
 
 from message import Message
 
@@ -55,9 +55,13 @@ def stats():
     return render_template('stats.html')
 
 
+img = b''
+
+
 @app.route('/stream')
 def stream():
-    pass
+    stream_context = stream_with_context(img)
+    return app.response_class(stream_context)
 
 
 def accept_socket_client(selector, sv_socket):
@@ -73,24 +77,7 @@ def accept_socket_client(selector, sv_socket):
         print(f'{traceback.format_exc()}')
 
 
-def socket_server(selector):
-    while True:
-        events = selector.select()
-        for key, mask in events:
-            if key.data:
-                message = key.data
-                try:
-                    key.data.process_events(mask)
-                except Exception as ex:
-                    print(f'Exception while processing event for {message.client_address}: {ex!r}')
-                    print(f'{traceback.format_exc()}')
-                    message.close()
-            else:
-                # noinspection PyTypeChecker
-                accept_socket_client(selector, key.fileobj)
-
-
-def start_socket_server():
+def socket_server():
     try:
         with selectors.DefaultSelector() as selector, socket.socket() as sv_socket:
             sv_socket.bind((HOST, PORT))
@@ -99,13 +86,25 @@ def start_socket_server():
 
             selector.register(sv_socket, selectors.EVENT_READ)
             print('Socket ready! Waiting connections...')
-            socket_server(selector)
+            while True:
+                events = selector.select()
+                for key, mask in events:
+                    if key.data:
+                        message = key.data
+                        try:
+                            key.data.process_events(mask)
+                        except Exception as ex:
+                            print(f'Exception while processing event for {message.client_address}: {ex!r}')
+                            print(f'{traceback.format_exc()}')
+                            message.close()
+                    else:
+                        # noinspection PyTypeChecker
+                        accept_socket_client(selector, key.fileobj)
     except Exception as ex:
         print(f'Exception while starting socket server: {ex!r}')
         print(f'{traceback.format_exc()}')
 
 
-if __name__ == '__main__' and not os.environ.get('WERKZEUG_RUN_MAIN'):
-    socket_thread = Thread(target=start_socket_server)
+if not os.environ.get("WERKZEUG_RUN_MAIN"):
+    socket_thread = Thread(target=socket_server)
     socket_thread.start()
-    app.run(debug=True, host='0.0.0.0', port=80)
