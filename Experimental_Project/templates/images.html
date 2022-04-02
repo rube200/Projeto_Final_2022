@@ -14,10 +14,12 @@
 </div>
 <div class="image">
     <img id="big" src="/static/pfp1.jpg"/>
+    <img id="big2" src="/static/pfp1.jpg"/>
     <div class="alignRight">
         <button id="toggle-stream"><img class="btnImage" src="/static/camera.png"/></button>
     </div>
 </div>
+<object type="text/html" class="img-thumbnail" data="http://192.168.137.87:81/stream" width="320" height = "240"></object>
 <h1>Other Images</h1>
 <h3 id="center">
     <button onclick="changeImage1()"><img id="small1" class="smallImage" src="/static/pfp2.jpg"/></button>
@@ -28,7 +30,9 @@
         document.addEventListener('DOMContentLoaded', function (event) {
           function takePicture(){
             const view = document.getElementById('big')
-            view.src = `http://192.168.137.71/capture?_cb=${Date.now()}`
+            view.src = `http://192.168.137.87/capture?_cb=${Date.now()}`
+              const view2 = document.getElementById('big2')
+            view2.src = `http://192.168.137.87:81/stream`
           }
             const streamButton = document.getElementById('toggle-stream')
           streamButton.onclick = () => {

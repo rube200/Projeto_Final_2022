@@ -32,6 +32,7 @@ class Message:
             self.write()
 
     def process_len(self):
+        pass
         if self._recv_len:
             return
 
@@ -48,6 +49,7 @@ class Message:
     def _read(self):
         try:
             data = self.client_socket.recv(2048)
+            print(f"received {data}")
         except BlockingIOError:
             pass
         else:
