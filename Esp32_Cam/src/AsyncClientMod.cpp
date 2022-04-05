@@ -66,6 +66,8 @@ size_t AsyncClientMod::writeAll(const char * data, size_t size, packetType type)
 
     dataSource = (int) size + type + data;
     dataLen = size + 8;//4(size) + 4(type)
+    Serial.printf("Sending %zu", dataLen);//todo
+    Serial.printf("Type %i", type);//todo
     written = 0;
     writeStartTime = millis();
 

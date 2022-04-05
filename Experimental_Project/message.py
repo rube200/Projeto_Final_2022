@@ -1,5 +1,15 @@
 import selectors
 import struct
+from enum import Enum
+
+
+class PacketType(Enum):
+    RAW = 0
+    STATE = 1
+    IMAGE = 2
+
+
+SIZE_DEFAULT = 4
 
 
 class Message:
@@ -9,6 +19,7 @@ class Message:
         self.client_address = client_address
         self._recv_buffer = b""
         self._recv_len = None
+        self._recv_type = None
         self._send_buffer = b""
 
     def close(self):
@@ -32,24 +43,52 @@ class Message:
             self.write()
 
     def process_len(self):
-        pass
         if self._recv_len:
             return
 
-        size_len = 2
-        if len(self._recv_buffer) < size_len:
+        if len(self._recv_buffer) < SIZE_DEFAULT:
             return
 
-        self._recv_len = struct.unpack(">H", self._recv_buffer[:size_len])[0]
-        self._recv_buffer = self._recv_buffer[size_len:]
+        self._recv_len = struct.unpack(">i", self._recv_buffer[:SIZE_DEFAULT])[0]
+        print(f"RECEIVE LEN {self._recv_len}")  # todo remove
+        self._recv_buffer = self._recv_buffer[SIZE_DEFAULT:]
 
     def process_packet(self):
-        pass
+        if not self._recv_len or not self._recv_type:
+            return
+
+        if len(self._recv_buffer) < self._recv_len:
+            return
+
+        data = self._recv_buffer[:self._recv_len]
+        packet_type = self._recv_type
+
+        self._recv_buffer = self._recv_buffer[self._recv_len:]
+        self._recv_len = None
+        self._recv_type = None
+
+        if packet_type is PacketType.RAW.value:
+            pass
+        elif packet_type is PacketType.STATE.value:
+            pass
+        elif packet_type is PacketType.IMAGE.value:
+            pass
+
+    def process_type(self):
+        if not self._recv_len or self._recv_type:
+            return
+
+        if len(self._recv_buffer) < SIZE_DEFAULT:
+            return
+
+        self._recv_type = struct.unpack(">i", self._recv_buffer[:SIZE_DEFAULT])[0]
+        print(f"RECEIVE type {self._recv_type}")  # todo remove
+        self._recv_buffer = self._recv_buffer[SIZE_DEFAULT:]
 
     def _read(self):
         try:
             data = self.client_socket.recv(2048)
-            print(f"received {data}")
+            print(f"received {len(data)}")
         except BlockingIOError:
             pass
         else:
@@ -62,6 +101,7 @@ class Message:
         self._read()
 
         self.process_len()
+        self.process_type()
         self.process_packet()
 
     def _write(self):
