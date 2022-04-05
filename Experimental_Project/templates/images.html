@@ -6,18 +6,19 @@
     <link rel="stylesheet" href="/static/style.css"/>
 </head>
 <body class="background">
+
 <div class="topNav">
-    <a href="{{ url_for('index') }}"> <img class="btnImage" src="/static/home.jpg"></a>
-    <a href="{{ url_for('client') }}"> <img class="btnImage" src="/static/camera.png"></a>
-    <img class="btnImage" src="/static/pfp1.jpg">
+    <a href="{{ url_for('selection') }}"> <img class="btnImage" src="/static/home.jpg"></a>
+    <a href="{{ url_for('live') }}"> <img class="btnImage" src="/static/esp.png"></a>
+    <img class="btnImage" src="/static/camera.png">
     <a href="{{ url_for('stats') }}"> <img class="btnImage" src="/static/stats.png"></a>
 </div>
 <div class="image">
     <img id="big" src="/static/pfp1.jpg"/>
-    <img id="big2" src="/static/pfp1.jpg"/>
-    <div class="alignRight">
+    <!--<img id="big2" src="/static/pfp1.jpg"/>
+     <div class="alignRight">
         <button id="toggle-stream"><img class="btnImage" src="/static/camera.png"/></button>
-    </div>
+    </div>-->
 </div>
 <object type="text/html" class="img-thumbnail" data="http://192.168.137.87:81/stream" width="320" height = "240"></object>
 <h1>Other Images</h1>

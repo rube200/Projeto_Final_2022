@@ -32,6 +32,16 @@ h3 {
     text-align: center;
 }
 
+.inline {
+    display: inline;
+}
+
+.alignPfp{
+    right: 0%;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+}
 
 .alignCenter {
     text-align: center;

@@ -5,7 +5,7 @@ import traceback
 from threading import Thread
 
 import pandas
-from flask import Flask, render_template, stream_with_context
+from flask import Flask, render_template, request, stream_with_context, redirect, url_for
 
 from message import Message
 
@@ -13,22 +13,28 @@ NAME = 'Video-Doorbell'
 HOST = '0.0.0.0'
 PORT = 45000
 
+ESP = ''
+
 app = Flask(NAME)
 
 
+@app.route('/postIP', methods=['POST'])
+def postIP():
+    ESP = request.form.get('esp')
+    if checkIP(ESP):
+        print(ESP)
+        return live()
+        #return redirect(url_for('live'))
+    print('bad ip:' ,ESP)
+
+
 @app.route('/')
-def index():
-    return render_template('index.html')
+def selection():
+    return render_template('selection.html')
 
-
-@app.route('/about')
-def about():
-    return render_template('about.html')
-
-
-@app.route('/client')
-def client():
-    return render_template('client.html')
+@app.route('/live')
+def live():
+    return render_template('live.html')
 
 
 @app.route('/images')
@@ -54,6 +60,17 @@ def stats():
     # Func.write('\n<a href=\'{{ url_for('index') }}\'>Return To Homepage</a>\n</body>')
     return render_template('stats.html')
 
+
+def checkIP(ip):
+    flag = False
+    if ("." in ip):
+        elements_array = ip.strip().split(".")
+        if(len(elements_array) == 4):
+            for i in elements_array:
+                if not(i.isnumeric() and int(i)>=0 and int(i)<=255):
+                    return False
+        return True
+    return False
 
 img = b''
 
