@@ -1,80 +1,24 @@
-#include <AsyncTCP.h>
-#include <WiFiManager.h>
+#include "esp_camera.h"
 
-#define ACCESS_POINT_NAME "Video-Doorbell"
-#define DEFAULT_TIMEOUT 3000//not used yet
-#define SERIAL_BAUD 115200
+static void enable_flash(bool enable) {
+  /*
+    ledc_set_duty(CONFIG_LED_LEDC_SPEED_MODE, CONFIG_LED_LEDC_CHANNEL, CONFIG_LED_MAX_INTENSITY);
+    ledc_update_duty(CONFIG_LED_LEDC_SPEED_MODE, CONFIG_LED_LEDC_CHANNEL);
+    CONFIG_LED_LEDC_LOW_SPEED_MODE
+    LEDC_LOW_SPEED_MODE
+    LEDC_HIGH_SPEED_MODE
 
-//Need to declared here or in a .h file
-typedef void (*captureCameraCb)(uint8_t *, size_t);
-typedef void (*emptyCallback)(void);
-
-static void setupSerial() {
-  Serial.begin(SERIAL_BAUD);
-  Serial.setDebugOutput(true);
+    vTaskDelay(150 / portTICK_PERIOD_MS); // The LED needs to be turned on ~150ms before the call to esp_camera_fb_get()
+  */
 }
 
-static bool setupWifi() {
-  static WiFiManager wifiManager;
-
-  wifiManager.debugPlatformInfo();
-  wifiManager.setDarkMode(true);
-
-  Serial.println("Starting WiFiManager...");
-  if (!wifiManager.autoConnect(ACCESS_POINT_NAME)) {
-    Serial.println("Failed to connect to WiFi.");
-    return false;
-
-  }
-
-  Serial.println("Successfully connected to WiFi.");
-  return true;
-}
-
-static void image_captured_cb(uint8_t * buf, size_t len) {
-  Serial.println("Image captured");
-}
-
-static bool initialized = false;
-static void setupCompleted() {
-  /*if (initialized) {
-    return;
-    }*/
-
-  Serial.println("Setup Completed");
-  initialized = true;
-}
-
-void setup() {
-  setupSerial();
-
-  if (!setupWifi()) {
-    Serial.println("Restarting ESP in 3s...");
-    delay(3000);
-    ESP.restart();
-    return;
-  }
-
-  setupCamera();
-
-  if (!setupSocket(setupCompleted)) {
-    Serial.println("Restarting ESP in 3s...");
-    delay(3000);
-    ESP.restart();
-    return;
-  }
-}
-/*  Serial.println(tcp_client.connecting());
-  Serial.println(tcp_client.connected());*/
-
-void loop() {
-  delay(1000);
-  if (!initialized)
-    return;
-
-  return;
-}
-
-/*  startCamera();
-  Serial.println("Capture Camera");
-  captureCamera(image_captured_cb);*/
+/*
+    bool converted = frame2bmp(fb, &buf, &buf_len);
+    int res = s->set_res_raw(s, startX, startY, endX, endY, offsetX, offsetY, totalX, totalY, outputX, outputY, scale, binning);
+    int res = s->set_pll(s, bypass, mul, sys, root, pre, seld5, pclken, pclk);
+    int res = s->get_reg(s, reg, mask);
+    int res = s->set_reg(s, reg, mask, val);
+    int res = s->set_xclk(s, LEDC_TIMER_0, xclk);
+    _timestamp.tv_sec = fb->timestamp.tv_sec;
+    _timestamp.tv_usec = fb->timestamp.tv_usec;
+*/
