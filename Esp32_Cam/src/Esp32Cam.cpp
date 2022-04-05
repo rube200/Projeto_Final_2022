@@ -64,7 +64,7 @@ bool Esp32Cam::captureCameraAndSend() {
     int64_t en = esp_timer_get_time();
     Serial.printf("Capture took %lli", ((en - st) / 1000));
 
-    size_t written = tcpClient.writeAll((char *) imgBuf, imgLen);
+    size_t written = tcpClient.writeAll((char *) imgBuf, imgLen, Image);
     if (written != imgLen) {
         Serial.printf("Fail to send img! Sent: %zu of %zu", written, imgLen);
         return false;
@@ -103,7 +103,6 @@ bool Esp32Cam::endCamera() {
         Serial.println("Camera is already off.");
         return true;
     }
-
 
     esp_err_t err = esp_camera_deinit();
     if (err != ESP_OK) {
