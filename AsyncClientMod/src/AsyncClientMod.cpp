@@ -1,6 +1,44 @@
 #include "AsyncClientMod.h"
 
-__attribute__((unused)) size_t AsyncClientMod::write_all(const char * data) {
+//reinterpret_cast
+template<typename T>
+static inline void esp_delay(const uint32_t timeout_ms, const T &&blocked) {
+    const auto start_ms = millis();
+    while (esp_try_delay(start_ms, timeout_ms) && blocked());
+}
+
+const uint32_t delay_interval_ms = 1;
+
+static bool esp_try_delay(const uint32_t start_ms, const uint32_t timeout_ms) {
+    const uint32_t expired = millis() - start_ms;
+    if (expired >= timeout_ms) {
+        return true;
+    }
+
+    vTaskDelay((std::min(timeout_ms - expired, delay_interval_ms) / portTICK_PERIOD_MS));
+    return false;
+}
+
+AsyncClientMod::AsyncClientMod(tcp_pcb *pcb) : AsyncClient(pcb), _disconnect_cb(nullptr), _disconnect_cb_arg(nullptr) {
+    onAck([this](...) { _turn_off_send_waiting(); });
+    onDisconnect([this](void *arg, AsyncClient *) {
+        _turn_off_send_waiting();
+
+        if (!_disconnect_cb) {
+            return;
+        }
+
+        _disconnect_cb(_disconnect_cb_arg, this);
+    });
+    onPoll([this](...) { _turn_off_send_waiting(); });
+}
+
+void AsyncClientMod::onDisconnectCb(AcConnectHandler cb, void *arg) {
+    _disconnect_cb = std::move(cb);
+    _disconnect_cb_arg = arg;
+}
+
+size_t AsyncClientMod::write_all(const char *data) {
     if (data == nullptr) {
         return 0;
     }
@@ -8,7 +46,7 @@ __attribute__((unused)) size_t AsyncClientMod::write_all(const char * data) {
     return write_all(data, strlen(data));
 }
 
-size_t AsyncClientMod::write_all(const char * data, size_t size) {
+size_t AsyncClientMod::write_all(const char *data, const size_t size) {
     if (data == nullptr || size == 0) {
         return 0;
     }
@@ -19,6 +57,7 @@ size_t AsyncClientMod::write_all(const char * data, size_t size) {
     _datasource = data;
     _datalen = size;
     _written = 0;
+    _write_start_time = millis();
 
     do {
         if (_write_some()) {
@@ -32,11 +71,32 @@ size_t AsyncClientMod::write_all(const char * data, size_t size) {
         }
 
         _send_waiting = true;
-        esp_delay(_ack_timeout, [this]() { return this->_send_waiting; }, 1);
+        esp_delay(_ack_timeout, [this]() { return this->_send_waiting; });
         _send_waiting = false;
     } while (true);
 
     return _written;
+}
+
+bool AsyncClientMod::_is_closed() {
+    if (!_pcb) {
+        return true;
+    }
+
+    uint8_t st = state();
+    return st == CLOSED || st == CLOSE_WAIT || st == CLOSING;
+}
+
+bool AsyncClientMod::_is_timeout() {
+    return millis() - _write_start_time > _ack_timeout;
+}
+
+void AsyncClientMod::_turn_off_send_waiting() {
+    if (!_send_waiting) {
+        return;
+    }
+
+    _send_waiting = false;
 }
 
 bool AsyncClientMod::_write_some() {
@@ -50,7 +110,7 @@ bool AsyncClientMod::_write_some() {
             return false;
 
         const auto remaining = _datalen - _written;
-        size_t next_chunk_size = std::min((size_t) tcp_sndbuf(_pcb), remaining);
+        const auto next_chunk_size = std::min((size_t) tcp_sndbuf(_pcb), remaining);
         if (!next_chunk_size)
             break;
 
@@ -74,17 +134,4 @@ bool AsyncClientMod::_write_some() {
     }
 
     return send();
-}
-
-bool AsyncClientMod::_is_timeout() {
-    return millis() - _write_start_time > _ack_timeout;
-}
-
-bool AsyncClientMod::_is_closed() {
-    if (!_pcb) {
-        return true;
-    }
-
-    uint8_t st = state();
-    return st == CLOSED || st == CLOSE_WAIT || st == CLOSING;
 }
