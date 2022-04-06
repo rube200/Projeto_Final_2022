@@ -1,40 +1,23 @@
-<!DOCTYPE html>
-<!--suppress HtmlRequiredAltAttribute -->
-<html lang="en">
-<head>
-    <title>Doorbell Selection</title>
-    <link rel="stylesheet" href="/esp32static/style.css"/>
-    <meta name="viewport"
-          content="width=device-width,
-          initial-scale=1.0">
-</head>
-<body>
-<div class="topNav">
-    <img alt="" class="btnImage border" src="/esp32static/home.jpg">
-    <a href="{{ url_for('live') }}" title="Live">
-        <img class="btnImage" src="/esp32static/esp.png">
-    </a>
-    <a href="{{ url_for('images') }}" title="Images">
-        <img alt="" class="btnImage" src="/esp32static/camera.png">
-    </a>
-    <a href="{{ url_for('stats') }}" title="Stats">
-        <img alt="" class="btnImage" src="/esp32static/stats.png">
-    </a>
-</div>
-<h1>Select a Doorbell</h1>
-<div id="center">
+{% extends 'default.html' %}
+
+{% block header %}
+  <h1>Select a Doorbell</h1>
+{% endblock %}
+
+{% block content %}
+<div id='center'>
     {% for doorbell in doorbellList %}
-        <button onclick="selectDoorBell(value)" value="{{ doorbell[1] }}">
-            <img alt='{{ doorbell }}' class="smallImage" src="/esp32static/doorbell.png"/>
+        <button onclick='selectDoorBell(value)' value='{{ doorbell[1] }}'>
+            <img alt='{{ doorbell }}' class='smallImage' src='{{ url_for('static', filename='doorbell.png') }}'/>
             {{ doorbell[0] }}
         </button>
     {% endfor %}
-    <a href="{{ url_for('add') }}" title="add">
-        <img class="btnImage" src="/esp32static/add.png">
+    <a href='{{ url_for('add') }}' title='add'>
+        <img alt='' class='btnImage' src='{{ url_for('static', filename='add.png') }}'>
     </a>
     <!--
-    <button onclick="selectDoorBell('192.168.137.87')">
-        <img id="small1" class="smallImage" src="/esp32static/esp.png"/>
+    <button onclick='selectDoorBell('192.168.137.87')'>
+        <img id='small1' class='smallImage' src='/esp32static/esp.png'/>
         192.168.137.87
     </button>
     -->
@@ -62,5 +45,4 @@
         }
     </script>
 </div>
-</body>
-</html>
+{% endblock %}
