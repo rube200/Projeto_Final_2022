@@ -34,7 +34,6 @@ def page_not_found(e):
 
 
 @app.route("/")
-@app.route("/index")
 def index():
     logging.debug('Requested index')
     return selection()
