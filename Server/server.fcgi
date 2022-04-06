@@ -10,10 +10,8 @@ from server import app
 
 def main():
     try:
-        logging.basicConfig(filename='Esp32CamFcgi.log', level=logging.DEBUG)
+        logging.basicConfig(filename='Esp32CamFcgi.log', level=logging.WARNING)
         git = Git('../')
-        logging.warning(git.working_dir)
-        logging.warning(Git('~/').working_dir)
         git.pull()
         WSGIServer(app).run()
     except Exception as ex:
