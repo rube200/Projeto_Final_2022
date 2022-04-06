@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<!--suppress HtmlRequiredAltAttribute -->
+<link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+<html lang="en">
+<head>
+    <title>Doorbell Selection</title>
+    <link rel="stylesheet" href="/static/style.css"/>
+</head>
+<body>
+<h1>Select a Doorbell</h1>
+<h3 id="center">
+    <button onclick="selectDoorBell('192.168.137.87')">
+        <img id="small1" class="smallImage" src="/static/esp.png"/>
+        192.168.137.87
+    </button>
+   
+    <script>
+          function selectDoorBell(ip) {
+              const xhr = new XMLHttpRequest();
+              const fd = new FormData();
+              fd.append('esp', ip);
+
+              //XHR.addEventListener( 'load', function( event ) {
+              //alert( 'Yeah! Data sent and response loaded.' );
+              //} );
+
+              // Define what happens in case of error
+              xhr.addEventListener('error', function () {
+                  alert('Oops! Something went wrong.');
+              });
+
+              // Set up our request
+              xhr.open('POST', 'http://127.0.0.1:5000/postIP');
+
+              // Send our FormData object; HTTP headers are set automatically
+              xhr.send(fd);
+          }
+    </script>
+</h3>
+</body>
+</html>

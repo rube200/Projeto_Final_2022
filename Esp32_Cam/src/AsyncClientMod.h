@@ -5,11 +5,19 @@
 #include <AsyncTCP.h>
 #include <lwip/tcp.h>
 
-enum packetType {
+enum packetType : char {
     Raw = 0,
     State = 1,
     Image = 2
 };
+
+static void * espMalloc(size_t size) {
+    void * res = malloc(size);
+    if (res) {
+        return res;
+    }
+    return heap_caps_malloc(size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+}
 
 class AsyncClientMod : public AsyncClient {
 public:

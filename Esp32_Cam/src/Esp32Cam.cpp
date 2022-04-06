@@ -1,13 +1,5 @@
 #include "Esp32Cam.h"
 
-static void *espMalloc(size_t size) {
-    void *res = malloc(size);
-    if (res) {
-        return res;
-    }
-    return heap_caps_malloc(size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-}
-
 static void restartEsp() {
     Serial.println("Restarting ESP in 3s...");
     delay(3000);
@@ -44,9 +36,8 @@ bool Esp32Cam::captureCameraAndSend() {
         return false;
     }
 
-    uint8_t *imgBuf;
+    uint8_t * imgBuf;
     size_t imgLen;
-
     if (fb->format == PIXFORMAT_JPEG) {
         imgBuf = (uint8_t *) espMalloc(fb->len);
         imgLen = fb->len;
@@ -65,6 +56,8 @@ bool Esp32Cam::captureCameraAndSend() {
     Serial.printf("Capture took %lli\n", ((en - st) / 1000));
 
     size_t written = tcpClient.writeAll((char *) imgBuf, imgLen, Image);
+    free(imgBuf);
+
     if (written != imgLen) {
         Serial.printf("Fail to send img! Sent: %zu of %zu\n", written, imgLen);
         return false;
@@ -72,8 +65,6 @@ bool Esp32Cam::captureCameraAndSend() {
 
     int64_t sd = esp_timer_get_time();
     Serial.printf("Capture and sent took %lli\n", ((sd - st) / 1000));
-
-    free(imgBuf);
     return true;
 }
 

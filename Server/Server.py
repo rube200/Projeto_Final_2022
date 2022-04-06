@@ -5,7 +5,7 @@ import traceback
 from threading import Thread
 
 import pandas
-from flask import Flask, render_template, request, stream_with_context, redirect, url_for
+from flask import Flask, render_template, request, redirect, stream_with_context
 
 from message import Message
 
@@ -18,28 +18,34 @@ ESP = ''
 app = Flask(NAME)
 
 
+# noinspection PyUnusedLocal
+@app.errorhandler(404)
+def page_not_found(e):
+    return redirect('/')
+
 @app.route('/postIP', methods=['POST'])
 def postIP():
     ESP = request.form.get('esp')
     if checkIP(ESP):
         print(ESP)
         return live()
-        #return redirect(url_for('live'))
-    print('bad ip:' ,ESP)
+        # return redirect(url_for('live'))
+    print('bad ip:', ESP)
 
 
 @app.route('/')
-def selection():
+def index():
     return render_template('selection.html')
-
-@app.route('/live')
-def live():
-    return render_template('live.html')
 
 
 @app.route('/images')
 def images():
     return render_template('images.html')
+
+
+@app.route('/live')
+def live():
+    return render_template('live.html')
 
 
 @app.route('/stats')
@@ -60,17 +66,17 @@ def stats():
     # Func.write('\n<a href=\'{{ url_for('index') }}\'>Return To Homepage</a>\n</body>')
     return render_template('stats.html')
 
-
 def checkIP(ip):
     flag = False
-    if ("." in ip):
+    if "." in ip:
         elements_array = ip.strip().split(".")
-        if(len(elements_array) == 4):
+        if len(elements_array) == 4:
             for i in elements_array:
-                if not(i.isnumeric() and int(i)>=0 and int(i)<=255):
+                if not (i.isnumeric() and 0 <= int(i) <= 255):
                     return False
         return True
     return False
+
 
 img = b''
 
@@ -122,6 +128,6 @@ def socket_server():
         print(f'{traceback.format_exc()}')
 
 
-if not os.environ.get("WERKZEUG_RUN_MAIN"):
+if not os.environ.get('WERKZEUG_RUN_MAIN'):
     socket_thread = Thread(target=socket_server)
     socket_thread.start()

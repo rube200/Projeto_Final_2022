@@ -64,10 +64,29 @@ size_t AsyncClientMod::writeAll(const char * data, size_t size, packetType type)
     assert(dataSource == nullptr);
     assert(!sendWaiting);
 
-    dataSource = (int) size + type + data;
-    dataLen = size + 8;//4(size) + 4(type)
-    Serial.printf("Sending %zu", dataLen);//todo
-    Serial.printf("Type %i", type);//todo
+    const auto headSize = 5;
+    dataLen = size + headSize;
+
+    auto * buf = (char *)espMalloc(dataLen);
+    if (buf == nullptr) {
+        Serial.printf("Fail to allocate buffer to send %zu bytes.\n", dataLen);
+        return 0;
+    }
+
+    buf[0] = static_cast<char>(size >> 24);
+    buf[1] = static_cast<char>(size >> 16);
+    buf[2] = static_cast<char>(size >> 8);
+    buf[3] = static_cast<char>(size);
+    buf[4] = static_cast<char>(type);
+    memcpy(buf+headSize, data, size);
+
+    dataSource = buf;
+    Serial.printf("Sending1 %zu\n", dataLen);//todo
+    Serial.printf("Type1 %i\n", type);//todo
+    Serial.printf("Data1 %0zu\n", size);
+    Serial.printf("Data2 %02x\n", type);
+    Serial.printf("Data3 %2s\n", data);
+    Serial.printf("Data4 %2s\n", dataSource);
     written = 0;
     writeStartTime = millis();
 
@@ -87,7 +106,8 @@ size_t AsyncClientMod::writeAll(const char * data, size_t size, packetType type)
         sendWaiting = false;
     } while (true);
 
-    return written;
+    ::free(buf);
+    return written - headSize;//header 4(size) + 1(type)
 }
 
 bool AsyncClientMod::isClosed() {
@@ -132,6 +152,7 @@ bool AsyncClientMod::writeSome() {
             flags |= TCP_WRITE_FLAG_MORE;
         }
 
+        Serial.printf("Sending!! %02x\n", buf);
         nextChunkSize = AsyncClient::add(buf, nextChunkSize, flags);
         if (!nextChunkSize) {
             break;
