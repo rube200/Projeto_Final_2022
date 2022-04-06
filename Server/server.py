@@ -5,8 +5,10 @@ import traceback
 from threading import Thread
 
 import pandas
-from flask import Flask, render_template, request, redirect, stream_with_context
-
+from flask import Flask, render_template, request, redirect, stream_with_context, url_for
+from werkzeug.utils import secure_filename
+#from db import db_init, db
+#from models import Img
 from message import Message
 
 NAME = 'Video-Doorbell'
@@ -16,26 +18,64 @@ PORT = 45000
 ESP = ''
 
 app = Flask(NAME)
-
+app.debug = True
 
 # noinspection PyUnusedLocal
 @app.errorhandler(404)
 def page_not_found(e):
     return redirect('/')
 
+
+@app.route('/postPicture', methods=['POST'])
+def postPicture():
+    pic = request.files('pic')
+    if not pic:
+        return 'No pic sent', 400
+
+    filename = secure_filename(pic.filename)
+    mimetype = pic.mimetype
+    #img = Img(img=pic.read(), mimetype=mimetype, name=filename)
+    #db.session.add(img)
+    #db.session.commit()
+    return 'Image has been uploaded', 200
+
 @app.route('/postIP', methods=['POST'])
 def postIP():
-    ESP = request.form.get('esp')
-    if checkIP(ESP):
+    incESP = request.form.get('esp')
+    if not incESP:
+        return 'No IP sent', 400
+    if checkIP(incESP):
+        ESP = incESP
         print(ESP)
-        return live()
-        # return redirect(url_for('live'))
-    print('bad ip:', ESP)
+        #return live()
+        return redirect(url_for('live'))
+    print('bad ip:' ,incESP)
+    #return selection()
+    return redirect(url_for('selection'))
 
+@app.route('/postESP', methods=['POST'])
+def postESP():
+    incESP = request.form.get('esp')
+    if not incESP:
+        return 'No ESP sent', 400
+    if checkIP(incESP):
+        print(incESP)
+        f = open('ESPs.txt','a')
+        f.write(incESP)
+        #return selection()
+        return redirect(url_for('selection'))
+    print('bad ip:' ,incESP)
+    #return selection()
+    return redirect(url_for('selection'))
 
 @app.route('/')
-def index():
-    return render_template('selection.html')
+def selection():
+    f = open ("ESPs.txt","r")
+    espList = [] 
+    for line in f:
+        espList.append(line)
+
+    return render_template('selection.html', doorbellList = espList)
 
 
 @app.route('/images')

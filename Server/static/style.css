@@ -32,6 +32,13 @@ h3 {
     text-align: center;
 }
 
+.border {
+    border-radius: 50%;
+    border-color: coral;
+    border-width: 2px;
+    border-style: solid;
+}
+
 .inline {
     display: inline;
 }

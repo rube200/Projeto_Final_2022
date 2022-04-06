@@ -5,19 +5,29 @@
 <head>
     <title>Doorbell Selection</title>
     <link rel="stylesheet" href="/static/style.css"/>
+    <meta name="viewport" 
+          content= "width=device-width, 
+          initial-scale=1.0">
 </head>
 <body>
 <h1>Select a Doorbell</h1>
 <h3 id="center">
+
+    {% for doorbell in doorbellList %}
+    <button onclick="selectDoorBell(value)" value = "{{ doorbell }}"><img alt= '{{ doorbell }}' class="smallImage" src="/static/doorbell.png"/> {{ doorbell }} </button>
+    {% endfor %}
+
+    <!--
     <button onclick="selectDoorBell('192.168.137.87')">
         <img id="small1" class="smallImage" src="/static/esp.png"/>
         192.168.137.87
     </button>
-   
+    -->
     <script>
           function selectDoorBell(ip) {
               const xhr = new XMLHttpRequest();
               const fd = new FormData();
+              //console.log(ip)
               fd.append('esp', ip);
 
               //XHR.addEventListener( 'load', function( event ) {

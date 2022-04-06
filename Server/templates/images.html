@@ -4,21 +4,25 @@
 <head>
     <title>Most Recent Images</title>
     <link rel="stylesheet" href="/static/style.css"/>
+    <meta name="viewport" 
+          content= "width=device-width, 
+          initial-scale=1.0">
 </head>
 <body class="background">
 
 <div class="topNav">
     <a href="{{ url_for('selection') }}"> <img class="btnImage" src="/static/home.jpg"></a>
     <a href="{{ url_for('live') }}"> <img class="btnImage" src="/static/esp.png"></a>
-    <img class="btnImage" src="/static/camera.png">
+    <img class="btnImage border" src="/static/camera.png">
     <a href="{{ url_for('stats') }}"> <img class="btnImage" src="/static/stats.png"></a>
 </div>
 <div class="image">
     <img id="big" src="/static/pfp1.jpg"/>
-    <!--<img id="big2" src="/static/pfp1.jpg"/>
+    <!--<img id="big2" src="/static/pfp1.jpg"/>-->
      <div class="alignRight">
-        <button id="toggle-stream"><img class="btnImage" src="/static/camera.png"/></button>
-    </div>-->
+        <button onclick="takePicture()"><img class="btnImage" src="/static/camera.png"/></button>
+        <!--id="toggle-stream"-->
+    </div>
 </div>
 <object type="text/html" class="img-thumbnail" data="http://192.168.137.87:81/stream" width="320" height = "240"></object>
 <h1>Other Images</h1>
@@ -32,13 +36,14 @@
           function takePicture(){
             const view = document.getElementById('big')
             view.src = `http://192.168.137.87/capture?_cb=${Date.now()}`
-              const view2 = document.getElementById('big2')
-            view2.src = `http://192.168.137.87:81/stream`
+            //const view2 = document.getElementById('big2')
+            //view2.src = `http://192.168.137.87:81/stream`
           }
-            const streamButton = document.getElementById('toggle-stream')
+          /*const streamButton = document.getElementById('toggle-stream')
           streamButton.onclick = () => {
             takePicture()
           }
+          */
 
         })
 
