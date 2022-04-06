@@ -3,7 +3,7 @@
 <html lang="en">
 <head>
     <title>Most Recent Images</title>
-    <link rel="stylesheet" href="/static/style.css"/>
+    <link rel="stylesheet" href="/esp32static/style.css"/>
     <meta name="viewport" 
           content= "width=device-width, 
           initial-scale=1.0">
@@ -11,25 +11,25 @@
 <body class="background">
 
 <div class="topNav">
-    <a href="{{ url_for('selection') }}"> <img class="btnImage" src="/static/home.jpg"></a>
-    <a href="{{ url_for('live') }}"> <img class="btnImage" src="/static/esp.png"></a>
-    <img class="btnImage border" src="/static/camera.png">
-    <a href="{{ url_for('stats') }}"> <img class="btnImage" src="/static/stats.png"></a>
+    <a href="{{ url_for('selection') }}"> <img class="btnImage" src="/esp32static/home.jpg"></a>
+    <a href="{{ url_for('live') }}"> <img class="btnImage" src="/esp32static/esp.png"></a>
+    <img class="btnImage border" src="/esp32static/camera.png">
+    <a href="{{ url_for('stats') }}"> <img class="btnImage" src="/esp32static/stats.png"></a>
 </div>
 <div class="image">
-    <img id="big" src="/static/pfp1.jpg"/>
-    <!--<img id="big2" src="/static/pfp1.jpg"/>-->
+    <img id="big" src="/esp32static/pfp1.jpg"/>
+    <!--<img id="big2" src="/esp32static/pfp1.jpg"/>-->
      <div class="alignRight">
-        <button onclick="takePicture()"><img class="btnImage" src="/static/camera.png"/></button>
+        <button onclick="takePicture()"><img class="btnImage" src="/esp32static/camera.png"/></button>
         <!--id="toggle-stream"-->
     </div>
 </div>
 <object type="text/html" class="img-thumbnail" data="http://192.168.137.87:81/stream" width="320" height = "240"></object>
 <h1>Other Images</h1>
 <h3 id="center">
-    <button onclick="changeImage1()"><img id="small1" class="smallImage" src="/static/pfp2.jpg"/></button>
-    <button onclick="changeImage2()"><img id="small2" class="smallImage" src="/static/pfp3.jpg"/></button>
-    <button onclick="changeImage3()"><img id="small3" class="smallImage" src="/static/pfp4.jpg"/></button>
+    <button onclick="changeImage1()"><img id="small1" class="smallImage" src="/esp32static/pfp2.jpg"/></button>
+    <button onclick="changeImage2()"><img id="small2" class="smallImage" src="/esp32static/pfp3.jpg"/></button>
+    <button onclick="changeImage3()"><img id="small3" class="smallImage" src="/esp32static/pfp4.jpg"/></button>
 
     <script>
         document.addEventListener('DOMContentLoaded', function (event) {
@@ -47,7 +47,7 @@
 
         })
 
-        currentImage = {myGlobal: "/static/pfp1.jpg"}
+        currentImage = {myGlobal: "/esp32static/pfp1.jpg"}
 
         function changeImage1(){
             tmp = document.getElementById('small1').src;

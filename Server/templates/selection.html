@@ -1,35 +1,35 @@
 <!DOCTYPE html>
 <!--suppress HtmlRequiredAltAttribute -->
-<link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+<link rel="shortcut icon" href="{{ url_for('esp32static', filename='favicon.ico') }}">
 <html lang="en">
 <head>
     <title>Doorbell Selection</title>
-    <link rel="stylesheet" href="/static/style.css"/>
+    <link rel="stylesheet" href="/esp32static/style.css"/>
     <meta name="viewport" 
           content= "width=device-width, 
           initial-scale=1.0">
 </head>
 <body>
     <div class="topNav">
-        <img alt="" class="btnImage border" src="/static/home.jpg">
-        <a href="{{ url_for('live') }}"> <img class="btnImage" src="/static/esp.png"></a>
+        <img alt="" class="btnImage border" src="/esp32static/home.jpg">
+        <a href="{{ url_for('live') }}"> <img class="btnImage" src="/esp32static/esp.png"></a>
         <a href="{{ url_for('images') }}" title="Images">
-            <img alt="" class="btnImage" src="/static/camera.png">
+            <img alt="" class="btnImage" src="/esp32static/camera.png">
         </a>
         <a href="{{ url_for('stats') }}" title="Stats">
-            <img alt="" class="btnImage" src="/static/stats.png">
+            <img alt="" class="btnImage" src="/esp32static/stats.png">
         </a>
     </div>
 <h1>Select a Doorbell</h1>
 <h3 id="center">
 
     {% for doorbell in doorbellList %}
-    <button onclick="selectDoorBell(value)" value = "{{ doorbell[1] }}"><img alt= '{{ doorbell }}' class="smallImage" src="/static/doorbell.png"/> {{ doorbell[0] }} </button>
+    <button onclick="selectDoorBell(value)" value = "{{ doorbell[1] }}"><img alt= '{{ doorbell }}' class="smallImage" src="/esp32static/doorbell.png"/> {{ doorbell[0] }} </button>
     {% endfor %}
-    <a href="{{ url_for('add') }}"> <img class="btnImage" src="/static/add.png"></a>
+    <a href="{{ url_for('add') }}"> <img class="btnImage" src="/esp32static/add.png"></a>
     <!--
     <button onclick="selectDoorBell('192.168.137.87')">
-        <img id="small1" class="smallImage" src="/static/esp.png"/>
+        <img id="small1" class="smallImage" src="/esp32static/esp.png"/>
         192.168.137.87
     </button>
     -->
