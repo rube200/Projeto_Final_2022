@@ -29,23 +29,9 @@
 
     <script>
           function addDoorBell() {
-              const xhr = new XMLHttpRequest();
-              const fd = new FormData();
-              //console.log(ip)
-              /*if(document.getElementById(name).value === null){
-                alert('Fill the Name field!')
-                return
-              }
-              if(document.getElementById(ip).value === null){
-                alert('Fill the Name field!')
-                return
-              }*/
-              elementName = document.getElementById('name');
-              elementIP = document.getElementById('ip');
-              if (elementName == null || elementIP == null){
-                alert('Bad inputs!')
-                return
-              }
+              //document.ajax({type: 'POST', url: '/postESP', dataType: 'json'})
+              var xhr = new XMLHttpRequest();
+              var fd = new FormData();
 
               if (!(ValidateIPaddress(document.getElementById('ip').value))){
                 return
