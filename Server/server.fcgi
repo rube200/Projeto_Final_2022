@@ -10,9 +10,15 @@ from server import app
 
 def main():
     try:
-        logging.basicConfig(filename='Esp32CamFcgi.log', level=logging.WARNING)
+        logging.basicConfig(filename='git.log', level=logging.WARNING)
         git = Git('../')
         git.pull()
+    except Exception as ex:
+        logging.exception(f'Exception while requesting git: {ex!r}')
+        logging.exception(f'{traceback.format_exc()}')
+
+    try:
+        logging.basicConfig(filename='server.fcgi.log', level=logging.WARNING)
         WSGIServer(app).run()
     except Exception as ex:
         logging.exception(f'Exception while executing wsgi server: {ex!r}')
