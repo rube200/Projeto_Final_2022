@@ -66,7 +66,7 @@ def postESP():
         f = open('ESPs.txt','a')
         f.write('\n' + name + ',' + ip)
         #return selection()
-        return redirect(url_for('selection'))
+        return redirect('/')
     print('bad ip:' ,ip)
     #return selection()
     return redirect(url_for('selection'))
