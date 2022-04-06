@@ -50,7 +50,8 @@ class Message:
             return
 
         self._recv_len = struct.unpack(">i", self._recv_buffer[:SIZE_DEFAULT])[0]
-        print(f"RECEIVE LEN {self._recv_len}")  # todo remove
+        _recv_len2 = struct.unpack("<i", self._recv_buffer[:SIZE_DEFAULT])[0]
+        print(f"RECEIVE LEN {self._recv_len} {_recv_len2}")  # todo remove
         self._recv_buffer = self._recv_buffer[SIZE_DEFAULT:]
 
     def process_packet(self):
@@ -88,7 +89,8 @@ class Message:
     def _read(self):
         try:
             data = self.client_socket.recv(2048)
-            print(f"received {len(data)}")
+            if not self._recv_buffer:
+                print(f"Data {data.hex()}")
         except BlockingIOError:
             pass
         else:

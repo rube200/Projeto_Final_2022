@@ -62,16 +62,16 @@ bool Esp32Cam::captureCameraAndSend() {
     }
 
     int64_t en = esp_timer_get_time();
-    Serial.printf("Capture took %lli", ((en - st) / 1000));
+    Serial.printf("Capture took %lli\n", ((en - st) / 1000));
 
     size_t written = tcpClient.writeAll((char *) imgBuf, imgLen, Image);
     if (written != imgLen) {
-        Serial.printf("Fail to send img! Sent: %zu of %zu", written, imgLen);
+        Serial.printf("Fail to send img! Sent: %zu of %zu\n", written, imgLen);
         return false;
     }
 
     int64_t sd = esp_timer_get_time();
-    Serial.printf("Capture and sent took %lli", ((sd - st) / 1000));
+    Serial.printf("Capture and sent took %lli\n", ((sd - st) / 1000));
 
     free(imgBuf);
     return true;
@@ -164,7 +164,7 @@ void Esp32Cam::onTcpDisconnect(void *, AsyncClient *) {
 }
 
 void Esp32Cam::onTcpError(void *, AsyncClient *, int8_t err) {
-    Serial.printf("Tcp client error 0x%x", err);
+    Serial.printf("Tcp client error 0x%x\n", err);
 }
 
 void Esp32Cam::onTcpPacket(void * arg, AsyncClient * client, pbuf * pb) {
