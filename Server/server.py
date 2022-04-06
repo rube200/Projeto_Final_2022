@@ -69,13 +69,9 @@ def postESP():
     return redirect(url_for('selection'))
 
 @app.route('/')
-def selection():
-    f = open ("ESPs.txt","r")
-    espList = [] 
-    for line in f:
-        espList.append(line)
+def live():
+    return render_template('live.html')
 
-    return render_template('selection.html', doorbellList = espList)
 
 
 @app.route('/images')
@@ -83,9 +79,14 @@ def images():
     return render_template('images.html')
 
 
-@app.route('/live')
-def live():
-    return render_template('live.html')
+@app.route('/selection')
+def selection():
+    f = open ("ESPs.txt","r")
+    espList = [] 
+    for line in f:
+        espList.append(line)
+
+    return render_template('selection.html', doorbellList = espList)
 
 
 @app.route('/stats')
