@@ -1,3 +1,4 @@
+import logging
 import os
 import selectors
 import socket
@@ -5,12 +6,13 @@ import traceback
 from threading import Thread
 
 import pandas
-from flask import Flask, render_template, request, redirect, stream_with_context, url_for
-import werkzeug
+from flask import Flask, redirect, render_template, request, stream_with_context, url_for
 from werkzeug.utils import secure_filename
-#from db import db_init, db
-#from models import Img
+
 from message import Message
+
+# from db import db_init, db
+# from models import Img
 
 NAME = 'Video-Doorbell'
 HOST = '0.0.0.0'
@@ -21,10 +23,77 @@ ESP = ''
 app = Flask(NAME)
 app.debug = True
 
+logging.basicConfig(filename='server.py.log', level=logging.DEBUG)
+
+
 # noinspection PyUnusedLocal
 @app.errorhandler(404)
 def page_not_found(e):
-    return redirect('/')
+    logging.debug(f'Page not found {e}')
+    return redirect(url_for('index'))
+
+
+@app.route("/")
+def index():
+    logging.debug('Requested index')
+    return selection()
+
+
+@app.route('/addESP')
+def add():
+    logging.debug('Requested addEsp')
+    return render_template('add.html')
+
+
+@app.route('/images')
+def images():
+    logging.debug('Requested images')
+    return render_template('images.html')
+
+
+@app.route('/live')
+def live():
+    logging.debug('Requested live')
+    return render_template('live.html')
+
+
+@app.route("selection")
+def selection():
+    logging.debug('Requested selection')
+
+    esp_list = []
+    with open("ESPs.txt", "r") as fl:
+        for line in fl:
+            esp_list.append(line)
+
+    return render_template('selection.html', doorbellList=esp_list)
+
+
+@app.route('/stats')
+def stats():
+    logging.debug('Requested stats')
+    # Func = open('templates/stats.html','w')
+    # Func.write('<!DOCTYPE html><body>\n')
+    path = 'templates/stats.html'
+    df = pandas.DataFrame({
+        'Days': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+        # 'Days': [['Monday', 4], ['Tuesday', 1], ['Wednesday', 2], ['Thursday', 2], ['Friday', 3], ['Saturday', 5], ['Sunday', 9]],
+        'Photos': [4, 1, 2, 2, 3, 5, 9],
+        'Day\'s Average': [3, 2, 3, 2, 7, 4, 1],
+        # 'Colours': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday','Saturday','Sunday', 'Last Week's Average','Last Week's Average','Last Week's Average','Last Week's Average', 'This Week's Average', 'This Week's Average','This Week's Average'],
+    })
+
+    html = df.to_html()
+    # Func = open('templates/stats.html','a')
+    # Func.write('\n<a href=\'{{ url_for('index') }}\'>Return To Homepage</a>\n</body>')
+    return render_template('stats.html')
+
+
+@app.route('/stream')
+def stream():
+    logging.debug('Requested stream')
+    stream_context = stream_with_context(img)
+    return app.response_class(stream_context)
 
 
 @app.route('/postPicture', methods=['POST'])
@@ -71,31 +140,6 @@ def postESP():
     #return selection()
     return redirect(url_for('selection'))
 
-@app.route('/')
-def selection():
-    f = open ("ESPs.txt","r")
-    espList = [] 
-    for line in f:
-        espList.append(line.split(','))
-
-    print (espList)  
-    return render_template('selection.html', doorbellList = espList)
-
-
-@app.route('/addESP')
-def add():
-    return render_template('add.html')
-
-
-@app.route('/images')
-def images():
-    return render_template('images.html')
-
-
-@app.route('/live')
-def live():
-    return render_template('live.html')
-
 
 @app.route('/stats')
 def stats():
@@ -115,6 +159,7 @@ def stats():
     # Func.write('\n<a href=\'{{ url_for('index') }}\'>Return To Homepage</a>\n</body>')
     return render_template('stats.html')
 
+
 def checkIP(ip):
     flag = False
     if "." in ip:
@@ -130,23 +175,17 @@ def checkIP(ip):
 img = b''
 
 
-@app.route('/stream')
-def stream():
-    stream_context = stream_with_context(img)
-    return app.response_class(stream_context)
-
-
 def accept_socket_client(selector, sv_socket):
     try:
         connection, address = sv_socket.accept()
-        print(f'Accepted a connection from {address}')
+        logging.info(f'Accepted a connection from {address}')
 
         connection.setblocking(False)
         message = Message(selector, connection, address)
         selector.register(connection, selectors.EVENT_READ, data=message)
     except Exception as ex:
-        print(f'Exception while accepting new socket client: {ex!r}')
-        print(f'{traceback.format_exc()}')
+        logging.exception(f'Exception while accepting new socket client: {ex!r}')
+        logging.exception(f'{traceback.format_exc()}')
 
 
 def socket_server():
@@ -157,7 +196,7 @@ def socket_server():
             sv_socket.setblocking(False)
 
             selector.register(sv_socket, selectors.EVENT_READ)
-            print('Socket ready! Waiting connections...')
+            logging.info('Socket ready! Waiting connections...')
             while True:
                 events = selector.select()
                 for key, mask in events:
@@ -166,15 +205,15 @@ def socket_server():
                         try:
                             key.data.process_events(mask)
                         except Exception as ex:
-                            print(f'Exception while processing event for {message.client_address}: {ex!r}')
-                            print(f'{traceback.format_exc()}')
+                            logging.exception(f'Exception while processing event for {message.client_address}: {ex!r}')
+                            logging.exception(f'{traceback.format_exc()}')
                             message.close()
                     else:
                         # noinspection PyTypeChecker
                         accept_socket_client(selector, key.fileobj)
     except Exception as ex:
-        print(f'Exception while starting socket server: {ex!r}')
-        print(f'{traceback.format_exc()}')
+        logging.exception(f'Exception while starting socket server: {ex!r}')
+        logging.exception(f'{traceback.format_exc()}')
 
 
 if not os.environ.get('WERKZEUG_RUN_MAIN'):

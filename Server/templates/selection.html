@@ -1,32 +1,38 @@
 <!DOCTYPE html>
 <!--suppress HtmlRequiredAltAttribute -->
-<link rel="shortcut icon" href="{{ url_for('esp32static', filename='favicon.ico') }}">
+<link rel="shortcut icon" href="{{ url_for('index', filename='favicon.ico') }}">
 <html lang="en">
 <head>
     <title>Doorbell Selection</title>
     <link rel="stylesheet" href="/esp32static/style.css"/>
-    <meta name="viewport" 
-          content= "width=device-width, 
+    <meta name="viewport"
+          content="width=device-width,
           initial-scale=1.0">
 </head>
 <body>
-    <div class="topNav">
-        <img alt="" class="btnImage border" src="/esp32static/home.jpg">
-        <a href="{{ url_for('live') }}"> <img class="btnImage" src="/esp32static/esp.png"></a>
-        <a href="{{ url_for('images') }}" title="Images">
-            <img alt="" class="btnImage" src="/esp32static/camera.png">
-        </a>
-        <a href="{{ url_for('stats') }}" title="Stats">
-            <img alt="" class="btnImage" src="/esp32static/stats.png">
-        </a>
-    </div>
+<div class="topNav">
+    <img alt="" class="btnImage border" src="/esp32static/home.jpg">
+    <a href="{{ url_for('live') }}" title="Live">
+        <img class="btnImage" src="/esp32static/esp.png">
+    </a>
+    <a href="{{ url_for('images') }}" title="Images">
+        <img alt="" class="btnImage" src="/esp32static/camera.png">
+    </a>
+    <a href="{{ url_for('stats') }}" title="Stats">
+        <img alt="" class="btnImage" src="/esp32static/stats.png">
+    </a>
+</div>
 <h1>Select a Doorbell</h1>
 <div id="center">
-
     {% for doorbell in doorbellList %}
-    <button onclick="selectDoorBell(value)" value = "{{ doorbell[1] }}"><img alt= '{{ doorbell }}' class="smallImage" src="/esp32static/doorbell.png"/> {{ doorbell[0] }} </button>
+        <button onclick="selectDoorBell(value)" value="{{ doorbell[1] }}">
+            <img alt='{{ doorbell }}' class="smallImage" src="/esp32static/doorbell.png"/>
+            {{ doorbell[0] }}
+        </button>
     {% endfor %}
-    <a href="{{ url_for('add') }}"> <img class="btnImage" src="/esp32static/add.png"></a>
+    <a href="{{ url_for('add') }}" title="add">
+        <img class="btnImage" src="/esp32static/add.png">
+    </a>
     <!--
     <button onclick="selectDoorBell('192.168.137.87')">
         <img id="small1" class="smallImage" src="/esp32static/esp.png"/>
@@ -34,27 +40,27 @@
     </button>
     -->
     <script>
-          function selectDoorBell(ip) {
-              const xhr = new XMLHttpRequest();
-              const fd = new FormData();
-              //console.log(ip)
-              fd.append('esp', ip);
+        function selectDoorBell(ip) {
+            const xhr = new XMLHttpRequest();
+            const fd = new FormData();
+            //console.log(ip)
+            fd.append('esp', ip);
 
-              //XHR.addEventListener( 'load', function( event ) {
-              //alert( 'Yeah! Data sent and response loaded.' );
-              //} );
+            //XHR.addEventListener( 'load', function( event ) {
+            //alert( 'Yeah! Data sent and response loaded.' );
+            //} );
 
-              // Define what happens in case of error
-              xhr.addEventListener('error', function () {
-                  alert('Oops! Something went wrong.');
-              });
+            // Define what happens in case of error
+            xhr.addEventListener('error', function () {
+                alert('Oops! Something went wrong.');
+            });
 
-              // Set up our request
-              xhr.open('POST', 'http://127.0.0.1:5000/postIP');
+            // Set up our request
+            xhr.open('POST', 'http://127.0.0.1:5000/postIP');
 
-              // Send our FormData object; HTTP headers are set automatically
-              xhr.send(fd);
-          }
+            // Send our FormData object; HTTP headers are set automatically
+            xhr.send(fd);
+        }
     </script>
 </div>
 </body>
