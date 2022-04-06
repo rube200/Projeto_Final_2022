@@ -109,6 +109,7 @@ def postPicture():
     #db.session.commit()
     return 'Image has been uploaded', 200
 
+
 @app.route('/postIP', methods=['POST'])
 def postIP():
     incESP = request.form.get('esp')
@@ -123,6 +124,7 @@ def postIP():
     print('bad ip:' ,incESP)
     #return selection()
     return redirect(url_for('selection'))
+
 
 @app.route('/postESP', methods=['POST'])
 def postESP():
@@ -139,25 +141,6 @@ def postESP():
     print('bad ip:' ,ip)
     #return selection()
     return redirect(url_for('selection'))
-
-
-@app.route('/stats')
-def stats():
-    # Func = open('templates/stats.html','w')
-    # Func.write('<!DOCTYPE html><body>\n')
-    path = 'templates/stats.html'
-    df = pandas.DataFrame({
-        'Days': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
-        # 'Days': [['Monday', 4], ['Tuesday', 1], ['Wednesday', 2], ['Thursday', 2], ['Friday', 3], ['Saturday', 5], ['Sunday', 9]],
-        'Photos': [4, 1, 2, 2, 3, 5, 9],
-        'Day\'s Average': [3, 2, 3, 2, 7, 4, 1],
-        # 'Colours': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday','Saturday','Sunday', 'Last Week's Average','Last Week's Average','Last Week's Average','Last Week's Average', 'This Week's Average', 'This Week's Average','This Week's Average'],
-    })
-
-    html = df.to_html()
-    # Func = open('templates/stats.html','a')
-    # Func.write('\n<a href=\'{{ url_for('index') }}\'>Return To Homepage</a>\n</body>')
-    return render_template('stats.html')
 
 
 def checkIP(ip):
