@@ -11,9 +11,11 @@ void loop() {
         return;
     }
 
+    Serial.println("Capturing...");
     if (!espController.captureCameraAndSend()) {
-        Serial.println("camera ERROR");
+        Serial.println("Camera ERROR");
         delay(200);
     }
     delay(1000);
 }
+//todo add reconnect if disconnected
