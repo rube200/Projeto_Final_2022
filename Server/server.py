@@ -21,9 +21,13 @@ PORT = 45000
 ESP = ''
 
 app = Flask(NAME)
+app.env = 'development'
 app.debug = True
+app.name = "Esp32cam-Web"
+app.static_url_path = '/esp32static'
 
 logging.basicConfig(filename='server.py.log', level=logging.DEBUG)
+logging.getLogger().addHandler(logging.StreamHandler())
 
 
 # noinspection PyUnusedLocal
@@ -104,9 +108,9 @@ def postPicture():
 
     filename = secure_filename(pic.filename)
     mimetype = pic.mimetype
-    #img = Img(img=pic.read(), mimetype=mimetype, name=filename)
-    #db.session.add(img)
-    #db.session.commit()
+    # img = Img(img=pic.read(), mimetype=mimetype, name=filename)
+    # db.session.add(img)
+    # db.session.commit()
     return 'Image has been uploaded', 200
 
 
@@ -118,11 +122,11 @@ def postIP():
     if checkIP(incESP):
         ESP = incESP
         print(ESP)
-        #return live()
+        # return live()
         return redirect("/live")
-        #return werkzeug.utils.redirect(url_for('live'))
-    print('bad ip:' ,incESP)
-    #return selection()
+        # return werkzeug.utils.redirect(url_for('live'))
+    print('bad ip:', incESP)
+    # return selection()
     return redirect(url_for('selection'))
 
 
@@ -134,12 +138,12 @@ def postESP():
         return 'No ESP sent', 400
     if checkIP(ip):
         print(ip)
-        f = open('ESPs.txt','a')
+        f = open('ESPs.txt', 'a')
         f.write('\n' + name + ',' + ip)
-        #return selection()
+        # return selection()
         return redirect('/')
-    print('bad ip:' ,ip)
-    #return selection()
+    print('bad ip:', ip)
+    # return selection()
     return redirect(url_for('selection'))
 
 
