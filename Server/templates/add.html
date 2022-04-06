@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<!--suppress HtmlRequiredAltAttribute -->
+<link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+<html lang="en">
+<head>
+    <title>Add Doorbell</title>
+    <link rel="stylesheet" href="/static/style.css"/>
+    <meta name="viewport" 
+          content= "width=device-width, 
+          initial-scale=1.0">
+</head>
+<body>
+    <div class="topNav">
+        <a href="{{ url_for('selection') }}" title="Selection">
+            <img alt="" class="btnImage" src="/static/back.jpg">
+        </a>
+    </div>
+<h1>Add a Doorbell</h1>
+<h3 id="center">
+
+
+    <label for="name">Doorbell's name:</label><br>
+    <input type="text" id="name" name="name"><br>
+    <label for="ip">IP address:</label><br>
+    <input type="text" id="ip" name="ip"><br>
+    <br>
+    <button onclick= "addDoorBell()" class="smallImage"> submit </button>
+
+
+    <script>
+          function addDoorBell() {
+              const xhr = new XMLHttpRequest();
+              const fd = new FormData();
+              //console.log(ip)
+              /*if(document.getElementById(name).value === null){
+                alert('Fill the Name field!')
+                return
+              }
+              if(document.getElementById(ip).value === null){
+                alert('Fill the Name field!')
+                return
+              }*/
+              if (!(ValidateIPaddress(document.getElementById(ip).value))){
+                alert('Invalid IP address!')
+                return
+              }
+              fd.append('name', document.getElementById(name).value);
+              fd.append('ip', document.getElementById(ip).value);
+              //XHR.addEventListener( 'load', function( event ) {
+              //alert( 'Yeah! Data sent and response loaded.' );
+              //} );
+
+              // Define what happens in case of error
+              xhr.addEventListener('error', function () {
+                  alert('Oops! Something went wrong.');
+              });
+
+              // Set up our request
+              xhr.open('POST', 'http://127.0.0.1:5000/postESP');
+
+              // Send our FormData object; HTTP headers are set automatically
+              xhr.send(fd);
+          }
+
+          function ValidateIPaddress(ipaddress) 
+            {
+                
+            if ((/^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/).test(ipaddress))
+                {
+                    return (true)
+                }
+            alert("You have entered an invalid IP address!")
+            return (false)
+            }
+    </script>
+</h3>
+</body>
+</html>

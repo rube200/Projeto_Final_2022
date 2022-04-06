@@ -57,16 +57,17 @@ def postIP():
 
 @app.route('/postESP', methods=['POST'])
 def postESP():
-    incESP = request.form.get('esp')
-    if not incESP:
+    name = request.form.get('name')
+    ip = request.form.get('ip')
+    if not name or not ip:
         return 'No ESP sent', 400
-    if checkIP(incESP):
-        print(incESP)
+    if checkIP(ip):
+        print(ip)
         f = open('ESPs.txt','a')
-        f.write(incESP)
+        f.write(name + ',' + ip)
         #return selection()
         return redirect(url_for('selection'))
-    print('bad ip:' ,incESP)
+    print('bad ip:' ,ip)
     #return selection()
     return redirect(url_for('selection'))
 
@@ -75,9 +76,15 @@ def selection():
     f = open ("ESPs.txt","r")
     espList = [] 
     for line in f:
-        espList.append(line)
+        espList.append(line.split(','))
 
+    print (espList)  
     return render_template('selection.html', doorbellList = espList)
+
+
+@app.route('/addESP')
+def add():
+    return render_template('add.html')
 
 
 @app.route('/images')
