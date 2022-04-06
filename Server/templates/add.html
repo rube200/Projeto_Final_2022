@@ -40,12 +40,18 @@
                 alert('Fill the Name field!')
                 return
               }*/
-              if (!(ValidateIPaddress(document.getElementById(ip).value))){
-                alert('Invalid IP address!')
+              elementName = document.getElementById('name');
+              elementIP = document.getElementById('ip');
+              if (elementName == null || elementIP == null){
+                alert('Bad inputs!')
                 return
               }
-              fd.append('name', document.getElementById(name).value);
-              fd.append('ip', document.getElementById(ip).value);
+
+              if (!(ValidateIPaddress(document.getElementById('ip').value))){
+                return
+              }
+              fd.append('name', document.getElementById('name').value);
+              fd.append('ip', document.getElementById('ip').value);
               //XHR.addEventListener( 'load', function( event ) {
               //alert( 'Yeah! Data sent and response loaded.' );
               //} );
@@ -69,7 +75,7 @@
                 {
                     return (true)
                 }
-            alert("You have entered an invalid IP address!")
+            alert("You have entered an invalid IP address! " + ipaddress)
             return (false)
             }
     </script>
