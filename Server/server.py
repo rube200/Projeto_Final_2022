@@ -6,6 +6,7 @@ from threading import Thread
 
 import pandas
 from flask import Flask, render_template, request, redirect, stream_with_context, url_for
+import werkzeug
 from werkzeug.utils import secure_filename
 #from db import db_init, db
 #from models import Img
@@ -48,7 +49,8 @@ def postIP():
         ESP = incESP
         print(ESP)
         #return live()
-        return redirect(url_for('live'))
+        return redirect("/live")
+        #return werkzeug.utils.redirect(url_for('live'))
     print('bad ip:' ,incESP)
     #return selection()
     return redirect(url_for('selection'))
@@ -69,17 +71,6 @@ def postESP():
     return redirect(url_for('selection'))
 
 @app.route('/')
-def live():
-    return render_template('live.html')
-
-
-
-@app.route('/images')
-def images():
-    return render_template('images.html')
-
-
-@app.route('/selection')
 def selection():
     f = open ("ESPs.txt","r")
     espList = [] 
@@ -87,6 +78,16 @@ def selection():
         espList.append(line)
 
     return render_template('selection.html', doorbellList = espList)
+
+
+@app.route('/images')
+def images():
+    return render_template('images.html')
+
+
+@app.route('/live')
+def live():
+    return render_template('live.html')
 
 
 @app.route('/stats')
