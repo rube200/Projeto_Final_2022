@@ -57,7 +57,7 @@ def live():
     return render_template('live.html')
 
 
-@app.route("selection")
+@app.route("/selection")
 def selection():
     logging.debug('Requested selection')
 
