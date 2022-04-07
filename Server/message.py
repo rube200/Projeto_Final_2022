@@ -1,6 +1,8 @@
+import io
 import selectors
 import struct
 from enum import Enum
+from PIL import Image
 
 
 class PacketType(Enum):
@@ -14,22 +16,22 @@ class Message:
         self.selector = selector
         self.client_socket = client_socket
         self.client_address = client_address
-        self._recv_buffer = b""
+        self._recv_buffer = b''
         self._recv_len = None
         self._recv_type = None
-        self._send_buffer = b""
+        self._send_buffer = b''
 
     def close(self):
-        print(f"Closing connection to {self.client_address}")
+        print(f'Closing connection to {self.client_address}')
         try:
             self.selector.unregister(self.client_socket)
         except Exception as ex:
-            print(f"Exception while unregister socket for {self.client_address}: {ex!r}")
+            print(f'Exception while unregister socket for {self.client_address}: {ex!r}')
 
         try:
             self.client_socket.close()
         except OSError as e:
-            print(f"Exception while closing socket for {self.client_address}: {e!r}")
+            print(f'Exception while closing socket for {self.client_address}: {e!r}')
         finally:
             self.client_socket = None
 
@@ -47,8 +49,8 @@ class Message:
         if len(self._recv_buffer) < size:
             return
 
-        self._recv_len = struct.unpack(">i", self._recv_buffer[:size])[0]
-        print(f"RECEIVE LEN {self._recv_len}")  # todo remove
+        self._recv_len = struct.unpack('>i', self._recv_buffer[:size])[0]
+        print(f'RECEIVE LEN {self._recv_len}')  # todo remove
         self._recv_buffer = self._recv_buffer[size:]
 
     def process_packet(self):
@@ -59,20 +61,36 @@ class Message:
             return
 
         data = self._recv_buffer[:self._recv_len]
-        packet_type = self._recv_type
+        packet_type = PacketType(self._recv_type)
 
         self._recv_buffer = self._recv_buffer[self._recv_len:]
         self._recv_len = None
         self._recv_type = None
 
+        print(f"len2 {len(data)}")
         if packet_type is PacketType.RAW:
-            print("Raw")
+            print('Raw')
         elif packet_type is PacketType.STATE:
-            print("State")
+            print('State')
         elif packet_type is PacketType.IMAGE:
-            print("Image")
+            with open('image1.jpeg', 'ab') as f:
+                f.write(data)
+
+            #with Image.open(data) as img:
+            #    print(img.size)
+            #    img.save('image2.jpeg')
+
+            with Image.open(io.BytesIO(data)) as img:
+                print(img.size)
+                img.save('image3.jpeg')
+
+            with Image.frombytes('YCbCr', (320, 240), data) as img:
+                print(img.size)
+                img.save('image4.jpeg')
+
+            print('Image')
         else:
-            print("None")
+            print('None')
 
     def process_type(self):
         if not self._recv_len or self._recv_type:
@@ -82,22 +100,19 @@ class Message:
         if len(self._recv_buffer) < size:
             return
 
-        self._recv_type = int(self._recv_buffer[:size])
-        print(f"RECEIVE type {self._recv_type}")  # todo remove
+        self._recv_type = int.from_bytes(bytes=self._recv_buffer[:size], byteorder='big')
         self._recv_buffer = self._recv_buffer[size:]
 
     def _read(self):
         try:
             data = self.client_socket.recv(2048)
-            if not self._recv_buffer:
-                print(f"Data {data.hex()}")
         except BlockingIOError:
             pass
         else:
             if data:
                 self._recv_buffer += data
             else:
-                raise RuntimeError("Peer closed.")
+                raise RuntimeError('Peer closed.')
 
     def read(self):
         self._read()

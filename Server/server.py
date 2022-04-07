@@ -14,48 +14,63 @@ from message import Message
 # from db import db_init, db
 # from models import Img
 
+DEBUG = True
 NAME = 'Video-Doorbell'
 HOST = '0.0.0.0'
 PORT = 45000
 
-ESP = ''
+logging.basicConfig(filename='server.py.log', level=logging.DEBUG if DEBUG else logging.WARNING)
+logging.getLogger().addHandler(logging.StreamHandler())
 
 app = Flask(NAME)
 app.env = 'development'
-app.debug = True
-app.name = "Esp32cam-Web"
+app.debug = DEBUG
+app.name = 'Esp32cam-Web'
 app.static_url_path = '/esp32static'
 
-logging.basicConfig(filename='server.py.log', level=logging.DEBUG)
-logging.getLogger().addHandler(logging.StreamHandler())
+nav = [
+    {'name': 'Home', 'image': 'home.jpg', 'url': 'index'},
+    {'name': 'Live', 'image': 'esp.png', 'url': 'live'},
+    {'name': 'Images', 'image': 'camera.png', 'url': 'images'},
+    {'name': 'Stats', 'image': 'stats.png', 'url': 'stats'},
+]
 
+ESP = ''
 
-#experimental for dynamic urls
+# experimental for dynamic urls
 users = {
-    "johna": {
-        "name": "yef",
-        "bio": "Creator of dez nutz",
-        "twitter_handle": "@johna"
+    'johna': {
+        'name': 'yef',
+        'bio': 'Creator of dez nutz',
+        'twitter_handle': '@johna'
     },
-    "sup": {
-        "name": "mah",
-        "bio": "N",
-        "twitter_handle": "@supN"
+    'sup': {
+        'name': 'mah',
+        'bio': 'N',
+        'twitter_handle': '@supN'
     },
-    "imagine": {
-        "name": "dragon",
-        "bio": "These nuts across",
-        "twitter_handle": "@your face"
+    'imagine': {
+        'name': 'dragon',
+        'bio': 'These nuts across',
+        'twitter_handle': '@your face'
     }
 }
 
-@app.route("/profile/<username>")
+
+@app.route('/profile/<username>')
 def profile(username):
     user = None
     if username in users:
         user = users[username]
-    return render_template('user.html', username = username, user= user)
-#end of dynamix url testing grounds
+    return render_template('user.html', username=username, user=user)
+
+
+# end of dynamix url testing grounds
+
+
+@app.context_processor
+def inject_nav():
+    return dict(nav=nav)
 
 
 # noinspection PyUnusedLocal
@@ -65,7 +80,7 @@ def page_not_found(e):
     return redirect(url_for('index'))
 
 
-@app.route("/")
+@app.route('/')
 def index():
     logging.debug('Requested index')
     return selection()
@@ -89,12 +104,12 @@ def live():
     return render_template('live.html')
 
 
-@app.route("/selection")
+@app.route('/selection')
 def selection():
     logging.debug('Requested selection')
 
     esp_list = []
-    with open("ESPs.txt", "r") as fl:
+    with open('ESPs.txt', 'r') as fl:
         for line in fl:
             esp_list.append(line.split(','))
 
@@ -127,7 +142,8 @@ def stream():
     stream_context = stream_with_context(img)
     return app.response_class(stream_context)
 
-#experimental
+
+# experimental
 @app.route('/postPicture', methods=['POST'])
 def postPicture():
     pic = request.files('pic')
@@ -151,7 +167,7 @@ def postIP():
         ESP = incESP
         print(ESP)
         # return live()
-        return redirect("/live")
+        return redirect('/live')
         # return werkzeug.utils.redirect(url_for('live'))
     print('bad ip:', incESP)
     # return selection()
@@ -177,8 +193,8 @@ def postESP():
 
 def checkIP(ip):
     flag = False
-    if "." in ip:
-        elements_array = ip.strip().split(".")
+    if '.' in ip:
+        elements_array = ip.strip().split('.')
         if len(elements_array) == 4:
             for i in elements_array:
                 if not (i.isnumeric() and 0 <= int(i) <= 255):
