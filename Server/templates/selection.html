@@ -40,7 +40,8 @@
                 });
 
                 // Set up our request
-                xhr.open('POST', 'http://127.0.0.1:5000/postIP');
+                const host =  `${window.location.protocol}//${window.location.host}`;
+                xhr.open('POST', `${host}/esp32cam/postIP`);
 
                 // Send our FormData object; HTTP headers are set automatically
                 xhr.send(fd);

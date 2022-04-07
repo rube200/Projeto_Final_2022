@@ -228,6 +228,8 @@ def packet_recv_callback(packet_type: PacketType, data: bytes):
     elif packet_type is PacketType.STATE:
         print('State')
     elif packet_type is PacketType.IMAGE:
+        global img
+        img = data
         start_time = time.time()
         file = FileStorage(io.BytesIO(data), secure_filename('test.jpeg'))
         file.save('upload', len(data))
