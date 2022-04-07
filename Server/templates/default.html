@@ -4,7 +4,9 @@
 <meta charset='UTF-8' content='width=device-width, initial-scale=1.0' name='viewport'>
 <title>{% block title %}{% endblock %}</title>
 <nav class='topNav'>
-    <img alt='Nav home image' class='btnImage border' src='{{ url_for('static', filename='home.jpg') }}'>
+    <a href='{{ url_for('selection') }}' title='Nav live button'>
+        <img alt='Nav home image' class='btnImage border' src='{{ url_for('static', filename='home.jpg') }}'>
+    </a>
     <a href='{{ url_for('live') }}' title='Nav live button'>
         <img alt='Nav live image' class='btnImage' src='{{ url_for('static', filename='esp.png') }}'>
     </a>

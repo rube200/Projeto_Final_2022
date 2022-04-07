@@ -1,20 +1,15 @@
-<!DOCTYPE html>
-<!--suppress HtmlRequiredAltAttribute -->
-<link rel="shortcut icon" href="{{ url_for('esp32static', filename='favicon.ico') }}">
-<html lang="en">
-<head>
+{% extends 'default.html' %}
+
+{% block header %}
     <title>Add Doorbell</title>
-    <link rel="stylesheet" href="/esp32static/style.css"/>
-    <meta name="viewport" 
-          content= "width=device-width, 
-          initial-scale=1.0">
-</head>
-<body>
-    <div class="topNav">
+{% endblock %}
+
+{% block content %}
+<!---  <div class="topNav">
         <a href="{{ url_for('selection') }}" title="Selection">
-            <img alt="" class="btnImage" src="/esp32static/back.jpg">
+            <img alt="" class="btnImage" src='{{ url_for('static', filename='back.png') }}'/>
         </a>
-    </div>
+    </div> -->  
 <h1>Add a Doorbell</h1>
 <h3 id="center">
 
@@ -66,5 +61,4 @@
             }
     </script>
 </h3>
-</body>
-</html>
+{% endblock %}

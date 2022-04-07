@@ -1,30 +1,11 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <title>Home</title>
-    <link rel="stylesheet" href="/esp32static/style.css"/>
-    <meta name="viewport" 
-          content= "width=device-width, 
-          initial-scale=1.0">
-</head>
-<body class="background">
-<div class="topNav">
-    <a href="{{ url_for('selection') }}" title="Selection">
-        <img alt="" class="btnImage" src="/esp32static/home.jpg">
-    </a>
-    <img alt="" class="btnImage border" src="/esp32static/esp.png">
-    <a href="{{ url_for('images') }}" title="Images">
-        <img alt="" class="btnImage" src="/esp32static/camera.png">
-    </a>
-    <a href="{{ url_for('stats') }}" title="Stats">
-        <img alt="" class="btnImage" src="/esp32static/stats.png">
-    </a>
-</div>
+{% extends 'default.html' %}
+
+{% block content %}
 <div>
     <div class="image">
-        <img alt="" id="stream-view" src="/esp32static/pfp1.jpg"/>
+        <img alt="" id="stream-view" src='{{ url_for('static', filename='pfp1.jpg') }}'/>
         <button id="enable-stream">
-            <img alt="" class=alignPfp src="/esp32static/esp.png"/>
+            <img alt="" class=alignPfp src='{{ url_for('static', filename='esp.png') }}'/>
         </button>
     </div>
 
@@ -42,5 +23,4 @@
 
     document.addEventListener('DOMContentLoaded', documentLoaded);
 </script>
-</body>
-</html>
+{% endblock %}
