@@ -7,6 +7,7 @@ void setup() {
 
 void loop() {
     if (!espController.isReady()) {
+        //todo reconnect socket
         delay(50);
         return;
     }
@@ -14,8 +15,7 @@ void loop() {
     Serial.println("Capturing...");
     if (!espController.captureCameraAndSend()) {
         Serial.println("Camera ERROR");
-        delay(200);
     }
-    delay(1000);
+
+    delay(50);
 }
-//todo add reconnect if disconnected
