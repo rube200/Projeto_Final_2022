@@ -30,6 +30,34 @@ logging.basicConfig(filename='server.py.log', level=logging.DEBUG)
 logging.getLogger().addHandler(logging.StreamHandler())
 
 
+#experimental for dynamic urls
+users = {
+    "johna": {
+        "name": "yef",
+        "bio": "Creator of dez nutz",
+        "twitter_handle": "@johna"
+    },
+    "sup": {
+        "name": "mah",
+        "bio": "N",
+        "twitter_handle": "@supN"
+    },
+    "imagine": {
+        "name": "dragon",
+        "bio": "These nuts across",
+        "twitter_handle": "@your face"
+    }
+}
+
+@app.route("/profile/<username>")
+def profile(username):
+    user = None
+    if username in users:
+        user = users[username]
+    return render_template('user.html', username = username, user= user)
+#end of dynamix url testing grounds
+
+
 # noinspection PyUnusedLocal
 @app.errorhandler(404)
 def page_not_found(e):
@@ -99,7 +127,7 @@ def stream():
     stream_context = stream_with_context(img)
     return app.response_class(stream_context)
 
-
+#experimental
 @app.route('/postPicture', methods=['POST'])
 def postPicture():
     pic = request.files('pic')

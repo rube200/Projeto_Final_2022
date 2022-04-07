@@ -1,0 +1,34 @@
+{% extends 'default.html' %}
+
+{% block header %}
+    <title>User</title>
+{% endblock %}
+
+{% block content %}
+
+<div class="container">
+
+            <hi>Profile</hi>
+            <hr>
+
+            <div>
+                <h4>{{ username }}</h4>
+                <hr>
+                {% if user %}
+                    <p><strong>{{ user["name"] }}</strong></p>
+                    <p>{{ user["bio"] }}</p>
+                    <p>{{ user["twitter_handle"] }}</p>
+                {% else %}
+                    <p>User not found</p>
+                {% endif %}
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+</div>
+
+{% endblock %}
