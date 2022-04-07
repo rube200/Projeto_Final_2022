@@ -1,15 +1,18 @@
+import io
 import logging
 import os
 import selectors
 import socket
+import time
 import traceback
 from threading import Thread
 
 import pandas
 from flask import Flask, redirect, render_template, request, stream_with_context, url_for
+from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
 
-from message import Message
+from message import Message, PacketType
 
 # from db import db_init, db
 # from models import Img
@@ -212,11 +215,27 @@ def accept_socket_client(selector, sv_socket):
         logging.info(f'Accepted a connection from {address}')
 
         connection.setblocking(False)
-        message = Message(selector, connection, address)
+        message = Message(selector, connection, address, packet_recv_callback)
         selector.register(connection, selectors.EVENT_READ, data=message)
     except Exception as ex:
         logging.exception(f'Exception while accepting new socket client: {ex!r}')
         logging.exception(f'{traceback.format_exc()}')
+
+
+def packet_recv_callback(packet_type: PacketType, data: bytes):
+    if packet_type is PacketType.RAW:
+        print('Raw')
+    elif packet_type is PacketType.STATE:
+        print('State')
+    elif packet_type is PacketType.IMAGE:
+        start_time = time.time()
+        file = FileStorage(io.BytesIO(data), secure_filename('test.jpeg'))
+        file.save('upload', len(data))
+        print("--- %s seconds ---" % (time.time() - start_time))
+        print('Image')
+    else:
+        print('None')
+    pass
 
 
 def socket_server():

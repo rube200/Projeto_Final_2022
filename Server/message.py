@@ -1,9 +1,8 @@
-import io
+import logging
 import selectors
 import struct
-import time
+import traceback
 from enum import Enum
-from PIL import Image
 
 
 class PacketType(Enum):
@@ -13,26 +12,27 @@ class PacketType(Enum):
 
 
 class Message:
-    def __init__(self, selector, client_socket, client_address):
+    def __init__(self, selector, client_socket, client_address, packet_recv_callback):
         self.selector = selector
         self.client_socket = client_socket
         self.client_address = client_address
+        self.packet_recv_callback = packet_recv_callback
         self._recv_buffer = b''
         self._recv_len = None
         self._recv_type = None
         self._send_buffer = b''
 
     def close(self):
-        print(f'Closing connection to {self.client_address}')
+        logging.info(f'Closing connection to {self.client_address}')
         try:
             self.selector.unregister(self.client_socket)
         except Exception as ex:
-            print(f'Exception while unregister socket for {self.client_address}: {ex!r}')
+            logging.exception(f'Exception while unregister socket for {self.client_address}: {ex!r}')
 
         try:
             self.client_socket.close()
         except OSError as e:
-            print(f'Exception while closing socket for {self.client_address}: {e!r}')
+            logging.exception(f'Exception while closing socket for {self.client_address}: {e!r}')
         finally:
             self.client_socket = None
 
@@ -51,7 +51,6 @@ class Message:
             return
 
         self._recv_len = struct.unpack('>i', self._recv_buffer[:size])[0]
-        print(f'RECEIVE LEN {self._recv_len}')  # todo remove
         self._recv_buffer = self._recv_buffer[size:]
 
     def process_packet(self):
@@ -68,25 +67,15 @@ class Message:
         self._recv_len = None
         self._recv_type = None
 
-        if packet_type is PacketType.RAW:
-            print('Raw')
-        elif packet_type is PacketType.STATE:
-            print('State')
-        elif packet_type is PacketType.IMAGE:
-            start_time = time.time()
-            with open('image1.jpeg', 'wb') as f:
-                f.write(data)
-            print("--- %s seconds ---" % (time.time() - start_time))
+        if not self.packet_recv_callback:
+            logging.info(f'Client {self.client_address} received a packet but don\'t have a callback to process it.')
+            return
 
-            start_time = time.time()
-            with Image.open(io.BytesIO(data)) as img:
-                print(img.size)
-                img.save('image2.jpeg')
-            print("--- %s seconds ---" % (time.time() - start_time))
-
-            print('Image')
-        else:
-            print('None')
+        try:
+            self.packet_recv_callback(packet_type, data)
+        except Exception as ex:
+            logging.exception(f'Exception while processing packet for {self.client_address}: {ex!r}')
+            logging.exception(f'{traceback.format_exc()}')
 
     def process_type(self):
         if not self._recv_len or self._recv_type:
