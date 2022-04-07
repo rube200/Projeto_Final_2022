@@ -2,29 +2,26 @@
 <link rel='icon' href='{{ url_for('static', filename='favicon.ico') }}' type='image/x-icon'>
 <link rel='stylesheet' href='{{ url_for('static', filename='style.css') }}'/>
 <meta charset='UTF-8' content='width=device-width, initial-scale=1.0' name='viewport'>
-<!---<title>{% block title %}{% endblock %}</title>-->
-<body class="{{ body_class }}">
-    <!--<h2> {{ Appcontext }}wat</h2>-->
+<title>{{ name }}</title>
+<body class='{{ body_class }}'>
 <nav class='topNav'>
-    <a href='{{ url_for('index') }}' title='Nav home button'>
-        <img alt='Nav home image' class='btnImage border' src='{{ url_for('static', filename='home.jpg') }}'>
-    </a>
-    <a href='{{ url_for('live') }}' title='Nav live button'>
-        <img alt='Nav live image' class='btnImage' src='{{ url_for('static', filename='esp.png') }}'>
-    </a>
-    <a href='{{ url_for('images') }}' title='Nav images button'>
-        <img alt='Nav images image' class='btnImage' src='{{ url_for('static', filename='camera.png') }}'>
-    </a>
-    <a href='{{ url_for('stats') }}' title='Nav stats button'>
-        <img alt='Nav stats image' class='btnImage' src='{{ url_for('static', filename='stats.png') }}'>
-    </a>
+    {% for nv in nav %}
+        <a href='{{ url_for(nv.url) }}' title='Nav {{ nv.name }} button'>
+            <img
+                    alt='Nav {{ nv.name }} image'
+                    class='btnImage {% if nv.name|lower == name|lower %} border {% endif %}'
+                    src='{{ url_for('static', filename=nv.image) }}'>
+        </a>
+    {% endfor %}
 </nav>
 <section class='content'>
     <header>
         {% block header %}{% endblock %}
     </header>
     {% for message in get_flashed_messages() %}
-        <div class='flash'>{{ message }}</div>
+        <div class='flash'>
+            {{ message }}
+        </div>W
     {% endfor %}
     {% block content %}{% endblock %}
 </section>

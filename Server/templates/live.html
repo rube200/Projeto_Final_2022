@@ -1,28 +1,29 @@
 {% extends 'default.html' %}
 
 {% set body_class='background' %}
+{% set name = self._TemplateReference__context.name|replace('.html', '')|capitalize %}
+
 {% block content %}
-
-<div>
-    <div class="image">
-        <img alt="" id="stream-view" src='{{ url_for('static', filename='pfp1.jpg') }}'/>
-        <button id="enable-stream">
-            <img alt="" class=alignPfp src='{{ url_for('static', filename='esp.png') }}'/>
-        </button>
+    <div>
+        <div class='image'>
+            <img alt='' id='stream-view' src='{{ url_for('static', filename='pfp1.jpg') }}'/>
+            <button id='enable-stream'>
+                <img alt='' class=alignPfp src='{{ url_for('static', filename='esp.png') }}'/>
+            </button>
+        </div>
     </div>
+    <script>
+        function documentLoaded() {
+            const streamButton = document.getElementById('enable-stream');
+            const streamView = document.getElementById('stream-view');
 
-</div>
-<script>
-    function documentLoaded() {
-        const streamButton = document.getElementById('enable-stream');
-        const streamView = document.getElementById('stream-view');
+            streamButton.onclick = enableStream;
 
-        streamButton.onclick = enableStream;
-        function enableStream() {
-            streamView.src = `http://192.168.137.87:81/stream`;
+            function enableStream() {
+                streamView.src = `http://192.168.137.87:81/stream`;
+            }
         }
-    }
 
-    document.addEventListener('DOMContentLoaded', documentLoaded);
-</script>
+        document.addEventListener('DOMContentLoaded', documentLoaded);
+    </script>
 {% endblock %}
