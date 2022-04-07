@@ -3,8 +3,9 @@
 <link rel='stylesheet' href='{{ url_for('static', filename='style.css') }}'/>
 <meta charset='UTF-8' content='width=device-width, initial-scale=1.0' name='viewport'>
 <title>{% block title %}{% endblock %}</title>
+<body class="{{ body_class }}">
 <nav class='topNav'>
-    <a href='{{ url_for('selection') }}' title='Nav live button'>
+    <a href='{{ url_for('index') }}' title='Nav home button'>
         <img alt='Nav home image' class='btnImage border' src='{{ url_for('static', filename='home.jpg') }}'>
     </a>
     <a href='{{ url_for('live') }}' title='Nav live button'>
@@ -26,3 +27,4 @@
     {% endfor %}
     {% block content %}{% endblock %}
 </section>
+</body>
