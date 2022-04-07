@@ -1,6 +1,7 @@
 import io
 import selectors
 import struct
+import time
 from enum import Enum
 from PIL import Image
 
@@ -67,26 +68,21 @@ class Message:
         self._recv_len = None
         self._recv_type = None
 
-        print(f"len2 {len(data)}")
         if packet_type is PacketType.RAW:
             print('Raw')
         elif packet_type is PacketType.STATE:
             print('State')
         elif packet_type is PacketType.IMAGE:
-            with open('image1.jpeg', 'ab') as f:
+            start_time = time.time()
+            with open('image1.jpeg', 'wb') as f:
                 f.write(data)
+            print("--- %s seconds ---" % (time.time() - start_time))
 
-            #with Image.open(data) as img:
-            #    print(img.size)
-            #    img.save('image2.jpeg')
-
+            start_time = time.time()
             with Image.open(io.BytesIO(data)) as img:
                 print(img.size)
-                img.save('image3.jpeg')
-
-            with Image.frombytes('YCbCr', (320, 240), data) as img:
-                print(img.size)
-                img.save('image4.jpeg')
+                img.save('image2.jpeg')
+            print("--- %s seconds ---" % (time.time() - start_time))
 
             print('Image')
         else:
