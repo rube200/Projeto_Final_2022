@@ -142,7 +142,13 @@ def stats():
 @app.route('/stream')
 def stream():
     logging.debug('Requested stream')
-    stream_context = stream_with_context(img)
+
+    def generate():
+        with open('test.jpeg', 'rb') as f:
+            for row in f:
+                yield row
+
+    stream_context = stream_with_context(generate())
     return app.response_class(stream_context)
 
 
@@ -206,9 +212,6 @@ def checkIP(ip):
     return False
 
 
-img = b''
-
-
 def accept_socket_client(selector, sv_socket):
     try:
         connection, address = sv_socket.accept()
@@ -228,12 +231,14 @@ def packet_recv_callback(packet_type: PacketType, data: bytes):
     elif packet_type is PacketType.STATE:
         print('State')
     elif packet_type is PacketType.IMAGE:
-        global img
-        img = data
         start_time = time.time()
-        file = FileStorage(io.BytesIO(data), secure_filename('test.jpeg'))
-        file.save('upload', len(data))
-        print("--- %s seconds ---" % (time.time() - start_time))
+        file_name = secure_filename('test.jpeg')
+        with open(file_name, 'wb') as f:
+            f.write(data)
+
+        # file = FileStorage(io.BytesIO(data), )
+        # file.save(file_name, len(data))
+        print('--- %s seconds ---' % (time.time() - start_time))
         print('Image')
     else:
         print('None')
