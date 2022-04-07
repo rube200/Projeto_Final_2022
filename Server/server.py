@@ -68,7 +68,7 @@ def selection():
     esp_list = []
     with open("ESPs.txt", "r") as fl:
         for line in fl:
-            esp_list.append(line)
+            esp_list.append(line.split(','))
 
     return render_template('selection.html', doorbellList=esp_list)
 
