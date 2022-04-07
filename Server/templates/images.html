@@ -1,8 +1,9 @@
 {% extends 'default.html' %}
 
 
-
+{% set body_class='background' %}
 {% block content %}
+
 <div class="image">
     <img id="big" src='{{ url_for('static', filename='pfp1.jpg') }}'/>
     <!--<img id="big2" src="/esp32static/pfp1.jpg"/>-->
