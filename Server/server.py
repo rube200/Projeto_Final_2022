@@ -10,7 +10,7 @@ from threading import Thread
 import pandas
 from flask import Flask, redirect, render_template, request, stream_with_context, url_for
 from werkzeug.datastructures import FileStorage
-from werkzeug.utils import secure_filename
+from werkzeug.utils import secure_filename, send_file
 
 from message import Message, PacketType
 
@@ -93,6 +93,13 @@ def index():
 def add():
     logging.debug('Requested addEsp')
     return render_template('add.html')
+
+
+@app.route('/image')
+def image():
+    logging.debug('Requested image')
+    filename = secure_filename('test.jpeg')
+    return send_file(filename, mimetype='image/jpeg')
 
 
 @app.route('/images')
