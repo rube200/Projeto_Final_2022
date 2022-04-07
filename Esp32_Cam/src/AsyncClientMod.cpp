@@ -81,12 +81,6 @@ size_t AsyncClientMod::writeAll(const char * data, size_t size, packetType type)
     memcpy(buf+headSize, data, size);
 
     dataSource = buf;
-    Serial.printf("Sending1 %zu\n", dataLen);//todo
-    Serial.printf("Type1 %i\n", type);//todo
-    Serial.printf("Data1 %0zu\n", size);
-    Serial.printf("Data2 %02x\n", type);
-    Serial.printf("Data3 %2s\n", data);
-    Serial.printf("Data4 %2s\n", dataSource);
     written = 0;
     writeStartTime = millis();
 
@@ -152,7 +146,6 @@ bool AsyncClientMod::writeSome() {
             flags |= TCP_WRITE_FLAG_MORE;
         }
 
-        Serial.printf("Sending!! %02x\n", buf);
         nextChunkSize = AsyncClient::add(buf, nextChunkSize, flags);
         if (!nextChunkSize) {
             break;

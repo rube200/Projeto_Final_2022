@@ -7,6 +7,10 @@ static void restartEsp() {
     assert(0);
 }
 
+static int64_t calculateTime(int64_t start) {
+    return (esp_timer_get_time() - start) / 1000;
+}
+
 void Esp32Cam::begin() {
     Serial.begin(SERIAL_BAUD);
     Serial.setDebugOutput(true);
@@ -19,18 +23,20 @@ void Esp32Cam::begin() {
 }
 
 bool Esp32Cam::captureCameraAndSend() {
-    int64_t st = esp_timer_get_time();
     if (!isReady()) {
         Serial.println("Socket is not ready!");
         return false;
     }
 
+    int64_t start = esp_timer_get_time();
     if (!isCameraOn && !beginCamera()) {
         Serial.println("Fail to capture camera frame. Camera is off");
         return false;
     }
+    Serial.printf("%lli ms to initialize camera.\n", calculateTime(start));
 
-    camera_fb_t *fb = esp_camera_fb_get();
+    start = esp_timer_get_time();
+    camera_fb_t * fb = esp_camera_fb_get();
     if (!fb) {
         Serial.println("Fail to capture camera frame. FB is null.");
         return false;
@@ -51,20 +57,18 @@ bool Esp32Cam::captureCameraAndSend() {
             return false;
         }
     }
+    Serial.printf("%lli ms to capture and convert.\n", calculateTime(start));
 
-    int64_t en = esp_timer_get_time();
-    Serial.printf("Capture took %lli\n", ((en - st) / 1000));
-
+    start = esp_timer_get_time();
     size_t written = tcpClient.writeAll((char *) imgBuf, imgLen, Image);
-    free(imgBuf);
+    Serial.printf("%lli ms to write tcp.\n", calculateTime(start));
 
+    free(imgBuf);
     if (written != imgLen) {
         Serial.printf("Fail to send img! Sent: %zu of %zu\n", written, imgLen);
         return false;
     }
 
-    int64_t sd = esp_timer_get_time();
-    Serial.printf("Capture and sent took %lli\n", ((sd - st) / 1000));
     return true;
 }
 
