@@ -1,8 +1,26 @@
-import logging
-import selectors
+import logging as log
 import struct
-import traceback
 from enum import Enum
+from selectors import BaseSelector, EVENT_READ, EVENT_WRITE
+from socket import socket
+from traceback import format_exc
+from typing import Any, Tuple, Union
+
+Address = Union[Tuple[Any, ...], str]
+
+
+def wrap_try_except(func: (), msg: str = None, ex_cb: () = None):
+    try:
+        func()
+    except Exception as ex:
+        if msg:
+            log.exception(f'{msg}: {ex!r}')
+        else:
+            log.exception(f'Exception as occurred: {ex!r}')
+        log.exception(f'{format_exc()}')
+
+        if ex_cb:
+            ex_cb(ex)
 
 
 class PacketType(Enum):
@@ -11,35 +29,58 @@ class PacketType(Enum):
     IMAGE = 2
 
 
-class Message:
-    def __init__(self, selector, client_socket, client_address, packet_recv_callback):
-        self.selector = selector
-        self.client_socket = client_socket
-        self.client_address = client_address
-        self.packet_recv_callback = packet_recv_callback
+class SocketClient:
+    def __init__(self, selector: BaseSelector, connection: socket, address: Address, packet_cb: ()):
+        self._address = address
+        self._connection = connection
+        self._packet_cb = packet_cb
+        self._selector = selector
+
+        self._closed = False
         self._recv_buffer = b''
         self._recv_len = None
         self._recv_type = None
         self._send_buffer = b''
 
-    def close(self):
-        logging.info(f'Closing connection to {self.client_address}')
-        try:
-            self.selector.unregister(self.client_socket)
-        except Exception as ex:
-            logging.exception(f'Exception while unregister socket for {self.client_address}: {ex!r}')
+    def __del__(self):
+        self.close()
 
-        try:
-            self.client_socket.close()
-        except OSError as e:
-            logging.exception(f'Exception while closing socket for {self.client_address}: {e!r}')
-        finally:
-            self.client_socket = None
+    def __exit__(self, *args):
+        self.close()
+
+    def __str__(self) -> str:
+        return self._connection.__str__()
+
+    @property
+    def address(self):
+        return self._address
+
+    def close(self):
+        if self._closed:
+            return
+
+        self._closed = True
+
+        log.info(f'Closing connection to {self._address}')
+        wrap_try_except(lambda: self._selector.unregister(self._connection),
+                        f'Exception while unregister socket for {self._address}')
+        wrap_try_except(self._connection.close,
+                        f'Exception while closing socket for {self._address}')
+
+        self._address = None
+        self._connection = None
+        self._packet_cb = None
+        self._selector = None
+
+        self._recv_buffer = b''
+        self._recv_len = None
+        self._recv_type = None
+        self._send_buffer = b''
 
     def process_events(self, mask):
-        if mask & selectors.EVENT_READ:
+        if mask & EVENT_READ:
             self.read()
-        if mask & selectors.EVENT_WRITE:
+        if mask & EVENT_WRITE:
             self.write()
 
     def process_len(self):
@@ -68,14 +109,14 @@ class Message:
         self._recv_type = None
 
         if not self.packet_recv_callback:
-            logging.info(f'Client {self.client_address} received a packet but don\'t have a callback to process it.')
+            log.info(f'Client {self.client_address} received a packet but don\'t have a callback to process it.')
             return
 
         try:
             self.packet_recv_callback(packet_type, data)
         except Exception as ex:
-            logging.exception(f'Exception while processing packet for {self.client_address}: {ex!r}')
-            logging.exception(f'{traceback.format_exc()}')
+            log.exception(f'Exception while processing packet for {self.client_address}: {ex!r}')
+            log.exception(f'{traceback.format_exc()}')
 
     def process_type(self):
         if not self._recv_len or self._recv_type:
