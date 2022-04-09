@@ -1,57 +1,87 @@
 import logging as log
-from selectors import DefaultSelector, EVENT_READ
-from socketserver import ThreadingTCPServer
+from multiprocessing.pool import ThreadPool
+from selectors import BaseSelector, EVENT_READ, PollSelector
+from socket import socket
+from threading import Event, Thread
+from traceback import format_exc
 
-from flup.server.threadpool import ThreadPool
-
-from socket_client import Address, PacketType, SocketClient, wrap_try_except
+from socket_client import Address, PacketType, SocketClient
 
 
-class SocketServer(ThreadingTCPServer):
+def run_socket_server(host_address: Address, debug: bool = False):
+    with SocketServer(host_address, debug) as server:
+        socket_thread = Thread(target=server.serve_forever)
+        socket_thread.daemon = True
+        socket_thread.start()
+
+
+class SocketServer(socket):
     def __init__(self, host_address: Address, debug: bool = False):
-        super().__init__(host_address, )
-        self._host_address = host_address
-        self._selector = DefaultSelector()
-        self._threadPool = ThreadPool
         log.basicConfig(filename='socket.log', level=log.DEBUG if debug else log.WARNING)
 
+        try:
+            super().__init__()
+
+            self._host_address = host_address
+            self._selector = PollSelector
+            self._shutdown_event = Event()
+            self._shutdown_request = False
+
+            self.bind(self._host_address)
+            self.listen()
+            self.setblocking(False)
+            log.info('Socket ready!')
+        except Exception as ex:
+            self.close()
+            log.error(f'Exception while setting up SocketServer: {ex!r}')
+            log.error(format_exc())
+
     def __enter__(self):
-        self.setup_server()
+        return self
 
-    def setup_server(self):
-        self.bind(self._host_address)
-        self.listen()
-        self.setblocking(False)
+    def __exit__(self, *args):
+        self._shutdown_request = True
+        self._shutdown_event.wait()
+        super().__exit__()
 
-        self._selector.register(self, EVENT_READ)
-        log.info('Socket ready! Waiting connections...')
+    def serve_forever(self, poll_interval: float = 0.5):
+        self._shutdown_event.clear()
 
-    def process_server(self, infinite_loop: bool = True):
-        if not infinite_loop:
-            self._process_server()
+        try:
+            with self._selector() as selector, ThreadPool() as thread_pool:
+                selector.register(self, EVENT_READ)
+                log.info('Waiting connections...')
+
+                while not self._shutdown_request:
+                    key, mask = selector.select(poll_interval)
+                    if self._shutdown_request:
+                        break
+
+                    if not key:
+                        self._accept_client(selector, thread_pool)
+                        return
+
+                    data = key.data
+                    try:
+                        data.process_events(mask)
+                    except Exception as ex:
+                        log.exception(f'Exception while processing event for {data.client_address}: {ex!r}')
+                        log.exception(f'{format_exc()}')
+                        data.close()
+        finally:
+            self._shutdown_event.set()
+            self._shutdown_request = False
+
+    def _accept_client(self, selector: PollSelector, thread_pool: ThreadPool):
+        try:
+            connection, address = self.accept()
+            log.info(f'Accepted a connection from {address}')
+        except OSError:
             return
 
-        while True:
-            self._process_server()
-
-    def _process_server(self):
-        events = self._selector.select()
-        for key, mask in events:
-            if not key.data:
-                wrap_try_except(self._accept_client, 'Exception while accepting new client')
-                return
-
-            data: SocketClient = key.data
-            wrap_try_except(lambda: data.process_events(mask), f'Exception while processing event for {data.address}',
-                            lambda: data.close)
-
-    def _accept_client(self):
-        connection, address = self.accept()
-        log.info(f'Accepted a connection from {address}')
-
         connection.setblocking(False)
-        message = SocketClient(self._selector, connection, address, self._process_packet)
-        self._selector.register(connection, EVENT_READ, data=message)
+        client = SocketClient(address, connection, selector, thread_pool)
+        selector.register(connection, EVENT_READ, client)
 
     def _process_packet(self, packet_type: PacketType, data: bytes):
         if packet_type is PacketType.RAW:
