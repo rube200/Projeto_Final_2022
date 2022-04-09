@@ -1,26 +1,12 @@
 import logging as log
 import struct
 from enum import Enum
-from selectors import BaseSelector, EVENT_READ, EVENT_WRITE
+from selectors import EVENT_READ, EVENT_WRITE, PollSelector
 from socket import socket
 from traceback import format_exc
 from typing import Any, Tuple, Union
 
 Address = Union[Tuple[Any, ...], str]
-
-
-def wrap_try_except(func: (), msg: str = None, ex_cb: () = None):
-    try:
-        func()
-    except Exception as ex:
-        if msg:
-            log.exception(f'{msg}: {ex!r}')
-        else:
-            log.exception(f'Exception as occurred: {ex!r}')
-        log.exception(f'{format_exc()}')
-
-        if ex_cb:
-            ex_cb(ex)
 
 
 class PacketType(Enum):
@@ -30,12 +16,13 @@ class PacketType(Enum):
 
 
 class SocketClient:
-    def __init__(self, selector: BaseSelector, connection: socket, address: Address, packet_cb: ()):
+    def __init__(self, address: Address, connection: socket, selector: PollSelector, shared_dictionary: dict):
         self._address = address
         self._connection = connection
-        self._packet_cb = packet_cb
+        self._shared_dictionary = shared_dictionary
         self._selector = selector
 
+        self._camera = b''
         self._closed = False
         self._recv_buffer = b''
         self._recv_len = None
@@ -45,15 +32,16 @@ class SocketClient:
     def __del__(self):
         self.close()
 
-    def __exit__(self, *args):
-        self.close()
-
     def __str__(self) -> str:
         return self._connection.__str__()
 
     @property
     def address(self):
         return self._address
+
+    @property
+    def camera(self):
+        return self._camera
 
     def close(self):
         if self._closed:
@@ -62,14 +50,11 @@ class SocketClient:
         self._closed = True
 
         log.info(f'Closing connection to {self._address}')
-        wrap_try_except(lambda: self._selector.unregister(self._connection),
-                        f'Exception while unregister socket for {self._address}')
-        wrap_try_except(self._connection.close,
-                        f'Exception while closing socket for {self._address}')
+        self._selector.unregister(self._connection)
+        self._connection.close()
 
         self._address = None
         self._connection = None
-        self._packet_cb = None
         self._selector = None
 
         self._recv_buffer = b''
@@ -78,10 +63,15 @@ class SocketClient:
         self._send_buffer = b''
 
     def process_events(self, mask):
-        if mask & EVENT_READ:
-            self.read()
-        if mask & EVENT_WRITE:
-            self.write()
+        try:
+            if mask & EVENT_READ:
+                self.read()
+            if mask & EVENT_WRITE:
+                self.write()
+        except Exception as ex:
+            log.exception(f'Exception while processing event for {self.address}: {ex!r}')
+            log.exception(f'{format_exc()}')
+            self.close()
 
     def process_len(self):
         if self._recv_len:
@@ -108,15 +98,22 @@ class SocketClient:
         self._recv_len = None
         self._recv_type = None
 
-        if not self.packet_recv_callback:
-            log.info(f'Client {self.client_address} received a packet but don\'t have a callback to process it.')
-            return
-
         try:
-            self.packet_recv_callback(packet_type, data)
+            self._process_packet(packet_type, data)
         except Exception as ex:
-            log.exception(f'Exception while processing packet for {self.client_address}: {ex!r}')
-            log.exception(f'{traceback.format_exc()}')
+            log.exception(f'Exception while processing packet for {self.address}: {ex!r}')
+            log.exception(f'{format_exc()}')
+
+    def _process_packet(self, packet_type: PacketType, data: bytes):
+        if packet_type is PacketType.RAW:
+            print('Raw')
+        elif packet_type is PacketType.STATE:
+            print('State')
+        elif packet_type is PacketType.IMAGE:
+            log.debug(f'Received a image from {self.address}')
+            self._camera = data
+        else:
+            print('None')
 
     def process_type(self):
         if not self._recv_len or self._recv_type:
@@ -131,7 +128,7 @@ class SocketClient:
 
     def _read(self):
         try:
-            data = self.client_socket.recv(2048)
+            data = self._connection.recv(2048)
         except BlockingIOError:
             pass
         else:
@@ -152,7 +149,7 @@ class SocketClient:
             return
 
         try:
-            sent = self.client_socket.send(self._send_buffer)
+            sent = self._connection.send(self._send_buffer)
         except BlockingIOError:
             pass
         else:

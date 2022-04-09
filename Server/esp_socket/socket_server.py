@@ -1,31 +1,40 @@
 import logging as log
-from multiprocessing.pool import ThreadPool
-from selectors import BaseSelector, EVENT_READ, PollSelector
+from concurrent.futures.thread import ThreadPoolExecutor
+from selectors import EVENT_READ, PollSelector
 from socket import socket
 from threading import Event, Thread
 from traceback import format_exc
 
-from socket_client import Address, PacketType, SocketClient
+from socket_client import Address, SocketClient
 
 
-def run_socket_server(host_address: Address, debug: bool = False):
-    with SocketServer(host_address, debug) as server:
-        socket_thread = Thread(target=server.serve_forever)
-        socket_thread.daemon = True
-        socket_thread.start()
+def run_socket_server(host_address: Address, shared_dictionary: dict, debug: bool = False):
+    socket_thread = Thread(target=_run_socket_server, args=(host_address, shared_dictionary, debug, ...))
+    socket_thread.daemon = True
+    socket_thread.start()
+
+
+def _run_socket_server(host_address: Address, shared_dictionary: dict, thread_pool: ThreadPoolExecutor,
+                       debug: bool = False):
+    with PollSelector() as selector, SocketServer(host_address, selector, shared_dictionary, thread_pool,
+                                                  debug) as server:
+        server.serve_forever()
 
 
 class SocketServer(socket):
-    def __init__(self, host_address: Address, debug: bool = False):
+    def __init__(self, host_address: Address, selector: PollSelector, shared_dictionary: dict,
+                 thread_pool: ThreadPoolExecutor, debug: bool = False):
         log.basicConfig(filename='socket.log', level=log.DEBUG if debug else log.WARNING)
 
         try:
             super().__init__()
 
             self._host_address = host_address
-            self._selector = PollSelector
+            self._selector = selector
+            self._shared_dictionary = shared_dictionary
             self._shutdown_event = Event()
             self._shutdown_request = False
+            self._thread_pool = thread_pool
 
             self.bind(self._host_address)
             self.listen()
@@ -48,31 +57,25 @@ class SocketServer(socket):
         self._shutdown_event.clear()
 
         try:
-            with self._selector() as selector, ThreadPool() as thread_pool:
-                selector.register(self, EVENT_READ)
-                log.info('Waiting connections...')
+            self._selector.register(self, EVENT_READ)
+            log.info('Waiting connections...')
 
-                while not self._shutdown_request:
-                    key, mask = selector.select(poll_interval)
-                    if self._shutdown_request:
-                        break
+            while not self._shutdown_request:
+                key, mask = self._selector.select(poll_interval)
+                if self._shutdown_request:
+                    break
 
-                    if not key:
-                        self._accept_client(selector, thread_pool)
-                        return
+                if not key:
+                    self._accept_client()
+                    return
 
-                    data = key.data
-                    try:
-                        data.process_events(mask)
-                    except Exception as ex:
-                        log.exception(f'Exception while processing event for {data.client_address}: {ex!r}')
-                        log.exception(f'{format_exc()}')
-                        data.close()
+                self._thread_pool.submit(key.data.process_events, mask)
+
         finally:
             self._shutdown_event.set()
             self._shutdown_request = False
 
-    def _accept_client(self, selector: PollSelector, thread_pool: ThreadPool):
+    def _accept_client(self):
         try:
             connection, address = self.accept()
             log.info(f'Accepted a connection from {address}')
@@ -80,17 +83,5 @@ class SocketServer(socket):
             return
 
         connection.setblocking(False)
-        client = SocketClient(address, connection, selector, thread_pool)
-        selector.register(connection, EVENT_READ, client)
-
-    def _process_packet(self, packet_type: PacketType, data: bytes):
-        if packet_type is PacketType.RAW:
-            print('Raw')
-        elif packet_type is PacketType.STATE:
-            print('State')
-        elif packet_type is PacketType.IMAGE:
-            print('Image')
-            with open('test.jpeg', 'wb') as f:
-                f.write(data)
-        else:
-            print('None')
+        client = SocketClient(address, connection, self._selector, self._shared_dictionary)
+        self._selector.register(connection, EVENT_READ, client)
