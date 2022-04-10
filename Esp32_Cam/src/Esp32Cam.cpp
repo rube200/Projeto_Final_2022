@@ -73,7 +73,6 @@ void Esp32Cam::connectSocket() {
         return;
     }
     Serial.println("Connection requested...");
-    Serial.println(tcpClient.state());
 }
 
 bool Esp32Cam::isDisconnected() {
@@ -100,7 +99,7 @@ bool Esp32Cam::beginCamera() {
 
     esp_err_t err = esp_camera_init(&cameraConfig);
     if (err != ESP_OK) {
-        Serial.printf("Fail to start camera error 0x%x", err);
+        Serial.printf("Fail to start camera error %s", esp_err_to_name(err));
         return false;
     }
 
@@ -117,7 +116,7 @@ bool Esp32Cam::endCamera() {
 
     esp_err_t err = esp_camera_deinit();
     if (err != ESP_OK) {
-        Serial.printf("Fail to stop camera error 0x%x", err);
+        Serial.printf("Fail to stop camera error %s", esp_err_to_name(err));
         return false;
     }
 
@@ -168,7 +167,7 @@ void Esp32Cam::onTcpDisconnect(void *, AsyncClient *) {
 }
 
 void Esp32Cam::onTcpError(void *, AsyncClient *, int8_t err) {
-    Serial.printf("Tcp client error 0x%x\n", err);
+    Serial.printf("Tcp client error %s\n", esp_err_to_name(err));
 }
 
 void Esp32Cam::onTcpPacket(void * arg, AsyncClient * client, pbuf * pb) {
