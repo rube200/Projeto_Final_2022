@@ -9,12 +9,13 @@
 {% block content %}
     <div id='center'>
         {% for doorbell in doorbellList %}
+            <p>->{{ doorbell }}<-</p>
             <button onclick='selectDoorBell(value)' value='{{ doorbell[1] }}'>
                 <img alt='{{ doorbell }}' class='smallImage' src='{{ url_for('static', filename='doorbell.png') }}'/>
                 {{ doorbell[0] }}
             </button>
         {% endfor %}
-        <a href='{{ url_for('add') }}' title='add'>
+        <a href='{{ url_for('addEsp') }}' title='add'>
             <img alt='' class='btnImage' src='{{ url_for('static', filename='add.png') }}'>
         </a>
         <!--

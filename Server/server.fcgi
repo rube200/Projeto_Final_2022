@@ -1,18 +1,21 @@
 #!/usr/bin/python
-import logging
+import logging as log
 import traceback
 
 from flup.server.fcgi import WSGIServer
-from server import app
+
+from server import set_logger, web_server
+
+DEBUG = True
 
 
 def main():
     try:
-        logging.basicConfig(filename='server.fcgi.log', level=logging.WARNING)
-        WSGIServer(app).run()
+        set_logger('server.fcgi.log', DEBUG)
+        WSGIServer(web_server).run()
     except Exception as ex:
-        logging.exception(f'Exception while executing wsgi server: {ex!r}')
-        logging.exception(f'{traceback.format_exc()}')
+        log.exception(f'Exception while executing wsgi server: {ex!r}')
+        log.exception(f'{traceback.format_exc()}')
 
 
 if __name__ == '__main__':
