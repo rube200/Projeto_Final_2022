@@ -5,10 +5,33 @@ void setup() {
     espController.begin();
 }
 
+bool isWifiDown = false;
 void loop() {
-    if (!espController.isReady()) {
-        //todo reconnect socket
-        delay(50);
+    if (!WiFi.isConnected()) {
+        if (isWifiDown) {
+            Esp32Cam::restartEsp();
+            return;
+        }
+
+        isWifiDown = true;
+        Serial.println("Wifi not connected! Waiting for auto reconnect");
+        Esp32Cam::espDelay(5000, []() { return !WiFi.isConnected(); });//wait for auto reconnect
+        return;
+    } else if (isWifiDown) {
+        isWifiDown = false;
+    }
+
+    espController.isDisconnected();
+    Esp32Cam::espDelay(50);
+    return;
+    if (espController.isDisconnected()) {
+        espController.connectSocket();
+        Esp32Cam::espDelay(50);
+        return;
+    }
+
+    if (!espController.isReady()) {//connecting or disconnecting
+        Esp32Cam::espDelay(5);
         return;
     }
 
@@ -17,5 +40,5 @@ void loop() {
         Serial.println("Camera ERROR");
     }
 
-    delay(50);
+    Esp32Cam::espDelay(50);
 }

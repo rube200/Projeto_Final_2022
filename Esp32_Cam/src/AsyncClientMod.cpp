@@ -1,22 +1,5 @@
 #include "AsyncClientMod.h"
 
-const uint32_t delayIntervalMs = 1;
-static bool espTryDelay(const uint32_t startMs, const uint32_t timeoutMs) {
-    const uint32_t expired = millis() - startMs;
-    if (expired >= timeoutMs) {
-        return true;
-    }
-
-    vTaskDelay((std::min(timeoutMs - expired, delayIntervalMs) / portTICK_PERIOD_MS));
-    return false;
-}
-
-template<typename T>
-static inline void espDelay(const uint32_t timeoutMs, const T &&blocked) {
-    const auto startMs = millis();
-    while (espTryDelay(startMs, timeoutMs) && blocked());
-}
-
 AsyncClientMod::AsyncClientMod(tcp_pcb *pcb) : AsyncClient(pcb), disconnectCb(nullptr), disconnectCbArg(nullptr) {
     onAck([this](...) { turnOffSendWaiting(); });
     onDisconnect([this](void *arg, AsyncClient *) {
@@ -67,7 +50,7 @@ size_t AsyncClientMod::writeAll(const char * data, size_t size, packetType type)
     const auto headSize = 5;
     dataLen = size + headSize;
 
-    auto * buf = (char *)espMalloc(dataLen);
+    auto *buf = (char *) espMalloc(dataLen);
     if (buf == nullptr) {
         Serial.printf("Fail to allocate buffer to send %zu bytes.\n", dataLen);
         return 0;

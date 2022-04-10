@@ -1,12 +1,5 @@
 #include "Esp32Cam.h"
 
-static void restartEsp() {
-    Serial.println("Restarting ESP in 3s...");
-    delay(3000);
-    ESP.restart();
-    assert(0);
-}
-
 static int64_t calculateTime(int64_t start) {
     return (esp_timer_get_time() - start) / 1000;
 }
@@ -45,7 +38,7 @@ bool Esp32Cam::captureCameraAndSend() {
     uint8_t * imgBuf;
     size_t imgLen;
     if (fb->format == PIXFORMAT_JPEG) {
-        imgBuf = (uint8_t *) espMalloc(fb->len);
+        imgBuf = (uint8_t *) AsyncClientMod::espMalloc(fb->len);
         imgLen = fb->len;
         memcpy(imgBuf, fb->buf, imgLen);
         esp_camera_fb_return(fb);
@@ -72,8 +65,31 @@ bool Esp32Cam::captureCameraAndSend() {
     return true;
 }
 
+void Esp32Cam::connectSocket() {
+    Serial.println("Connecting to host...");
+    if (!tcpClient.connect(REMOTE_HOST, REMOTE_PORT)) {
+        Serial.println("Fail to connect to host.");
+        restartEsp();
+        return;
+    }
+    Serial.println("Connection requested...");
+    Serial.println(tcpClient.state());
+}
+
+bool Esp32Cam::isDisconnected() {
+    Serial.println(tcpClient.state());
+    return tcpClient.disconnected();
+}
+
 bool Esp32Cam::isReady() {
-    return WiFi.isConnected() && tcpClient.connected();
+    return tcpClient.connected();
+}
+
+void Esp32Cam::restartEsp() {
+    Serial.println("Restarting ESP in 3s...");
+    delay(3000);
+    ESP.restart();
+    assert(0);
 }
 
 bool Esp32Cam::beginCamera() {
@@ -122,8 +138,14 @@ void Esp32Cam::startCamera() {
     Serial.println("Camera is fine.");
 }
 
+void Esp32Cam::startSocket() {
+    socketSub();
+    connectSocket();
+}
+
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "UnreachableCallsOfFunction"
+
 void Esp32Cam::socketSub() {
     Serial.println("Subscribing tcp events...");
 
@@ -136,19 +158,6 @@ void Esp32Cam::socketSub() {
     Serial.println("Tcp events subscribed.");
 }
 #pragma clang diagnostic pop
-
-void Esp32Cam::startSocket() {
-    socketSub();
-    Serial.println("Connecting to host...");
-
-    if (!tcpClient.connect(REMOTE_HOST, REMOTE_PORT)) {
-        Serial.println("Fail to connect to host.");
-        restartEsp();
-        return;
-    }
-
-    Serial.println("Connection requested...");
-}
 
 void Esp32Cam::onTcpConnect(void *, AsyncClient *) {
     Serial.println("Socket ready! Connected to host!");
@@ -175,6 +184,8 @@ void Esp32Cam::startWifiManager() {
 
     wifiManager.debugPlatformInfo();
     wifiManager.setDarkMode(true);
+    wifiManager.setMenu(wifiMenu);
+
     if (!wifiManager.autoConnect(ACCESS_POINT_NAME)) {
         Serial.println("Failed to connect to WiFi.");
         restartEsp();
