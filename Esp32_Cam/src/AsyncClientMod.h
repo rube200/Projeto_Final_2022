@@ -16,7 +16,7 @@ enum packetType : char {
 
 class AsyncClientMod : public AsyncClient {
 public:
-    explicit AsyncClientMod(tcp_pcb * = nullptr);
+    __attribute__((unused)) explicit AsyncClientMod(tcp_pcb * = nullptr);
 
     ~AsyncClientMod();
 

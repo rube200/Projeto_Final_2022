@@ -1,6 +1,6 @@
 #include "AsyncClientMod.h"
 
-AsyncClientMod::AsyncClientMod(tcp_pcb *pcb) : AsyncClient(pcb), disconnectCb(nullptr), disconnectCbArg(nullptr) {
+__attribute__((unused)) AsyncClientMod::AsyncClientMod(tcp_pcb *pcb) : AsyncClient(pcb), disconnectCb(nullptr), disconnectCbArg(nullptr) {
     onAck([this](...) { turnOffSendWaiting(); });
     onDisconnect([this](void *arg, AsyncClient *) {
         turnOffSendWaiting();
