@@ -3,15 +3,11 @@
 {% set name = self._TemplateReference__context.name|replace('.html', '')|capitalize %}
 
 {% block header %}
-    <title>User</title>
+    <hi>Profile</hi>
 {% endblock %}
 
 {% block content %}
     <div class='container'>
-
-        <hi>Profile</hi>
-        <hr>
-
         <div>
             <h4>{{ username }}</h4>
             <hr>
@@ -22,14 +18,6 @@
             {% else %}
                 <p>User not found</p>
             {% endif %}
-
         </div>
-
     </div>
-
-    </div>
-
-
-    </div>
-
 {% endblock %}

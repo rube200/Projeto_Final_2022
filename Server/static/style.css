@@ -27,20 +27,9 @@ h3 {
     overflow: hidden;
 }
 
-.video {
-    margin: 0 auto;
-    text-align: center;
-}
-
 .border {
     border-radius: 50%;
-    border-color: coral;
-    border-width: 2px;
-    border-style: solid;
-}
-
-.inline {
-    display: inline;
+    border: 2px solid #ff7f50;
 }
 
 .alignPfp{
@@ -50,18 +39,8 @@ h3 {
     border-radius: 50%;
 }
 
-.alignCenter {
-    text-align: center;
-}
-
 .alignRight {
     text-align: right;
-}
-
-.background {
-    background-size: auto;
-    background: url('suitFinal.png') no-repeat 47% 70%;
-
 }
 
 .image {
@@ -84,22 +63,7 @@ h3 {
     border-radius: 50%;
 }
 
-#rightCenter {
-    text-align: center;
-}
-
-#bottom {
-    vertical-align: bottom;
-}
-
-#left {
-    text-align: left;
-}
-
 #center {
     text-align: center;
 }
 
-#right {
-    text-align: right;
-}

@@ -1,8 +1,7 @@
-import logging
+from flask import Flask, redirect, url_for, render_template, send_file, stream_with_context
 
 from buffer import Buffer
 from esp_socket.socket_client import ClientData
-from flask import Flask, redirect, url_for, render_template, send_file, stream_with_context
 
 NAV_DICT = [
     {'name': 'Home', 'image': 'home.jpg', 'url': 'index'},
