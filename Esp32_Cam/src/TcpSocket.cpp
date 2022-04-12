@@ -49,6 +49,7 @@ bool Esp32CamSocket::connectToHost(const IPAddress &ipAddr, const uint16_t port)
     tcp_recv(pcb, &tcpRecv);
     tcp_sent(pcb, &tcpSent);
 
+    txTime = millis();
     return tcp_connect(pcb, &addr, port, &tcpConnected) != ERR_OK;
 }
 
@@ -138,6 +139,7 @@ size_t Esp32CamSocket::write(const void *data, size_t size) {
         return 0;
     }
 
+    txTime = millis();
     size_t written = 0;
     do {
         auto hasWritten = false;
@@ -167,12 +169,12 @@ size_t Esp32CamSocket::write(const void *data, size_t size) {
         }
 
         if (hasWritten) {
+            txTime = millis();
             tcp_output(selfPcb);
         }
 
-
         tcp_output(selfPcb);
-        if (isClosed() || !writeBuffer || written >= writeBufferSize) {
+        if (isClosed() || !writeBuffer || written >= writeBufferSize || millis() > txTime + MAX_TIMEOUT) {
             break;
         }
 

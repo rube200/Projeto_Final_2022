@@ -59,6 +59,7 @@ private:
 
     void clearWriteBuffer();
 
+    uint32_t txTime = millis();
     bool sendWaiting = false;
     char *writeBuffer = nullptr;
     size_t writeBufferSize = 0;

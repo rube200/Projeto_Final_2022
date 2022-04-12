@@ -85,6 +85,10 @@ err_t Esp32CamSocket::tcpRecv(void *arg, tcp_pcb *pcb, pbuf *buf, err_t err) {
         buf = b->next;
         b->next = nullptr;
 
+#if DEBUG
+        Serial.printf("Received packet size: %i\n", b->len);
+#endif
+
         //data cb b->payload, b->len
         if (pcb) {
             tcp_recved(pcb, b->len);

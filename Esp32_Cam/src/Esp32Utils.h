@@ -5,6 +5,7 @@
 #define PACKET_HEADER 5
 #endif
 
+#define DEBUG 1
 #define ESP_32_CAM_PROJECT 1
 
 #include <Arduino.h>
