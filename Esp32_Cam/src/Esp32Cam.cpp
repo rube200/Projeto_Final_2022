@@ -1,18 +1,24 @@
 #include "Esp32Cam.h"
 
+
+#ifdef DEBUG
+bool debug = true;
 static int64_t calculateTime(int64_t start) {
     return (esp_timer_get_time() - start) / 1000;
 }
+#else
+bool debug = false;
+#endif
 
 void Esp32Cam::begin() {
     Serial.begin(SERIAL_BAUD);
-    Serial.setDebugOutput(true);
+    Serial.setDebugOutput(debug);
 
     startWifiManager();
     startCamera();
-    startSocket();
+    connectSocket();
 
-    Serial.println("Setup Completed");
+    Serial.println("Setup Completed!");
 }
 
 bool Esp32Cam::captureCameraAndSend() {
@@ -21,26 +27,29 @@ bool Esp32Cam::captureCameraAndSend() {
         return false;
     }
 
-    int64_t start = esp_timer_get_time();
+#ifdef DEBUG
+    //int64_t start = esp_timer_get_time();
+#endif
     if (!isCameraOn && !beginCamera()) {
         Serial.println("Fail to capture camera frame. Camera is off");
         return false;
     }
-    Serial.printf("%lli ms to initialize camera.\n", calculateTime(start));
-
-    start = esp_timer_get_time();
-    camera_fb_t * fb = esp_camera_fb_get();
+#ifdef DEBUG
+    //Serial.printf("%lli ms to initialize camera.\n", calculateTime(start));
+    //start = esp_timer_get_time();
+#endif
+    camera_fb_t *fb = esp_camera_fb_get();
     if (!fb) {
         Serial.println("Fail to capture camera frame. FB is null.");
         return false;
     }
 
-    uint8_t * imgBuf;
+    uint8_t *imgBuf;
     size_t imgLen;
     if (fb->format == PIXFORMAT_JPEG) {
-        imgBuf = (uint8_t *) AsyncClientMod::espMalloc(fb->len);
+        imgBuf = (uint8_t *) espMalloc(fb->len + PACKET_HEADER);
         imgLen = fb->len;
-        memcpy(imgBuf, fb->buf, imgLen);
+        memcpy(imgBuf + PACKET_HEADER, fb->buf, imgLen);
         esp_camera_fb_return(fb);
     } else {
         bool converted = frame2jpg(fb, 80, &imgBuf, &imgLen);
@@ -49,13 +58,23 @@ bool Esp32Cam::captureCameraAndSend() {
             Serial.println("Fail to convert frame to jpg.");
             return false;
         }
+
+        imgBuf = (uint8_t *) espPacketAlloc(imgBuf, imgLen, PACKET_HEADER);
     }
-    Serial.printf("%lli ms to capture and convert.\n", calculateTime(start));
 
-    start = esp_timer_get_time();
-    size_t written = tcpClient.writeAll((char *) imgBuf, imgLen, Image);
-    Serial.printf("%lli ms to write tcp.\n", calculateTime(start));
-
+#ifdef DEBUG
+    //Serial.printf("%lli ms to capture and convert.\n", calculateTime(start));
+    //start = esp_timer_get_time();
+#endif
+    imgBuf[0] = static_cast<char>(imgLen >> 24);
+    imgBuf[1] = static_cast<char>(imgLen >> 16);
+    imgBuf[2] = static_cast<char>(imgLen >> 8);
+    imgBuf[3] = static_cast<char>(imgLen);
+    imgBuf[4] = static_cast<char>(Image);
+    size_t written = espSocket.write(imgBuf, imgLen + PACKET_HEADER);
+#ifdef DEBUG
+    //Serial.printf("%lli ms to write tcp.\n", calculateTime(start));
+#endif
     free(imgBuf);
     if (written != imgLen) {
         Serial.printf("Fail to send img! Sent: %zu of %zu\n", written, imgLen);
@@ -67,7 +86,7 @@ bool Esp32Cam::captureCameraAndSend() {
 
 void Esp32Cam::connectSocket() {
     Serial.println("Connecting to host...");
-    if (!tcpClient.connect(REMOTE_HOST, REMOTE_PORT)) {
+    if (!espSocket.connect(REMOTE_HOST, REMOTE_PORT)) {
         Serial.println("Fail to connect to host.");
         restartEsp();
         return;
@@ -76,12 +95,11 @@ void Esp32Cam::connectSocket() {
 }
 
 bool Esp32Cam::isDisconnected() {
-    Serial.println(tcpClient.state());
-    return tcpClient.disconnected();
+    return espSocket.isClosed();
 }
 
 bool Esp32Cam::isReady() {
-    return tcpClient.connected();
+    return espSocket.isConnected();
 }
 
 void Esp32Cam::restartEsp() {
@@ -137,51 +155,10 @@ void Esp32Cam::startCamera() {
     Serial.println("Camera is fine.");
 }
 
-void Esp32Cam::startSocket() {
-    socketSub();
-    connectSocket();
-}
-
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "UnreachableCallsOfFunction"
-
-void Esp32Cam::socketSub() {
-    Serial.println("Subscribing tcp events...");
-
-    tcpClient.onConnect(onTcpConnect);
-    tcpClient.onDisconnectCb(onTcpDisconnect);
-    tcpClient.onError(onTcpError);
-    tcpClient.onPacket(onTcpPacket);
-    tcpClient.onTimeout(onTcpTimeout);
-
-    Serial.println("Tcp events subscribed.");
-}
-#pragma clang diagnostic pop
-
-void Esp32Cam::onTcpConnect(void *, AsyncClient *) {
-    Serial.println("Socket ready! Connected to host!");
-}
-
-void Esp32Cam::onTcpDisconnect(void *, AsyncClient *) {
-    Serial.println("Socket disconnected!");
-}
-
-void Esp32Cam::onTcpError(void *, AsyncClient *, int8_t err) {
-    Serial.printf("Tcp client error %s\n", esp_err_to_name(err));
-}
-
-void Esp32Cam::onTcpPacket(void * arg, AsyncClient * client, pbuf * pb) {
-    Serial.println("Socket packet");//TODO
-}
-
-void Esp32Cam::onTcpTimeout(void *, AsyncClient *, uint32_t time) {
-    Serial.printf("Socket timeout! Time: %u", time);
-}
-
 void Esp32Cam::startWifiManager() {
     Serial.println("Starting WiFiManager...");
 
-    wifiManager.debugPlatformInfo();
+    wifiManager.setDebugOutput(debug);
     wifiManager.setDarkMode(true);
     wifiManager.setMenu(wifiMenu);
 

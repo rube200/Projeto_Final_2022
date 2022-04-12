@@ -2,14 +2,24 @@
 #define ESP32_CAM_ESP32CAM_H
 
 #include <Arduino.h>
-#include "AsyncClientMod.h"
 #include <esp_camera.h>
+#include "Esp32Utils.h"
+#include "TcpSocket.h"
 #include <WiFiManager.h>
 
 #define ACCESS_POINT_NAME "Video-Doorbell"
 #define REMOTE_HOST "192.168.1.73"
 #define REMOTE_PORT 45000
 #define SERIAL_BAUD 115200
+
+enum packetType : char {
+    Raw = 0,
+    RequestName = 1,
+    Name = 2,
+    RequestImage,
+    Image = 4,
+    CloseCamera = 5
+};
 
 class Esp32Cam {
 public:
@@ -19,17 +29,7 @@ public:
 
     void connectSocket();
 
-    template<typename T>
-    static inline void espDelay(const uint32_t timeoutMs, const T &&blocked) {
-        AsyncClientMod::espDelay(timeoutMs, **blocked);
-    }
-
-    static inline void espDelay(const uint32_t timeoutMs) {
-        AsyncClientMod::espDelay(timeoutMs);
-    }
-
     bool isDisconnected();
-
     bool isReady();
 
     static void restartEsp();
@@ -61,8 +61,9 @@ protected:
             .jpeg_quality = 15,
             .fb_count = 2,
     };
-    bool isCameraOn{};
-    AsyncClientMod tcpClient;
+
+    bool isCameraOn;
+    Esp32CamSocket espSocket;
     WiFiManager wifiManager;
     std::vector<const char *> wifiMenu = {"wifi", "param", "exit", "sep", "custom", "exit"};
 
@@ -71,21 +72,7 @@ private:
 
     bool endCamera();
 
-    static void onTcpConnect(void *, AsyncClient *);
-
-    static void onTcpDisconnect(void *, AsyncClient *);
-
-    static void onTcpError(void *, AsyncClient *, int8_t);
-
-    static void onTcpPacket(void *, AsyncClient *, pbuf *);
-
-    static void onTcpTimeout(void *, AsyncClient *, uint32_t);
-
     void startCamera();
-
-    void startSocket();
-
-    void socketSub();
 
     void startWifiManager();
 };
