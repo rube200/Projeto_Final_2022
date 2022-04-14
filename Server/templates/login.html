@@ -1,0 +1,39 @@
+<!DOCTYPE html>   
+<html>   
+<head>  
+<meta name="viewport" content="width=device-width, initial-scale=1">  
+<title> Login Page </title> 
+ 
+    <div>   
+        <label>Username : </label>   
+        <input type="text" placeholder="Enter Username" id="username" required>  
+        <label>Password : </label>   
+        <input type="password" placeholder="Enter Password" id="password" required>  
+        <button onclick='login()'>Login</button>     
+    </div>   
+
+    <script>
+        function login() {
+            const xhr = new XMLHttpRequest();
+            const fd = new FormData();
+
+            fd.append('usr', document.getElementById('username').value);
+            fd.append('pw', document.getElementById('password').value);
+            //XHR.addEventListener( 'load', function( event ) {
+            //alert( 'Yeah! Data sent and response loaded.' );
+            //} );
+
+            // Define what happens in case of error
+            xhr.addEventListener('error', function () {
+                alert('Oops! Something went wrong.');
+            });
+
+            // Set up our request
+            xhr.open('POST', '/logon');
+
+            // Send our FormData object; HTTP headers are set automatically
+            xhr.send(fd);
+            console.log('posted')
+        }
+
+    </script>
