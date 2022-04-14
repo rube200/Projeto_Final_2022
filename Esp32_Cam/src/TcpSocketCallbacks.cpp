@@ -1,10 +1,19 @@
+#include <utility>
+
 #include "TcpSocket.h"
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "ConstantFunctionResult"
 
+void Esp32CamSocket::onData(onDataDelegate callback, void *arg) {
+    onDataCallback = std::move(callback);
+    onDataCallbackArg = arg;
+}
+
 err_t Esp32CamSocket::tcpConnected(void *arg, tcp_pcb *pcb, const err_t) {
-    castSelf(arg)->selfPcb = pcb;
+    auto *self = castSelf(arg);
+    self->connecting = false;
+    self->selfPcb = pcb;
 #if ESP_32_CAM_PROJECT
     Serial.println("Socket ready! Connected to host!");
 #endif
@@ -14,8 +23,9 @@ err_t Esp32CamSocket::tcpConnected(void *arg, tcp_pcb *pcb, const err_t) {
 void Esp32CamSocket::tcpDnsFound(const char *, const ip_addr_t *ipaddr, void *arg) {
     auto *self = castSelf(arg);
     if (!ipaddr || !ipaddr->u_addr.ip4.addr) {
+        self->connecting = false;
         self->sendWaiting = false;
-        Serial.printf("Dns error: %s\n", esp_err_to_name(-55));
+        Serial.printf("Dns error: %s %i\n", esp_err_to_name(-55), -55);
         return;
     }
 
@@ -23,9 +33,10 @@ void Esp32CamSocket::tcpDnsFound(const char *, const ip_addr_t *ipaddr, void *ar
 }
 
 void Esp32CamSocket::tcpErr(void *arg, const err_t err) {
-    Serial.printf("Tcp error: %s\n", esp_err_to_name(err));
+    Serial.printf("Tcp error: %s %i\n", esp_err_to_name(err), err);
 
     auto *self = castSelf(arg);
+    self->connecting = false;
     self->sendWaiting = false;
     if (!self->selfPcb) {
         return;
@@ -46,7 +57,7 @@ void Esp32CamSocket::tcpErr(void *arg, const err_t err) {
 
 err_t Esp32CamSocket::tcpRecv(void *arg, tcp_pcb *pcb, pbuf *buf, err_t err) {
     if (err != ERR_OK) {
-        Serial.printf("Tcp recv error: %s\n", esp_err_to_name(err));
+        Serial.printf("Tcp recv error: %s %i\n", esp_err_to_name(err), err);
     }
 
     auto *self = castSelf(arg);
@@ -81,7 +92,7 @@ err_t Esp32CamSocket::tcpRecv(void *arg, tcp_pcb *pcb, pbuf *buf, err_t err) {
     }
 
     while (buf != nullptr) {
-        pbuf *b = buf;
+        auto *b = buf;
         buf = b->next;
         b->next = nullptr;
 
@@ -89,7 +100,10 @@ err_t Esp32CamSocket::tcpRecv(void *arg, tcp_pcb *pcb, pbuf *buf, err_t err) {
         Serial.printf("Received packet size: %i\n", b->len);
 #endif
 
-        //data cb b->payload, b->len
+        if (self->onDataCallback) {
+            self->onDataCallback(self->onDataCallbackArg, b->payload, b->len);
+        }
+
         if (pcb) {
             tcp_recved(pcb, b->len);
         }

@@ -1,6 +1,6 @@
 #include "TcpSocket.h"
 
-__attribute__((unused)) Esp32CamSocket::Esp32CamSocket(tcp_pcb *pcb) : connectPort(0) {
+__attribute__((unused)) Esp32CamSocket::Esp32CamSocket(tcp_pcb *pcb) {
     selfPcb = pcb;
 }
 
@@ -25,12 +25,20 @@ bool Esp32CamSocket::connect(const char *hostname, uint16_t port) {
         return connectToHost(IPAddress(addr.u_addr.ip4.addr), port);
     }
 
-    Serial.printf("Tcp dns resolve error: %s\n", esp_err_to_name(err));
+    Serial.printf("Tcp dns resolve error: %s %i\n", esp_err_to_name(err), err);
     return false;
 }
 
 bool Esp32CamSocket::connectToHost(const IPAddress &ipAddr, const uint16_t port) {
+    if (connecting) {
+        return true;
+    } else {
+        connecting = true;
+    }
+
+    Serial.println("Connecting to host...");
     if (selfPcb) {
+        connecting = false;
         Serial.printf("Tcp already connected state: %s\n", tcp_debug_state_str(selfPcb->state));
         return false;
     }
@@ -41,6 +49,10 @@ bool Esp32CamSocket::connectToHost(const IPAddress &ipAddr, const uint16_t port)
 
     auto *pcb = tcp_new_ip_type(IPADDR_TYPE_V4);
     if (!pcb) {
+        connecting = false;
+#if DEBUG
+        Serial.println("Connect pcb is null");
+#endif
         return false;
     }
 
@@ -50,7 +62,7 @@ bool Esp32CamSocket::connectToHost(const IPAddress &ipAddr, const uint16_t port)
     tcp_sent(pcb, &tcpSent);
 
     txTime = millis();
-    return tcp_connect(pcb, &addr, port, &tcpConnected) != ERR_OK;
+    return tcp_connect(pcb, &addr, port, &tcpConnected) == ERR_OK;
 }
 
 err_t Esp32CamSocket::close() {
@@ -113,8 +125,7 @@ void Esp32CamSocket::appendWriteBuffer(const void *data, size_t size) {
         return;
     }
 
-    void *prt = (char *) writeBuffer + oldSize;
-    memcpy(prt, data, size);
+    memcpy((char *) writeBuffer + oldSize, data, size);
 }
 
 void Esp32CamSocket::clearWriteBuffer() {
@@ -148,14 +159,14 @@ size_t Esp32CamSocket::write(const void *data, size_t size) {
                 break;
             }
 
-            const size_t remaining = writeBufferSize - written;
-            const size_t nextChunkSize = std::min((size_t) tcp_sndbuf(selfPcb), remaining);
+            const auto remaining = writeBufferSize - written;
+            const auto nextChunkSize = std::min((size_t) tcp_sndbuf(selfPcb), remaining);
             if (!nextChunkSize) {
                 break;
             }
 
-            const void *buf = writeBuffer + written;
-            uint8_t flags = 0;
+            const auto *buf = writeBuffer + written;
+            auto flags = 0;
             if (nextChunkSize < remaining) {
                 flags |= TCP_WRITE_FLAG_MORE;
             }
