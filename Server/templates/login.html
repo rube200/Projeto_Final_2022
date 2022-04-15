@@ -4,13 +4,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">  
 <title> Login Page </title> 
  
-    <div>   
-        <label>Username : </label>   
-        <input type="text" placeholder="Enter Username" id="username" required>  
-        <label>Password : </label>   
-        <input type="password" placeholder="Enter Password" id="password" required>  
-        <button onclick='login()'>Login</button>     
-    </div>   
+  
+    <form action="#" method="post">
+        <p>Username : </p>   
+        <p><input type="text" placeholder="Enter Username" name="username" required></p>  
+        <p>Password : </p>   
+        <p><input type="password" placeholder="Enter Password" name="password" required></p>  
+        <p><input type="submit" value="Login"></p>     
+    </form> 
 
     <script>
         function login() {
@@ -30,6 +31,11 @@
 
             // Set up our request
             xhr.open('POST', '/logon');
+            //xhr.response
+
+            xhr.onload = () => {
+
+            }
 
             // Send our FormData object; HTTP headers are set automatically
             xhr.send(fd);

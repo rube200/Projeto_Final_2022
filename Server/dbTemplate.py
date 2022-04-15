@@ -1,26 +1,22 @@
 import base64
 from xml.etree.ElementTree import tostring
-from flask import Flask, render_template, redirect, request
+from flask import Flask, render_template, redirect, request, url_for
 import sqlite3
 app = Flask(__name__)
 
-@app.route('/')
+@app.route('/', methods = ['POST', 'GET'])
 def profile():
-    return render_template('login.html')
-
-@app.route('/logon', methods = ['POST'])
-def logon():
-    #has to be request.form
-    usr = request.form.get('usr')
-    pw = request.form.get('pw')
-    print(usr)
-    print(pw)
-    conn = sqlite3.connect('proj.db')
-    c = conn.cursor()
-    c.execute("SELECT ID FROM USER WHERE NAME like ? AND PASSWORD like ?", (usr, pw))
-    m = [row[0] for row in c] [0]
-    print(m)
-    return redirect('/images/'+ str(m))
+    if request.method == 'POST':
+        usr = request.form.get('username')
+        pw = request.form.get('password')
+        conn = sqlite3.connect('proj.db')
+        c = conn.cursor()
+        c.execute("SELECT ID FROM USER WHERE NAME like ? AND PASSWORD like ?", (usr, pw))
+        m = [row[0] for row in c] [0]
+        return redirect(url_for("images", id = m))
+    else:
+        return render_template('login.html')
+    
 
 
 @app.route('/images/<id>')
@@ -29,10 +25,9 @@ def images(id):
     print(id)
     conn = sqlite3.connect('proj.db')
     c = conn.cursor()
-    m = c.execute("SELECT * FROM PICTURE WHERE USER_ID LIKE ?", (id))
-    file1 = open("base64.txt", "w") 
+    imgs = c.execute("SELECT * FROM PICTURE WHERE USER_ID LIKE ?", (id)) 
     data = []
-    for x in m:
+    for img in imgs:
         
         #Base64 Encoding
         
@@ -40,10 +35,8 @@ def images(id):
         #base64_encoded_string= base64_encoded.decode('utf-8')
 
 
-        data.append(base64.b64encode(x[1]).decode('utf-8'))
-
-        file1.write(base64.b64encode(x[1]).decode('utf-8'))
-
+        data.append(base64.b64encode(img[1]).decode('utf-8'))
+        #data.append('iVBORw0KGgoAAAANSUhEUgAAAAoAAAAJCAIAAACExCpEAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAASSURBVChTY5DutMGDRqZ0pw0A4ZNOwQNf')
     c.close()
     conn.close()    
     #print(data)
@@ -53,4 +46,4 @@ def images(id):
 
 
 if __name__ == "__main__":
-    app.run()
+    app.run(debug=True)
