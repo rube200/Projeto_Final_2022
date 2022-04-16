@@ -80,23 +80,27 @@ conn.execute(query)
 
 #insert img
 c = conn.cursor()
-with open('clouds.png', 'rb') as f:
-    blob = f.read()
-c.execute(''' INSERT INTO USER (ID, NAME, PASSWORD) VALUES(?, ?, ?)''', (3, 'sup brah', '123'))
+#with open('clouds.png', 'rb') as f:
+#    blob = f.read()
+#c.execute(''' INSERT INTO USER (ID, NAME, PASSWORD) VALUES(?, ?, ?)''', (3, 'sup brah', '123'))
 
-c.execute(''' INSERT INTO PICTURE (ID, DATA, USER_ID) VALUES(?, ?, ?)''', (1, blob, 3))
-
+#c.execute(''' INSERT INTO PICTURE (ID, DATA, USER_ID) VALUES(?, ?, ?)''', (1, blob, 3))
+m = c.execute("SELECT ID FROM USER WHERE NAME LIKE ? AND PASSWORD LIKE ?", ('sup brah', '123'))
 #to retreive img
 
-m = c.execute("SELECT * FROM PICTURE")
+#m = c.execute("SELECT * FROM PICTURE")
 
-for x in m:
-    data = x[1] # x[0] is id, 1 is blob and 2 is user_id
+#for x in m:
+#    data = x[1] # x[0] is id, 1 is blob and 2 is user_id
 
-with open('output.png','wb') as f:
-    f.write(data)
+#with open('output.png','wb') as f:
+#    f.write(data)
+m = [row[0] for row in c]
+print('b4 m')
 
 
+print(m)
+print('after m')
 conn.commit()
 c.close()
 conn.close()
