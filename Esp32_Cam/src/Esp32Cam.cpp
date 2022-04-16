@@ -16,7 +16,7 @@ void Esp32Cam::begin() {
 
     startWifiManager();
     startCamera();
-    connectSocket();
+    setupSocket();
 
     Serial.println("Setup Completed!");
 }
@@ -28,56 +28,56 @@ bool Esp32Cam::captureCameraAndSend() {
     }
 
 #ifdef DEBUG
-    //int64_t start = esp_timer_get_time();
+    auto start = esp_timer_get_time();
 #endif
     if (!isCameraOn && !beginCamera()) {
         Serial.println("Fail to capture camera frame. Camera is off");
         return false;
     }
 #ifdef DEBUG
-    //Serial.printf("%lli ms to initialize camera.\n", calculateTime(start));
-    //start = esp_timer_get_time();
+    Serial.printf("%lli ms to initialize camera.\n", calculateTime(start));
+    start = esp_timer_get_time();
 #endif
-    camera_fb_t *fb = esp_camera_fb_get();
+    auto *fb = esp_camera_fb_get();
     if (!fb) {
         Serial.println("Fail to capture camera frame. FB is null.");
         return false;
     }
 
-    uint8_t *imgBuf;
-    size_t imgLen;
+    char *packet;
+    size_t packetLen;
     if (fb->format == PIXFORMAT_JPEG) {
-        imgBuf = (uint8_t *) espMalloc(fb->len + PACKET_HEADER);
-        imgLen = fb->len;
-        memcpy(imgBuf + PACKET_HEADER, fb->buf, imgLen);
+        packet = (char *) createPacket(fb->buf, fb->len, Image, PACKET_HEADER, false);
+        packetLen = PACKET_HEADER + fb->len;
         esp_camera_fb_return(fb);
     } else {
-        bool converted = frame2jpg(fb, 80, &imgBuf, &imgLen);
+        uint8_t *imgBuf;
+        size_t imgLen;
+        const auto converted = frame2jpg(fb, 80, &imgBuf, &imgLen);
         esp_camera_fb_return(fb);
+
         if (!converted) {
             Serial.println("Fail to convert frame to jpg.");
             return false;
         }
 
-        imgBuf = (uint8_t *) espPacketAlloc(imgBuf, imgLen, PACKET_HEADER);
+        packet = (char *) createPacket(imgBuf, imgLen, Image, PACKET_HEADER);
+        packetLen = PACKET_HEADER + imgLen;
     }
 
 #ifdef DEBUG
-    //Serial.printf("%lli ms to capture and convert.\n", calculateTime(start));
-    //start = esp_timer_get_time();
+    Serial.printf("%lli ms to capture and convert.\n", calculateTime(start));
+    start = esp_timer_get_time();
 #endif
-    imgBuf[0] = static_cast<char>(imgLen >> 24);
-    imgBuf[1] = static_cast<char>(imgLen >> 16);
-    imgBuf[2] = static_cast<char>(imgLen >> 8);
-    imgBuf[3] = static_cast<char>(imgLen);
-    imgBuf[4] = static_cast<char>(Image);
-    size_t written = espSocket.write(imgBuf, imgLen + PACKET_HEADER);
+
+    size_t written = espSocket.write(packet, packetLen);
 #ifdef DEBUG
-    //Serial.printf("%lli ms to write tcp.\n", calculateTime(start));
+    Serial.printf("%lli ms to write tcp.\n", calculateTime(start));
 #endif
-    free(imgBuf);
-    if (written != imgLen) {
-        Serial.printf("Fail to send img! Sent: %zu of %zu\n", written, imgLen);
+
+    free(packet);
+    if (written != packetLen) {
+        Serial.printf("Fail to send img! Sent: %zu of %zu\n", written, packetLen);
         return false;
     }
 
@@ -85,13 +85,62 @@ bool Esp32Cam::captureCameraAndSend() {
 }
 
 void Esp32Cam::connectSocket() {
-    Serial.println("Connecting to host...");
-    if (!espSocket.connect(REMOTE_HOST, REMOTE_PORT)) {
-        Serial.println("Fail to connect to host.");
-        restartEsp();
+    if (espSocket.connect(REMOTE_HOST, REMOTE_PORT)) {
         return;
     }
-    Serial.println("Connection requested...");
+
+    Serial.println("Fail to connect to host.");
+    restartEsp();
+}
+
+void Esp32Cam::processData(void *arg, void *dt, size_t len) {//todo maybe need changes to read buffer
+    const auto data = (char *) dt;
+    if (len < 5) {
+#if DEBUG
+        Serial.printf("Ignoring packet size %zu - %s\n", len, data);
+#endif
+        return;
+    }
+
+    const auto msgLen = data[0] << 24 | data[1] << 16 | data[2] << 8 | data[3];
+    if (msgLen + PACKET_HEADER != len) {
+#if DEBUG
+        Serial.printf("Ignoring packet size unmatch %zu - %d\n", len, msgLen + PACKET_HEADER);
+#endif
+        return;
+    }
+
+    auto *self = reinterpret_cast<Esp32Cam *>(arg);
+    const auto type = static_cast<packetType>(data[4]);
+
+    switch (type) { // NOLINT(hicpp-multiway-paths-covered)
+        case Uuid:
+            self->sendUuid();
+            break;
+
+        default:
+#if DEBUG
+            Serial.printf("Unknown packet %i\n", type);
+#endif
+            break;
+    }
+}
+
+void Esp32Cam::sendUuid() {
+    auto *mac = (char *) getMacAddress();
+    auto *packet = (char *) createPacket(mac, 6, Uuid, PACKET_HEADER);
+    const auto packetSize = PACKET_HEADER + 6;
+    const auto written = espSocket.write(packet, packetSize);
+
+    free(packet);
+    if (written != packetSize) {
+        Serial.printf("Fail to send img! Sent: %zu of %d\n", written, packetSize);
+    }
+}
+
+void Esp32Cam::setupSocket() {
+    espSocket.onData(processData, this);
+    connectSocket();
 }
 
 bool Esp32Cam::isDisconnected() {
@@ -115,9 +164,9 @@ bool Esp32Cam::beginCamera() {
         return true;
     }
 
-    esp_err_t err = esp_camera_init(&cameraConfig);
+    const auto err = esp_camera_init(&cameraConfig);
     if (err != ESP_OK) {
-        Serial.printf("Fail to start camera error %s", esp_err_to_name(err));
+        Serial.printf("Fail to start camera error %s %i\n", esp_err_to_name(err), err);
         return false;
     }
 
@@ -132,9 +181,9 @@ bool Esp32Cam::endCamera() {
         return true;
     }
 
-    esp_err_t err = esp_camera_deinit();
+    const auto err = esp_camera_deinit();
     if (err != ESP_OK) {
-        Serial.printf("Fail to stop camera error %s", esp_err_to_name(err));
+        Serial.printf("Fail to stop camera error %s %i\n", esp_err_to_name(err), err);
         return false;
     }
 
@@ -153,6 +202,12 @@ void Esp32Cam::startCamera() {
     }
 
     Serial.println("Camera is fine.");
+}
+
+void *Esp32Cam::getMacAddress() {
+    auto *baseMac = espMalloc(6);
+    esp_read_mac((uint8_t *) baseMac, ESP_MAC_WIFI_STA);
+    return baseMac;
 }
 
 void Esp32Cam::startWifiManager() {

@@ -5,7 +5,7 @@ void setup() {
     espController.begin();
 }
 
-bool isWifiDown = false;
+auto isWifiDown = false;
 void loop() {
     if (!WiFi.isConnected()) {
         if (isWifiDown) {
@@ -23,7 +23,7 @@ void loop() {
 
     if (espController.isDisconnected()) {
         espController.connectSocket();
-        espDelay(50);
+        espDelay(100);
         return;
     }
 
@@ -32,11 +32,9 @@ void loop() {
         return;
     }
 
-    /*if (!espController.captureCameraAndSend()) {
+    if (!espController.captureCameraAndSend()) {
         Serial.println("Camera ERROR");
-    }*/
+    }
 
-    Serial.println("!");
-    espDelay(5000);
-    Serial.println("2!");
+    espDelay(50);
 }

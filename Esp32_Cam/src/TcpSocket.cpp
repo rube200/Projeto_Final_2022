@@ -1,6 +1,6 @@
 #include "TcpSocket.h"
 
-__attribute__((unused)) Esp32CamSocket::Esp32CamSocket(tcp_pcb *pcb) : connectPort(0) {
+__attribute__((unused)) Esp32CamSocket::Esp32CamSocket(tcp_pcb *pcb) {
     selfPcb = pcb;
 }
 
@@ -14,6 +14,12 @@ Esp32CamSocket::~Esp32CamSocket() {
 }
 
 bool Esp32CamSocket::connect(const char *hostname, uint16_t port) {
+    if (connecting) {
+        return true;
+    } else {
+        connecting = true;
+    }
+
     ip_addr_t addr;
     const auto err = dns_gethostbyname(hostname, &addr, &tcpDnsFound, this);
     if (err == ERR_INPROGRESS) {
@@ -22,15 +28,28 @@ bool Esp32CamSocket::connect(const char *hostname, uint16_t port) {
     }
 
     if (err == ERR_OK) {
-        return connectToHost(IPAddress(addr.u_addr.ip4.addr), port);
+        return connectToHostInternally(IPAddress(addr.u_addr.ip4.addr), port);
     }
 
-    Serial.printf("Tcp dns resolve error: %s\n", esp_err_to_name(err));
+    connecting = false;
+    Serial.printf("Tcp dns resolve error: %s %i\n", esp_err_to_name(err), err);
     return false;
 }
 
 bool Esp32CamSocket::connectToHost(const IPAddress &ipAddr, const uint16_t port) {
+    if (connecting) {
+        return true;
+    } else {
+        connecting = true;
+    }
+
+    return connectToHostInternally(ipAddr, port);
+}
+
+bool Esp32CamSocket::connectToHostInternally(const IPAddress &ipAddr, const uint16_t port) {
+    Serial.println("Connecting to host...");
     if (selfPcb) {
+        connecting = false;
         Serial.printf("Tcp already connected state: %s\n", tcp_debug_state_str(selfPcb->state));
         return false;
     }
@@ -41,6 +60,10 @@ bool Esp32CamSocket::connectToHost(const IPAddress &ipAddr, const uint16_t port)
 
     auto *pcb = tcp_new_ip_type(IPADDR_TYPE_V4);
     if (!pcb) {
+        connecting = false;
+#if DEBUG
+        Serial.println("Connect pcb is null");
+#endif
         return false;
     }
 
@@ -50,10 +73,19 @@ bool Esp32CamSocket::connectToHost(const IPAddress &ipAddr, const uint16_t port)
     tcp_sent(pcb, &tcpSent);
 
     txTime = millis();
-    return tcp_connect(pcb, &addr, port, &tcpConnected) != ERR_OK;
+    if (tcp_connect(pcb, &addr, port, &tcpConnected) == ERR_OK) {
+        return true;
+    }
+
+    connecting = false;
+    return true;
 }
 
 err_t Esp32CamSocket::close() {
+    x
+            connecting = false;
+    sendWaiting = false;
+
     if (!selfPcb) {
         return ERR_OK;
     }
@@ -86,11 +118,7 @@ bool Esp32CamSocket::isClosed() {
 }
 
 bool Esp32CamSocket::isConnected() {
-    if (!selfPcb) {
-        return false;
-    }
-
-    return selfPcb->state == 4;
+    return selfPcb && selfPcb->state == 4;
 }
 
 void Esp32CamSocket::appendWriteBuffer(const void *data, size_t size) {
@@ -113,8 +141,7 @@ void Esp32CamSocket::appendWriteBuffer(const void *data, size_t size) {
         return;
     }
 
-    void *prt = (char *) writeBuffer + oldSize;
-    memcpy(prt, data, size);
+    memcpy((char *) writeBuffer + oldSize, data, size);
 }
 
 void Esp32CamSocket::clearWriteBuffer() {
@@ -131,7 +158,10 @@ size_t Esp32CamSocket::write(const void *data, size_t size) {
         return 0;
     }
 
-    assert(!sendWaiting);
+    if (!sendWaiting) {
+        Serial.printf("WOW SOMETHING GOT INCREDIBLE WRONG.");
+        return 0;
+    }
     appendWriteBuffer(data, size);
     if (!writeBuffer) {
         Serial.printf("Fail to allocate buffer to send %zu bytes.\n", writeBufferSize);
@@ -145,22 +175,22 @@ size_t Esp32CamSocket::write(const void *data, size_t size) {
         auto hasWritten = false;
         while (written < writeBufferSize) {
             if (isClosed()) {
+                hasWritten = false;
                 break;
             }
 
-            const size_t remaining = writeBufferSize - written;
-            const size_t nextChunkSize = std::min((size_t) tcp_sndbuf(selfPcb), remaining);
+            const auto remaining = writeBufferSize - written;
+            const auto nextChunkSize = std::min((size_t) tcp_sndbuf(selfPcb), remaining);
             if (!nextChunkSize) {
                 break;
             }
 
-            const void *buf = writeBuffer + written;
-            uint8_t flags = 0;
+            auto flags = 0;
             if (nextChunkSize < remaining) {
                 flags |= TCP_WRITE_FLAG_MORE;
             }
 
-            if (tcp_write(selfPcb, buf, nextChunkSize, flags) != ERR_OK) {
+            if (tcp_write(selfPcb, writeBuffer + written, nextChunkSize, flags) != ERR_OK) {
                 break;
             }
 
@@ -173,7 +203,6 @@ size_t Esp32CamSocket::write(const void *data, size_t size) {
             tcp_output(selfPcb);
         }
 
-        tcp_output(selfPcb);
         if (isClosed() || !writeBuffer || written >= writeBufferSize || millis() > txTime + MAX_TIMEOUT) {
             break;
         }

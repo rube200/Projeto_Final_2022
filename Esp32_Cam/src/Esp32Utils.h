@@ -8,6 +8,13 @@
 #define DEBUG 1
 #define ESP_32_CAM_PROJECT 1
 
+enum packetType : char {
+    Raw = 0,
+    Uuid = 1,
+    Image = 2,
+    CloseCamera = 3
+};
+
 #include <Arduino.h>
 #include <cstdint>
 
@@ -18,7 +25,7 @@ static inline void espDelay(uint32_t, const T &&blocked);
 
 static bool espTryDelay(uint32_t, uint32_t);
 
-static void *espPacketAlloc(void *, size_t, size_t);
+static void *createPacket(void *, size_t, packetType, size_t = PACKET_HEADER, bool shouldFree = true);
 
 static void *espMalloc(size_t);
 
@@ -44,16 +51,25 @@ static bool espTryDelay(const uint32_t startMs, const uint32_t timeoutMs) {
     return false;
 }
 
-static void *espPacketAlloc(void *data, size_t size, size_t packetHeader) {
-    const auto allocSize = size + packetHeader;
-
-    char *res;
-    if ((res = (char *) malloc(allocSize)) ||
-        (res = (char *) heap_caps_malloc(allocSize, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT))) {
-        memcpy(res + packetHeader, data, size);
-        free(data);
+static void *createPacket(void *data, size_t size, packetType type, size_t headerSize, bool shouldFree) {
+    auto *res = (char *) espMalloc(headerSize + size);
+    if (!res) {
         return res;
     }
+
+    if (data && size > 0) {
+        memcpy(res + headerSize, data, size);
+    }
+
+    if (data && shouldFree) {
+        free(data);
+    }
+
+    res[0] = static_cast<char>(size >> 24);
+    res[1] = static_cast<char>(size >> 16);
+    res[2] = static_cast<char>(size >> 8);
+    res[3] = static_cast<char>(size);
+    res[4] = static_cast<char>(type);
 
     return res;
 }

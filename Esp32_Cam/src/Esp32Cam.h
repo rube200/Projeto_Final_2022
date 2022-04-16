@@ -8,18 +8,9 @@
 #include <WiFiManager.h>
 
 #define ACCESS_POINT_NAME "Video-Doorbell"
-#define REMOTE_HOST "192.168.1.73"
+#define REMOTE_HOST "192.168.137.1"
 #define REMOTE_PORT 45000
 #define SERIAL_BAUD 115200
-
-enum packetType : char {
-    Raw = 0,
-    RequestName = 1,
-    Name = 2,
-    RequestImage,
-    Image = 4,
-    CloseCamera = 5
-};
 
 class Esp32Cam {
 public:
@@ -30,7 +21,10 @@ public:
     void connectSocket();
 
     bool isDisconnected();
+
     bool isReady();
+
+    static void *getMacAddress();
 
     static void restartEsp();
 
@@ -65,9 +59,15 @@ protected:
     bool isCameraOn;
     Esp32CamSocket espSocket;
     WiFiManager wifiManager;
-    std::vector<const char *> wifiMenu = {"wifi", "param", "exit", "sep", "custom", "exit"};
+    std::vector<const char *> wifiMenu = {"wifi", "exit"};// "param", "sep", "custom"
 
 private:
+    static void processData(void *, void *, size_t);
+
+    void sendUuid();
+
+    void setupSocket();
+
     bool beginCamera();
 
     bool endCamera();
