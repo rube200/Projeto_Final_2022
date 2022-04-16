@@ -48,6 +48,8 @@ private:
     uint16_t connectPort = 0;
     tcp_pcb *selfPcb = nullptr;
 
+    bool connectToHostInternally(const IPAddress, const uint16_t);
+
     //Calls for events
     static err_t tcpConnected(void *, tcp_pcb *, err_t);
 

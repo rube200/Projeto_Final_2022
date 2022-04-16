@@ -52,28 +52,24 @@ static bool espTryDelay(const uint32_t startMs, const uint32_t timeoutMs) {
 }
 
 static void *createPacket(void *data, size_t size, packetType type, size_t headerSize, bool shouldFree) {
-    const auto allocSize = size + headerSize;
-
-    char *res;
-    if ((res = (char *) malloc(allocSize)) ||
-        (res = (char *) heap_caps_malloc(allocSize, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT))) {
-
-        if (data && size > 0) {
-            memcpy(res + headerSize, data, size);
-        }
-
-        if (data && shouldFree) {
-            free(data);
-        }
-
-        res[0] = static_cast<char>(size >> 24);
-        res[1] = static_cast<char>(size >> 16);
-        res[2] = static_cast<char>(size >> 8);
-        res[3] = static_cast<char>(size);
-        res[4] = static_cast<char>(type);
-
+    auto *res = (char *) espMalloc(headerSize + size);
+    if (!res) {
         return res;
     }
+
+    if (data && size > 0) {
+        memcpy(res + headerSize, data, size);
+    }
+
+    if (data && shouldFree) {
+        free(data);
+    }
+
+    res[0] = static_cast<char>(size >> 24);
+    res[1] = static_cast<char>(size >> 16);
+    res[2] = static_cast<char>(size >> 8);
+    res[3] = static_cast<char>(size);
+    res[4] = static_cast<char>(type);
 
     return res;
 }

@@ -29,7 +29,7 @@ void Esp32CamSocket::tcpDnsFound(const char *, const ip_addr_t *ipaddr, void *ar
         return;
     }
 
-    self->connectToHost(ipaddr->u_addr.ip4.addr, self->connectPort);
+    self->connectToHostInternally(ipaddr->u_addr.ip4.addr, self->connectPort);
 }
 
 void Esp32CamSocket::tcpErr(void *arg, const err_t err) {
@@ -91,7 +91,7 @@ err_t Esp32CamSocket::tcpRecv(void *arg, tcp_pcb *pcb, pbuf *buf, err_t err) {
         return ERR_OK;
     }
 
-    while (buf != nullptr) {
+    while (buf) {
         auto *b = buf;
         buf = b->next;
         b->next = nullptr;

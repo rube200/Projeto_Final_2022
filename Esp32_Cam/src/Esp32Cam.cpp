@@ -128,7 +128,7 @@ void Esp32Cam::processData(void *arg, void *dt, size_t len) {//todo maybe need c
 
 void Esp32Cam::sendUuid() {
     auto *mac = (char *) getMacAddress();
-    auto * packet = (char *) createPacket(mac, 6, Uuid, PACKET_HEADER);
+    auto *packet = (char *) createPacket(mac, 6, Uuid, PACKET_HEADER);
     const auto packetSize = PACKET_HEADER + 6;
     const auto written = espSocket.write(packet, packetSize);
 
