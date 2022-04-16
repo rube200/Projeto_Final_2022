@@ -35,7 +35,7 @@ def images(id):
         #base64_encoded_string= base64_encoded.decode('utf-8')
 
 
-        data.append(base64.b64encode(img[1]).decode('utf-8'))
+        data.append("data:image/png;charset=UTF-8;base64," + base64.b64encode(img[1]).decode('utf-8'))
         #data.append('iVBORw0KGgoAAAANSUhEUgAAAAoAAAAJCAIAAACExCpEAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAASSURBVChTY5DutMGDRqZ0pw0A4ZNOwQNf')
     c.close()
     conn.close()    

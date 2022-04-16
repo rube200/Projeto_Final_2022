@@ -104,3 +104,9 @@ print('after m')
 conn.commit()
 c.close()
 conn.close()
+
+#generate random string for img name
+def get_random_string(length):
+    # Random string with the combination of lower and upper case
+    letters = string.ascii_letters
+    return ''.join(random.choice(letters) for i in range(length))
