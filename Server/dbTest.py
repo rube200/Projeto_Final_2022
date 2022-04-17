@@ -89,19 +89,22 @@ conn.execute(query)
 
 #insert img
 c = conn.cursor()
-with open('clouds.png', 'rb') as f:
+with open('add.png', 'rb') as f:
     blob = f.read()
-c.execute(''' INSERT INTO USER (ID, NAME, PASSWORD) VALUES(?, ?, ?)''', (3, 'sup brah', '123'))
 
-c.execute(''' INSERT INTO ESP (ID, IP, NAME, USER_ID) VALUES(?, ?, ?, ?)''', (1, "1.1.1.1", 'frontDoor', 3))
-
-
+"""
 c.execute(''' INSERT INTO PICTURE (ID, DATA, USER_ID, ESP_NAME,  DATE) VALUES(?, ?, ?, ?, ?)''', (1, blob, 3, "frontDoor", datetime.datetime.now()))
 c.execute(''' INSERT INTO PICTURE (ID, DATA, USER_ID, ESP_NAME,  DATE) VALUES(?, ?, ?, ?, ?)''', (2, blob, 3, "frontDoor", datetime.datetime.now()))
 c.execute(''' INSERT INTO PICTURE (ID, DATA, USER_ID, ESP_NAME,  DATE) VALUES(?, ?, ?, ?, ?)''', (3, blob, 3, "frontDoor", datetime.datetime.now()))
 c.execute(''' INSERT INTO PICTURE (ID, DATA, USER_ID, ESP_NAME,  DATE) VALUES(?, ?, ?, ?, ?)''', (4, blob, 3, "frontDoor", datetime.datetime.now()))
 c.execute(''' INSERT INTO PICTURE (ID, DATA, USER_ID, ESP_NAME,  DATE) VALUES(?, ?, ?, ?, ?)''', (5, blob, 3, "frontDoor", datetime.datetime.now()))
-c.execute(''' INSERT INTO PICTURE (ID, DATA, USER_ID, ESP_NAME,  DATE) VALUES(?, ?, ?, ?, ?)''', (6, blob, 3, "frontDoor", datetime.datetime.now()))
+c.execute(''' INSERT INTO USER (ID, NAME, PASSWORD) VALUES(?, ?, ?)''', (3, 'sup brah', '123'))
+
+c.execute(''' INSERT INTO ESP (ID, IP, NAME, USER_ID) VALUES(?, ?, ?, ?)''', (1, "1.1.1.1", 'frontDoor', 3))
+
+
+"""
+c.execute(''' INSERT INTO PICTURE (ID, DATA, USER_ID, ESP_NAME,  DATE) VALUES(?, ?, ?, ?, ?)''', (8, blob, 3, "frontDoor", datetime.datetime.now()))
 
 
 

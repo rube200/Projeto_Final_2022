@@ -9,12 +9,36 @@
 
 
 {% for img in imgs %}
-<!--<p>"data:image/png;charset=UTF-8;base64, '{{ img }}'</p> -->
-<img alt='sup' class='btnImage' src = '{{ img }}'>
-
+    {% if loop.first %}
+        <img id='big' src= '{{ img }}'/></br>
+        {{ esps[loop.index0]}} </br>
+        {{ dates[loop.index0]}} </br>
+<!--<p>"data:image/png;charset=UTF-8;base64, '{{ img }}'</p>
+       <button id='{{ data_index }}'  onclick='changeImage(this.id)'><img alt='sup' class='btnImage' src = '{{ img }}'></button></br>
+-->
+    {% else %}
+        {% with data_index = "val" %}
+        {% set data_index = 'img' ~ loop.index %}
+        <input type="image"  id='{{ data_index }}' onclick='changeImage(this.id)' class='btnImage' src = '{{ img }}' /></br> 
+        {{ esps[loop.index0]}} </br>
+        {{ dates[loop.index0]}} </br>
+        {% endwith %}
+    {% endif %}
 {% endfor %}
 
 </body>
+
+
+<script>
+
+function changeImage(elem) {
+                tmp = document.getElementById(elem).src;
+                document.getElementById(elem).src = document.getElementById('big').src;
+                document.getElementById('big').src = tmp;
+            }
+
+
+</script>
 <!--
 
     <script>
