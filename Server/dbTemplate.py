@@ -21,26 +21,33 @@ def profile():
 
 @app.route('/images/<id>')
 def images(id):    
-    print('b4 id')
-    print(id)
     conn = sqlite3.connect('proj.db')
     c = conn.cursor()
-    imgs = c.execute("SELECT * FROM PICTURE WHERE USER_ID LIKE ?", (id)) 
+    fiveMostRecent = c.execute("SELECT DATA,DATE,ESP_NAME FROM PICTURE  WHERE USER_ID LIKE ? ORDER BY DATE desc LIMIT 5", (id,))
+    #    GROUP BY USER_ID 
+    #imgs = c.execute("SELECT * FROM PICTURE WHERE USER_ID LIKE ?", (id)) 
     data = []
-    for img in imgs:
-        
+    names = []
+    dates = []
+    for img in fiveMostRecent:
         #Base64 Encoding
         
         #base64_encoded= base64.b64encode(x[1])
         #base64_encoded_string= base64_encoded.decode('utf-8')
-
-
-        data.append("data:image/png;charset=UTF-8;base64," + base64.b64encode(img[1]).decode('utf-8'))
+        #print("printing img1")
+        #print(img[1])
+        #with open(img[0] + '.png','wb') as f:
+        #    f.write(img[1])
+        data.append("data:image/png;charset=UTF-8;base64," + base64.b64encode(img[0]).decode('utf-8'))
         #data.append('iVBORw0KGgoAAAANSUhEUgAAAAoAAAAJCAIAAACExCpEAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAASSURBVChTY5DutMGDRqZ0pw0A4ZNOwQNf')
+        dates.append(img[1].split(".")[0]) #split to remove miliseconds
+        names.append(img[2])
+    
+    
     c.close()
     conn.close()    
     #print(data)
-    return render_template('dbImage.html', imgs = data)
+    return render_template('dbImage.html', imgs = data, dates = dates, esps = names)
 
 
 

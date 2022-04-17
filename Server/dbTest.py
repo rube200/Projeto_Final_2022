@@ -1,4 +1,5 @@
 import sqlite3
+import datetime
 #from classes import User 
 
 
@@ -48,6 +49,10 @@ import sqlite3
 
 ########
 
+
+
+#in text type use YYYY-MM-DD HH:MM:SS.SSS for date and time
+
 conn = sqlite3.connect('proj.db')
 
 query = (''' CREATE TABLE IF NOT EXISTS USER
@@ -61,6 +66,7 @@ conn.execute(query)
 query = (''' CREATE TABLE IF NOT EXISTS ESP
             (ID     INTAGER     PRIMARY KEY,
             IP    TEXT        NOT NULL,
+            NAME    TEXT    NOT NULL,
             USER_ID    INTAGER    NOT NULL,
             FOREIGN KEY(USER_ID) REFERENCES USER(ID)
             ); ''')
@@ -69,9 +75,12 @@ conn.execute(query)
 
 query = (''' CREATE TABLE IF NOT EXISTS PICTURE
             (ID     INTAGER     PRIMARY KEY,
-            DATA    BLOB        NOT NULL,
+            DATA    BLOB        NOT NULL,        
             USER_ID    INTAGER    NOT NULL,
-            FOREIGN KEY(USER_ID) REFERENCES USER(ID)
+            ESP_NAME    TEXT    NOT NULL,
+            DATE    TEXT    NOT NULL,
+            FOREIGN KEY(USER_ID) REFERENCES USER(ID),
+            FOREIGN KEY(ESP_NAME) REFERENCES ESP(NAME)
             ); ''')
 
 conn.execute(query)
@@ -80,12 +89,26 @@ conn.execute(query)
 
 #insert img
 c = conn.cursor()
-#with open('clouds.png', 'rb') as f:
-#    blob = f.read()
-#c.execute(''' INSERT INTO USER (ID, NAME, PASSWORD) VALUES(?, ?, ?)''', (3, 'sup brah', '123'))
+with open('clouds.png', 'rb') as f:
+    blob = f.read()
+c.execute(''' INSERT INTO USER (ID, NAME, PASSWORD) VALUES(?, ?, ?)''', (3, 'sup brah', '123'))
 
-#c.execute(''' INSERT INTO PICTURE (ID, DATA, USER_ID) VALUES(?, ?, ?)''', (1, blob, 3))
-m = c.execute("SELECT ID FROM USER WHERE NAME LIKE ? AND PASSWORD LIKE ?", ('sup brah', '123'))
+c.execute(''' INSERT INTO ESP (ID, IP, NAME, USER_ID) VALUES(?, ?, ?, ?)''', (1, "1.1.1.1", 'frontDoor', 3))
+
+
+c.execute(''' INSERT INTO PICTURE (ID, DATA, USER_ID, ESP_NAME,  DATE) VALUES(?, ?, ?, ?, ?)''', (1, blob, 3, "frontDoor", datetime.datetime.now()))
+c.execute(''' INSERT INTO PICTURE (ID, DATA, USER_ID, ESP_NAME,  DATE) VALUES(?, ?, ?, ?, ?)''', (2, blob, 3, "frontDoor", datetime.datetime.now()))
+c.execute(''' INSERT INTO PICTURE (ID, DATA, USER_ID, ESP_NAME,  DATE) VALUES(?, ?, ?, ?, ?)''', (3, blob, 3, "frontDoor", datetime.datetime.now()))
+c.execute(''' INSERT INTO PICTURE (ID, DATA, USER_ID, ESP_NAME,  DATE) VALUES(?, ?, ?, ?, ?)''', (4, blob, 3, "frontDoor", datetime.datetime.now()))
+c.execute(''' INSERT INTO PICTURE (ID, DATA, USER_ID, ESP_NAME,  DATE) VALUES(?, ?, ?, ?, ?)''', (5, blob, 3, "frontDoor", datetime.datetime.now()))
+c.execute(''' INSERT INTO PICTURE (ID, DATA, USER_ID, ESP_NAME,  DATE) VALUES(?, ?, ?, ?, ?)''', (6, blob, 3, "frontDoor", datetime.datetime.now()))
+
+
+
+conn.commit()
+c.close()
+conn.close()
+
 #to retreive img
 
 #m = c.execute("SELECT * FROM PICTURE")
@@ -95,6 +118,8 @@ m = c.execute("SELECT ID FROM USER WHERE NAME LIKE ? AND PASSWORD LIKE ?", ('sup
 
 #with open('output.png','wb') as f:
 #    f.write(data)
+"""
+m = c.execute("SELECT ID FROM USER WHERE NAME LIKE ? AND PASSWORD LIKE ?", ('sup brah', '123'))
 m = [row[0] for row in c]
 print('b4 m')
 
@@ -104,9 +129,11 @@ print('after m')
 conn.commit()
 c.close()
 conn.close()
+"""
+
 
 #generate random string for img name
-def get_random_string(length):
+#def get_random_string(length):
     # Random string with the combination of lower and upper case
-    letters = string.ascii_letters
-    return ''.join(random.choice(letters) for i in range(length))
+#    letters = string.ascii_letters
+#    return ''.join(random.choice(letters) for i in range(length))
