@@ -32,8 +32,6 @@ public:
 
     bool connect(const char *, uint16_t);
 
-    bool connectToHost(const IPAddress &, uint16_t);
-
     err_t close();
 
     bool isClosed();
@@ -45,10 +43,10 @@ public:
     size_t write(const void *, size_t);
 
 private:
+    bool connectToHostInternally(const IPAddress &, uint16_t);
+
     uint16_t connectPort = 0;
     tcp_pcb *selfPcb = nullptr;
-
-    bool connectToHostInternally(const IPAddress, const uint16_t);
 
     //Calls for events
     static err_t tcpConnected(void *, tcp_pcb *, err_t);

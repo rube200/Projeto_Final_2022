@@ -36,16 +36,6 @@ bool Esp32CamSocket::connect(const char *hostname, uint16_t port) {
     return false;
 }
 
-bool Esp32CamSocket::connectToHost(const IPAddress &ipAddr, const uint16_t port) {
-    if (connecting) {
-        return true;
-    } else {
-        connecting = true;
-    }
-
-    return connectToHostInternally(ipAddr, port);
-}
-
 bool Esp32CamSocket::connectToHostInternally(const IPAddress &ipAddr, const uint16_t port) {
     Serial.println("Connecting to host...");
     if (selfPcb) {
@@ -82,8 +72,7 @@ bool Esp32CamSocket::connectToHostInternally(const IPAddress &ipAddr, const uint
 }
 
 err_t Esp32CamSocket::close() {
-    x
-            connecting = false;
+    connecting = false;
     sendWaiting = false;
 
     if (!selfPcb) {

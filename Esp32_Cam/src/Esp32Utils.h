@@ -25,7 +25,7 @@ static inline void espDelay(uint32_t, const T &&blocked);
 
 static bool espTryDelay(uint32_t, uint32_t);
 
-static void *createPacket(void *, size_t, packetType, size_t = PACKET_HEADER, bool shouldFree = true);
+static void *createPacket(void *, size_t, packetType, size_t = PACKET_HEADER, bool = true);
 
 static void *espMalloc(size_t);
 
