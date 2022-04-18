@@ -4,12 +4,11 @@ from selectors import DefaultSelector, EVENT_READ
 from socket import socket
 from traceback import format_exc
 
-from Test.buffer import Buffer
 from esp_socket.socket_client import SocketClient
 
 
 class SocketServer(socket):
-    def __init__(self, _esp_clients: Buffer = None):
+    def __init__(self, _esp_clients: dict = None):
         super().__init__()
         self._disposed = False
         self._esp_clients = _esp_clients or {}
