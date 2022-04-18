@@ -1,7 +1,4 @@
-from flask import Flask, redirect, url_for, render_template, send_file, stream_with_context
-
-from buffer import Buffer
-from esp_socket.socket_client import ClientData
+from flask import abort, Flask, redirect, render_template, send_file, url_for, stream_with_context
 
 NAV_DICT = [
     {'name': 'Home', 'image': 'home.jpg', 'url': 'index'},
@@ -12,81 +9,90 @@ NAV_DICT = [
 
 
 class WebServer(Flask):
-    def __init__(self, debug: bool = False, name: str = 'Video-Doorbell'):
-        super().__init__(name)
-        self.debug = debug
-        self.env = 'development'
-        self.name = name
-        self.static_url_path = '/esp32static'
-        self._shared_dictionary = None
+    def __init__(self, _esp_clients: dict = None):
+        super().__init__(import_name=__name__, static_url_path='/esp32static')
+        self._esp_clients = _esp_clients or {}
 
-        self.add_url_rule('/', view_func=self.index)
-        self.add_url_rule('/addEsp', view_func=self.addEsp)
-        self.add_url_rule('/<int:esp_id>/image', view_func=self.image)
-        self.add_url_rule('/<int:esp_id>/live', view_func=self.live)
-        self.add_url_rule('/selection', view_func=self.selection)
-        self.add_url_rule('/stats', view_func=self.stats)
-        self.add_url_rule('/<int:esp_id>/stream', view_func=self.stream)
+    @property
+    def esp_clients(self):
+        return dict(self._esp_clients)
 
-        self.context_processor(self.inject_nav)
-        self.register_error_handler(404, self.page_not_found)
+    @esp_clients.setter
+    def esp_clients(self, value: dict):
+        self._esp_clients = value
 
-    def run_server(self):
-        self.run(host='0.0.0.0', port=80)
+    def get_client(self, esp_id: int):
+        return self._esp_clients.get(esp_id)
 
-    def set_shared_dict(self, shared_dictionary: Buffer):
-        self._shared_dictionary = shared_dictionary
 
-    @staticmethod
-    def inject_nav():
-        return dict(nav=NAV_DICT)
+web = WebServer()
 
-    @staticmethod
-    def page_not_found():
-        return redirect(url_for('index'))
 
-    def index(self):
-        return self.selection()
+@web.context_processor
+def inject_nav():
+    return dict(nav=NAV_DICT)
 
-    @staticmethod
-    def addEsp():  # todo
-        return render_template('add.html')
 
-    def image(self, esp_id: int):
-        client: ClientData = self._shared_dictionary.buffer.get(esp_id)
-        if not client:
-            return self.page_not_found()
+@web.errorhandler(404)
+def page_not_found():
+    return redirect(url_for('index'))
 
-        return send_file(client.camera, mimetype='image/jpeg')
 
-    def live(self, esp_id: int):
-        client: ClientData = self._shared_dictionary.buffer.get(esp_id)
-        return render_template('live.html')
+@web.errorhandler(400)
+def invalid_request():
+    return redirect(url_for('index'))
 
-    def selection(self):
-        esp_list = []
-        with open('ESPs.txt', 'r') as fl:
-            for line in fl:
-                esp_list.append(line.split(','))
 
-        door_bells = {}
-        buf = self._shared_dictionary.buffer
-        for k in buf:
-            door_bells[k] = buf[k].name
+@web.route('/')
+def index():
+    return selection()
 
-        return render_template('selection.html', doorbellList=door_bells)
 
-    @staticmethod
-    def stats():
-        return render_template('stats.html')
+@web.route('/addEsp')
+def addEsp():
+    return render_template('add.html')
 
-    def stream(self, esp_id: int):
-        client: ClientData = self._shared_dictionary.buffer.get(esp_id)
 
-        def generate():
-            yield b'--frame\r\n'
-            while True:
-                yield b'Content-Type: image/jpeg\r\n\r\n' + client.camera + b'\r\n--frame\r\n'
+@web.route('/<int:esp_id>/image')
+def image(esp_id: int):
+    client = web.get_client(esp_id)
+    return send_file(client.camera, mimetype='image/jpeg') if client else abort(400)
 
-        stream_context = stream_with_context(generate())
-        return self.response_class(stream_context, mimetype='multipart/x-mixed-replace; boundary=frame')
+
+@web.route('/<int:esp_id>/live')
+def live(esp_id: int):
+    client = web.get_client(esp_id)
+    return render_template('live.html') if client else abort(400)
+
+
+@web.route('/selection')
+def selection():
+    esp_list = []
+    with open('ESPs.txt', 'r') as fl:
+        for line in fl:
+            esp_list.append(line.split(','))
+
+    door_bells = {}
+    buf = web.esp_clients
+    for k in buf:
+        door_bells[k] = buf[k].unique_id
+
+    return render_template('selection.html', doorbellList=door_bells)
+
+
+@web.route('/stats')
+def stats():
+    return render_template('stats.html')
+
+
+@web.route('/stream')
+def stream(self, esp_id: int):
+    client = web.get_client(esp_id)
+
+    def generate():
+        yield b'--frame\r\n'
+        while True:
+            yield b'Content-Type: image/jpeg\r\n\r\n' + client.camera + b'\r\n--frame\r\n'
+
+    stream_context = stream_with_context(generate())
+    return self.response_class(stream_context, mimetype='multipart/x-mixed-replace; boundary=frame')
