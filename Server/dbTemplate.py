@@ -1,5 +1,4 @@
 import base64
-from xml.etree.ElementTree import tostring
 from flask import Flask, render_template, redirect, request, url_for
 import sqlite3
 app = Flask(__name__)
@@ -40,7 +39,7 @@ def images(id):
         #    f.write(img[1])
         data.append("data:image/png;charset=UTF-8;base64," + base64.b64encode(img[0]).decode('utf-8'))
         #data.append('iVBORw0KGgoAAAANSUhEUgAAAAoAAAAJCAIAAACExCpEAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAASSURBVChTY5DutMGDRqZ0pw0A4ZNOwQNf')
-        dates.append(img[1].split(".")[0]) #split to remove miliseconds
+        dates.append(img[1])#.split(".")[0]) #split to remove miliseconds
         names.append(img[2])
     
     

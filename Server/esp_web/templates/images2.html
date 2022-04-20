@@ -1,0 +1,121 @@
+{% extends 'default.html' %}
+
+{% set body_class='background' %}
+{% set name = self._TemplateReference__context.name|replace('.html', '')|capitalize %}
+
+{% block content %}
+
+{% for img in imgs %}
+    {% if loop.first %}
+    <div class='image'>
+        <img id='big' src= '{{ img }}'/></br>
+        {{ esps[loop.index0]}} </br>
+        {{ dates[loop.index0]}} </br>
+    </div>
+    <div class='alignRight'>
+        <button onclick='takePicture()'><img class='btnImage' src='{{ url_for('static', filename='camera.png') }}'/>
+        </button>
+        <!--id='toggle-stream'-->
+    </div>
+    <h1>Other Images</h1>
+<!--<p>"data:image/png;charset=UTF-8;base64, '{{ img }}'</p>
+       <button id='{{ data_index }}'  onclick='changeImage(this.id)'><img alt='sup' class='btnImage' src = '{{ img }}'></button></br>
+-->
+    {% else %}
+        {% with data_index = "val" %}
+        {% set data_index = 'img' ~ loop.index %}
+        <input type="image"  id='{{ data_index }}' onclick='changeImage(this.id)' class='btnImage' src = '{{ img }}' /></br> 
+        {{ esps[loop.index0]}} </br>
+        {{ dates[loop.index0]}} </br>
+        {% endwith %}
+    {% endif %}
+{% endfor %}
+<script>
+
+    function changeImage(elem) {
+                    tmp = document.getElementById(elem).src;
+                    document.getElementById(elem).src = document.getElementById('big').src;
+                    document.getElementById('big').src = tmp;
+                }
+    
+                //document.addEventListener('DOMContentLoaded', function (event) {
+    function takePicture() {
+        const view = document.getElementById('big');
+        view.src = `http://192.168.137.87/capture?_cb=${Date.now()}`
+                    //const view2 = document.getElementById('big2')
+                    //view2.src = `http://192.168.137.87:81/stream`
+                }
+
+                /*const streamButton = document.getElementById('toggle-stream')
+                streamButton.onclick = () => {
+                  takePicture()
+                }
+                */
+
+            //});
+    </script>
+{% endblock %}
+
+
+<!--
+
+    <script>
+
+var img = document.createElement('img');
+console.log('{{ img }}')
+img.src = 'data:image/jpeg;base64,' + btoa('{{ img }}');
+document.body.appendChild(img);
+
+
+
+</script>
+
+var img = document.createElement('img');
+console.log('{{ img }}')
+img.src = 'data:image/jpeg;base64,' + btoa('{{ img }}');
+document.body.appendChild(img);
+
+<script>
+
+
+var img = document.createElement('img');
+img.src = 'data:image/jpeg;base64,' + hexToBase64('{{ img }}');
+document.body.appendChild(img);
+
+function hexToBase64(str) {
+    return btoa(String.fromCharCode.apply(null, str.replace(/\r|\n/g, "").replace(/([\da-fA-F]{2}) ?/g, "0x$1 ").replace(/ +$/, "").split(" ")));
+}
+
+<script>
+
+Images.decodeArrayBuffer = function(buffer, onLoad) {
+    var mime;
+    var a = new Uint8Array(buffer);
+    var nb = a.length;
+    if (nb < 4)
+        return null;
+    var b0 = a[0];
+    var b1 = a[1];
+    var b2 = a[2];
+    var b3 = a[3];
+    if (b0 == 0x89 && b1 == 0x50 && b2 == 0x4E && b3 == 0x47)
+        mime = 'image/png';
+    else if (b0 == 0xff && b1 == 0xd8)
+        mime = 'image/jpeg';
+    else if (b0 == 0x47 && b1 == 0x49 && b2 == 0x46)
+        mime = 'image/gif';
+    else
+        return null;
+    var binary = "";
+    for (var i = 0; i < nb; i++)
+        binary += String.fromCharCode(a[i]);
+    var base64 = window.btoa(binary);
+    var image = new Image();
+    image.onload = onLoad;
+    image.src = 'data:' + mime + ';base64,' + base64;
+    return image;
+}
+
+
+</script>
+

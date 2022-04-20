@@ -1,8 +1,6 @@
-import logging
-from io import BytesIO
-from time import sleep
-
-from flask import abort, Flask, redirect, render_template, send_file, url_for, stream_with_context
+import base64
+import sqlite3
+from flask import abort, Flask, redirect, render_template, request, send_file, url_for, stream_with_context
 
 from esp_socket.socket_client import SocketClient
 
@@ -55,6 +53,46 @@ def invalid_request(e):
 def index():
     return selection()
 
+#added
+@web.route('/login', methods = ['POST', 'GET'])
+def login():
+    if request.method == 'POST':
+        usr = request.form.get('username')
+        pw = request.form.get('password')
+        conn = sqlite3.connect('proj.db')
+        c = conn.cursor()
+        c.execute("SELECT ID FROM USER WHERE NAME like ? AND PASSWORD like ?", (usr, pw))
+        m = [row[0] for row in c] [0]
+        return redirect(url_for("images", id = m))
+    else:
+        return render_template('login.html')
+    
+
+
+
+@web.route('/images/<int:id>')
+def images(id):    
+    conn = sqlite3.connect('proj.db')
+    c = conn.cursor()
+    fiveMostRecent = c.execute("SELECT DATA,DATE,ESP_NAME FROM PICTURE  WHERE USER_ID LIKE ? ORDER BY DATE desc LIMIT 5", (id,))
+    #    GROUP BY USER_ID 
+    #imgs = c.execute("SELECT * FROM PICTURE WHERE USER_ID LIKE ?", (id)) 
+    data = []
+    names = []
+    dates = []
+    for img in fiveMostRecent:
+        data.append("data:image/png;charset=UTF-8;base64," + base64.b64encode(img[0]).decode('utf-8'))
+        #data.append('iVBORw0KGgoAAAANSUhEUgAAAAoAAAAJCAIAAACExCpEAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAASSURBVChTY5DutMGDRqZ0pw0A4ZNOwQNf')
+        dates.append(img[1])#.split(".")[0]) #split to remove miliseconds
+        names.append(img[2])
+    
+    
+    c.close()
+    conn.close()    
+    #print(data)
+    return render_template('images2.html', imgs = data, dates = dates, esps = names)
+
+#end added
 
 @web.route('/addEsp')
 def addEsp():
