@@ -1,33 +1,30 @@
-{% extends 'default.html' %}
+{% extends "default.html" %}
 
-{% set body_class='background' %}
-{% set name = self._TemplateReference__context.name|replace('.html', '')|capitalize %}
+{% set body_class="background" %}
+{% set name = self._TemplateReference__context.name|replace(".html", "")|capitalize %}
+
+{% set source_url = url_for("static", filename="pfp1.jpg") %}
 
 {% block content %}
     <div>
-        <div class='image'>
-            <object id='stream-view' class='img-thumbnail'
-                    data='{{ url_for('static', filename='pfp1.jpg') }}'
-                    width='320'
-                    height='240'
-            type='image/jpeg'></object>
-            <button id='enable-stream'>
-                <img alt='' class=alignPfp src='{{ url_for('static', filename='esp.png') }}'/>
+        <div class="image">
+            <object class="img-thumbnail"
+                    data="{{ source_url }}"
+                    id="stream-view"
+                    width="320"
+                    height="240"
+                    type="image/jpeg">
+            </object>
+            <button onclick="watchStream('{{ url_for("stream", esp_id=esp_id) }}')">
+                <img alt="" class=alignPfp src="{{ url_for("static", filename="esp.png") }}"/>
             </button>
         </div>
     </div>
     <script>
-        function documentLoaded() {
-            const streamButton = document.getElementById('enable-stream');
-            const streamView = document.getElementById('stream-view');
+        const streamView = document.getElementById("stream-view");
 
-            streamButton.onclick = enableStream;
-
-            function enableStream() {
-                streamView.data = `/stream`;
-            }
+        function watchStream(streamUrl) {
+            streamView.data = streamUrl;
         }
-
-        document.addEventListener('DOMContentLoaded', documentLoaded);
     </script>
 {% endblock %}

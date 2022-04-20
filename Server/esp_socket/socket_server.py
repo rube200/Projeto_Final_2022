@@ -45,14 +45,14 @@ class SocketServer(socket):
             log.error(format_exc())
 
     @property
-    def esp_clients(self):
+    def esp_clients(self) -> dict:
         return dict(self._esp_clients)
 
     @esp_clients.setter
     def esp_clients(self, value: dict):
         self._esp_clients = value
 
-    def get_client(self, esp_id: int):
+    def get_client(self, esp_id: int) -> SocketClient:
         return self._esp_clients.get(esp_id)
 
     def _accept_client(self):

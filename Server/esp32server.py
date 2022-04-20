@@ -24,7 +24,7 @@ def config_logger(filename: str = 'esp32server.py.log'):
         return
 
     logger = True
-    log.basicConfig(filename=filename, level=log.DEBUG if environ.get('ESP32_DEBUG') else log.WARNING)
+    log.basicConfig(filename=filename, level=log.DEBUG if environ.get('ESP32_DEBUG') else log.INFO)
     log.getLogger().addHandler(log.StreamHandler())
 
 

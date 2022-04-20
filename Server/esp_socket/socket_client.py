@@ -62,11 +62,15 @@ class SocketClient:
             log.error(format_exc())
 
     @property
-    def address(self):
+    def address(self) -> Address:
         return self._address or 0
 
     @property
-    def unique_id(self):
+    def camera(self) -> bytes:
+        return self._camera or 0
+
+    @property
+    def unique_id(self) -> int:
         return self._unique_id
 
     def close(self):
@@ -146,8 +150,11 @@ class SocketClient:
 
         if packet_type is PacketType.UUID:
             self._unique_id = int(data.hex(), base=16)
+            self._name = str(self._unique_id)
+
             if self._unique_id_cd:
                 self._unique_id_cd(self)
+
             return
 
         if packet_type is PacketType.IMAGE:

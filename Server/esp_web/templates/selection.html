@@ -1,48 +1,44 @@
-{% extends 'default.html' %}
+{% extends "default.html" %}
 
-{% set name = 'Home' %}
+{% set name = "Home" %}
 
 {% block header %}
     <h1>Select a Doorbell</h1>
 {% endblock %}
 
 {% block content %}
-    <div id='center'>
-        {% for doorbell in doorbellList %}
-            <p>->{{ doorbell }}<-</p>
-            <button onclick='selectDoorBell(value)' value='{{ doorbell[1] }}'>
-                <img alt='{{ doorbell }}' class='smallImage' src='{{ url_for('static', filename='doorbell.png') }}'/>
-                {{ doorbell[0] }}
-            </button>
+    <div id="center">
+        {% for key, value in doorbells.items() %}
+            <a href="{{ url_for("live", esp_id=key) }}" title="Redirect to live page for {{ esp_id }}">
+                <button onclick="selectDoorBell()">
+                    <img alt="Select doorbell {{ key }}" class="smallImage"
+                         src="{{ url_for("static", filename="doorbell.png") }}"/>
+                    {{ key }}
+                </button>
+            </a>
         {% endfor %}
-        <a href='{{ url_for('addEsp') }}' title='add'>
-            <img alt='' class='btnImage' src='{{ url_for('static', filename='add.png') }}'>
+        <a href="{{ url_for("addEsp") }}" title="add">
+            <img class="btnImage" src="{{ url_for("static", filename="add.png") }}">
         </a>
-        <!--
-        <button onclick='selectDoorBell('192.168.137.87')'>
-            <img id='small1' class='smallImage' src='/esp32static/esp.png'/>
-            192.168.137.87
-        </button>
-        -->
         <script>
             function selectDoorBell(ip) {
                 const xhr = new XMLHttpRequest();
                 const fd = new FormData();
                 //console.log(ip)
-                fd.append('esp', ip);
+                fd.append("esp", ip);
 
-                //XHR.addEventListener( 'load', function( event ) {
-                //alert( 'Yeah! Data sent and response loaded.' );
+                //XHR.addEventListener( "load", function( event ) {
+                //alert( "Yeah! Data sent and response loaded." );
                 //} );
 
                 // Define what happens in case of error
-                xhr.addEventListener('error', function () {
-                    alert('Oops! Something went wrong.');
+                xhr.addEventListener("error", function () {
+                    alert("Oops! Something went wrong.");
                 });
 
                 // Set up our request
-                const host =  `${window.location.protocol}//${window.location.host}`;
-                xhr.open('POST', `${host}/esp32cam/postIP`);
+                const host = `${window.location.protocol}//${window.location.host}`;
+                xhr.open("POST", `${host}/esp32cam/postIP`);
 
                 // Send our FormData object; HTTP headers are set automatically
                 xhr.send(fd);
