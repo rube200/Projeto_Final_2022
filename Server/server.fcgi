@@ -1,10 +1,10 @@
 #!/usr/bin/python
 import logging as log
-import traceback
+from traceback import format_exc
 
 from flup.server.fcgi import WSGIServer
 
-from esp32server import config_logger, run_socket_server, set_buffer
+from esp32server import config_logger, run_socket_server, set_buffer, stop_socket_server
 from esp_web.flask_server import web
 
 
@@ -14,9 +14,10 @@ def main():
         set_buffer()
         run_socket_server()
         WSGIServer(web).run()
+        stop_socket_server()
     except Exception as ex:
         log.exception(f'Exception while executing wsgi server: {ex!r}')
-        log.exception(f'{traceback.format_exc()}')
+        log.exception(f'{format_exc()}')
 
 
 if __name__ == '__main__':
