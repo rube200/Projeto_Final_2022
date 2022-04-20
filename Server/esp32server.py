@@ -16,6 +16,7 @@ environ['FLASK_RUN_HOST'] = '0.0.0.0'
 environ['FLASK_RUN_PORT'] = '80'
 
 logger = False
+socket_thread = None
 
 
 def config_logger(filename: str = 'esp32server.py.log'):
@@ -29,7 +30,9 @@ def config_logger(filename: str = 'esp32server.py.log'):
 
 
 def run_socket_server():
-    Thread(daemon=True, target=socket_server.run).start()
+    global socket_thread
+    socket_thread = Thread(daemon=True, target=socket_server.run)
+    socket_thread.start()
 
 
 def run_web_server():
@@ -40,6 +43,14 @@ def set_buffer():
     buffer = {}
     socket_server.esp_clients = buffer
     web_server.esp_clients = buffer
+
+
+def stop_socket_server():
+    global socket_thread
+
+    socket_server.stop()
+    if socket_thread:
+        socket_thread.join()
 
 
 def main():
