@@ -15,10 +15,7 @@ environ['FLASK_ENV'] = 'development' if environ.get('FLASK_DEBUG') else 'product
 environ['FLASK_RUN_HOST'] = '0.0.0.0'
 environ['FLASK_RUN_PORT'] = '80'
 
-buffer = {}
 logger = False
-socket_server.esp_clients = buffer
-web_server.esp_clients = buffer
 
 
 def config_logger(filename: str = 'esp32server.py.log'):
@@ -39,8 +36,15 @@ def run_web_server():
     web_server.run(host=environ.get('FLASK_RUN_HOST'), port=environ.get('FLASK_RUN_PORT'))
 
 
+def set_buffer():
+    buffer = {}
+    socket_server.esp_clients = buffer
+    web_server.esp_clients = buffer
+
+
 def main():
     try:
+        set_buffer()
         if 'WERKZEUG_RUN_MAIN' in environ:
             log.debug('Running Servers...')
             run_socket_server()

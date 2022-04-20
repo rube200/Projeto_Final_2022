@@ -16,7 +16,6 @@ class PacketType(Enum):
     RAW = 0
     UUID = 1
     IMAGE = 2
-    CLOSE_CAMERA = 3
 
 
 class SocketClient:
