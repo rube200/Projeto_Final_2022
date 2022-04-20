@@ -70,8 +70,6 @@ private:
 
     bool beginCamera();
 
-    bool endCamera();
-
     void startCamera();
 
     void startWifiManager();

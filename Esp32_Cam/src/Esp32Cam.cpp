@@ -30,14 +30,6 @@ bool Esp32Cam::captureCameraAndSend() {
 #ifdef DEBUG
     auto start = esp_timer_get_time();
 #endif
-    if (!isCameraOn && !beginCamera()) {
-        Serial.println("Fail to capture camera frame. Camera is off");
-        return false;
-    }
-#ifdef DEBUG
-    Serial.printf("%lli ms to initialize camera.\n", calculateTime(start));
-    start = esp_timer_get_time();
-#endif
     auto *fb = esp_camera_fb_get();
     if (!fb) {
         Serial.println("Fail to capture camera frame. FB is null.");
@@ -134,7 +126,7 @@ void Esp32Cam::sendUuid() {
 
     free(packet);
     if (written != packetSize) {
-        Serial.printf("Fail to send img! Sent: %zu of %d\n", written, packetSize);
+        Serial.printf("Fail to send Uuid! Sent: %zu of %d\n", written, packetSize);
     }
 }
 
@@ -175,27 +167,10 @@ bool Esp32Cam::beginCamera() {
     return true;
 }
 
-bool Esp32Cam::endCamera() {
-    if (!isCameraOn) {
-        Serial.println("Camera is already off.");
-        return true;
-    }
-
-    const auto err = esp_camera_deinit();
-    if (err != ESP_OK) {
-        Serial.printf("Fail to stop camera error %s %i\n", esp_err_to_name(err), err);
-        return false;
-    }
-
-    Serial.println("Camera stopped.");
-    isCameraOn = false;
-    return true;
-}
-
 void Esp32Cam::startCamera() {
     Serial.println("Testing Camera...");
 
-    if (!beginCamera() || !endCamera()) {
+    if (!beginCamera()) {
         Serial.println("Failed to test camera.");
         restartEsp();
         return;
