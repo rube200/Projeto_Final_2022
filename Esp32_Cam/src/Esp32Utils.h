@@ -38,7 +38,7 @@ static inline void espDelay(uint32_t timeoutMs) {
 template<typename T>
 static inline void espDelay(const uint32_t timeoutMs, const T &&blocked) {
     const auto startMs = millis();
-    while (espTryDelay(startMs, timeoutMs) && blocked());
+    while (!espTryDelay(startMs, timeoutMs) && blocked());
 }
 
 static bool espTryDelay(const uint32_t startMs, const uint32_t timeoutMs) {
