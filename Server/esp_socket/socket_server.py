@@ -11,6 +11,7 @@ class SocketServer(socket):
     def __init__(self, _esp_clients: dict = None):
         super().__init__()
         self._disposed = False
+        self._keep_going = None
         self._esp_clients = _esp_clients or {}
         self._selector = DefaultSelector()
 
@@ -37,8 +38,14 @@ class SocketServer(socket):
 
     def _dispose(self):
         try:
+            self._keep_going = False
             del self._esp_clients
-            self._selector.__exit__()
+
+            for fn in list(self._selector.get_map().keys()):
+                key = self._selector.unregister(fn)
+                key.data.close()
+
+            self._selector.close()
             del self._selector
         except Exception as ex:
             log.error(f'Exception while disposing socket server: {ex!r}')
@@ -107,7 +114,7 @@ class SocketServer(socket):
             self._selector.register(self, EVENT_READ)
             log.info('Waiting connections...')
 
-            while True:
+            while self._keep_going:
                 for key, mask in self._selector.select():
                     if not key.data:
                         self._accept_client()
@@ -117,6 +124,8 @@ class SocketServer(socket):
         except Exception as ex:
             log.error(f'Exception while processing selector: {ex!r}')
             log.error(format_exc())
+        finally:
+            self.close()
 
     def _process_client(self, client: SocketClient, mask: int):
         try:
@@ -135,12 +144,16 @@ class SocketServer(socket):
             self.bind((ip, port))
             self.listen()
             self.setblocking(False)
+            self._keep_going = True
             log.info(f'Socket ready! {self.getsockname()}')
             self._process_server()
 
         except Exception as ex:
             log.error(f'Exception while running up SocketServer: {ex!r}')
             log.error(format_exc())
+
+    def stop(self):
+        self._keep_going = False
 
 
 socket = SocketServer()
