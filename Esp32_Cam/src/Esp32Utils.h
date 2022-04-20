@@ -6,7 +6,7 @@
 #endif
 
 #define DEBUG 1
-#define ESP_32_CAM_PROJECT 1
+#define DEBUG_CAMERA DEBUG & 0
 
 enum packetType : char {
     Raw = 0,
@@ -18,41 +18,38 @@ enum packetType : char {
 #include <Arduino.h>
 #include <cstdint>
 
-static inline void espDelay(uint32_t);
+static inline void espDelayUs(uint32_t);
 
 template<typename T>
-static inline void espDelay(uint32_t, const T &&blocked);
+static inline void espDelayUs(uint32_t, const T &&blocked);
 
-static bool espTryDelay(uint32_t, uint32_t);
+static bool espTryDelayUs(uint32_t, uint32_t);
 
-static void *createPacket(void *, size_t, packetType, size_t = PACKET_HEADER, bool = true);
+static uint8_t *createPacket(void *, size_t, packetType, size_t = PACKET_HEADER, bool = true);
 
-static void *espMalloc(size_t);
+static uint8_t *espMalloc(size_t);
 
-static void *espRealloc(void *ptr, size_t size);
-
-static inline void espDelay(uint32_t timeoutMs) {
-    vTaskDelay((timeoutMs / portTICK_PERIOD_MS));
+static inline void espDelayUs(uint32_t timeoutUs) {
+    vTaskDelay(timeoutUs * configTICK_RATE_HZ / 1000000);
 }
 
 template<typename T>
-static inline void espDelay(const uint32_t timeoutMs, const T &&blocked) {
-    const auto startMs = millis();
-    while (!espTryDelay(startMs, timeoutMs) && blocked());
+static inline void espDelayUs(const uint32_t timeoutUs, const T &&blocked) {
+    const auto startUs = esp_timer_get_time();
+    while (!espTryDelayUs(startUs, timeoutUs) && blocked());
 }
 
-static bool espTryDelay(const uint32_t startMs, const uint32_t timeoutMs) {
-    const auto timeLeft = millis() - startMs - timeoutMs;
-    if (timeLeft >= 0) {
+static bool espTryDelayUs(const uint32_t startUs, const uint32_t timeoutUs) {
+    if (esp_timer_get_time() >= startUs + timeoutUs) {
         return true;
     }
 
-    vTaskDelay(std::min(timeLeft, 1ul) / portTICK_PERIOD_MS);
+    vTaskDelay(configTICK_RATE_HZ / 1000);
     return false;
 }
 
-static void *createPacket(void *data, size_t size, packetType type, size_t headerSize, bool shouldFree) {
-    auto *res = (char *) espMalloc(headerSize + size);
+static uint8_t *createPacket(void *data, size_t size, packetType type, size_t headerSize, bool shouldFree) {
+    auto *res = espMalloc(headerSize + size);
     if (!res) {
         return res;
     }
@@ -74,26 +71,13 @@ static void *createPacket(void *data, size_t size, packetType type, size_t heade
     return res;
 }
 
-static void *espMalloc(size_t size) {
-    auto *res = malloc(size);
+static uint8_t *espMalloc(size_t size) {
+    auto *res = (uint8_t *) malloc(size);
     if (res) {
         return res;
     }
 
-    return heap_caps_malloc(size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-}
-
-static void *espRealloc(void *ptr, size_t size) {
-    if (!ptr) {
-        return espMalloc(size);
-    }
-
-    auto *res = realloc(ptr, size);
-    if (res) {
-        return res;
-    }
-
-    return heap_caps_realloc(ptr, size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    return (uint8_t *) heap_caps_malloc(size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
 }
 
 #endif

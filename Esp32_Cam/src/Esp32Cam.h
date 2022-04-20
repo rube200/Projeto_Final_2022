@@ -4,7 +4,6 @@
 #include <Arduino.h>
 #include <esp_camera.h>
 #include "Esp32Utils.h"
-#include "TcpSocket.h"
 #include <WiFiManager.h>
 
 #define ACCESS_POINT_NAME "Video-Doorbell"
@@ -12,21 +11,27 @@
 #define REMOTE_PORT 45000
 #define SERIAL_BAUD 115200
 
+//Packet related
+#define UUID_SIZE 11
+
 class Esp32Cam {
 public:
     void begin();
 
-    bool captureCameraAndSend();
+    void loop();
 
-    void connectSocket();
+    static inline uint8_t *getMacAddress() {
+        auto *baseMac = espMalloc(6);
+        esp_read_mac(baseMac, ESP_MAC_WIFI_STA);
+        return baseMac;
+    }
 
-    bool isDisconnected();
-
-    bool isReady();
-
-    static void *getMacAddress();
-
-    static void restartEsp();
+    static inline void restartEsp() {
+        Serial.println("Restarting ESP in 3s...");
+        delay(3000);
+        ESP.restart();
+        assert(0);
+    }
 
 protected:
     camera_config_t cameraConfig = {
@@ -57,22 +62,22 @@ protected:
     };
 
     bool isCameraOn;
-    Esp32CamSocket espSocket;
+    WiFiClient socket;
     WiFiManager wifiManager;
     std::vector<const char *> wifiMenu = {"wifi", "exit"};// "param", "sep", "custom"
 
 private:
-    static void processData(void *, void *, size_t);
-
-    void sendUuid();
-
-    void setupSocket();
-
-    bool beginCamera();
+    void startWifiManager();
 
     void startCamera();
 
-    void startWifiManager();
+    void connectSocket();
+
+    void processPacket(const String &);
+
+    void sendCamera();
+
+    void sendUuid();
 };
 
 #endif
