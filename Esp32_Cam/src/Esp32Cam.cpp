@@ -98,7 +98,7 @@ void Esp32Cam::loop() {
 
     sendCamera();
 
-    const auto delay = 100000 + start - esp_timer_get_time();
+    const auto delay = 50000 + start - esp_timer_get_time();
     if (delay <= 0) {
         return;
     }
