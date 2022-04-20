@@ -112,6 +112,7 @@ bool Esp32CamSocket::isConnected() {
 
 void Esp32CamSocket::appendWriteBuffer(const void *data, size_t size) {
     if (!data || !size) {
+        clearWriteBuffer();
         return;
     }
 
@@ -127,6 +128,7 @@ void Esp32CamSocket::appendWriteBuffer(const void *data, size_t size) {
     }
 
     if (!writeBuffer) {
+        clearWriteBuffer();
         return;
     }
 
@@ -147,8 +149,13 @@ size_t Esp32CamSocket::write(const void *data, size_t size) {
         return 0;
     }
 
-    if (!sendWaiting) {
-        Serial.printf("WOW SOMETHING GOT INCREDIBLE WRONG.");
+    if (sendWaiting) {
+        Serial.println("WOW SOMETHING GOT INCREDIBLE WRONG.");
+        return 0;
+    }
+
+    if (writeBuffer) {
+        Serial.println("BUFFER IS NOT NULL.");
         return 0;
     }
     appendWriteBuffer(data, size);
@@ -162,16 +169,21 @@ size_t Esp32CamSocket::write(const void *data, size_t size) {
     size_t written = 0;
     do {
         auto hasWritten = false;
-        while (written < writeBufferSize) {
+        auto remaining = writeBufferSize - written;
+        while (remaining > 0) {
             if (isClosed()) {
                 hasWritten = false;
                 break;
             }
 
-            const auto remaining = writeBufferSize - written;
-            const auto nextChunkSize = std::min((size_t) tcp_sndbuf(selfPcb), remaining);
+            const auto space = (size_t) (tcp_sndqueuelen(selfPcb) < TCP_SND_QUEUELEN ? tcp_sndbuf(selfPcb) : 0);
+            auto nextChunkSize = std::min(space, remaining);
             if (!nextChunkSize) {
                 break;
+            }
+
+            if (nextChunkSize > TCP_MSS) {
+                nextChunkSize = TCP_MSS;
             }
 
             auto flags = 0;
@@ -184,6 +196,7 @@ size_t Esp32CamSocket::write(const void *data, size_t size) {
             }
 
             hasWritten = true;
+            remaining -= nextChunkSize;
             written += nextChunkSize;
         }
 
