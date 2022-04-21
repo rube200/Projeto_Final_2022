@@ -9,11 +9,11 @@
 {% block content %}
     <div id="center">
         {% for key, value in doorbells.items() %}
-            <a href="{{ url_for("live", esp_id=key) }}" title="Redirect to live page for {{ esp_id }}">
+            <a href="{{ url_for("live", esp_id=key) }}" title="Redirect to live page for {{ key }}">
                 <button onclick="selectDoorBell()">
                     <img alt="Select doorbell {{ key }}" class="smallImage"
                          src="{{ url_for("static", filename="doorbell.png") }}"/>
-                    {{ key }}
+                    {{ value.name }}
                 </button>
             </a>
         {% endfor %}

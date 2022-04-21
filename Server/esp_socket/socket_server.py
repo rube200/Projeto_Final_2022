@@ -1,9 +1,10 @@
 import logging as log
 from os import environ
-from selectors import DefaultSelector, EVENT_READ
+from selectors import EVENT_READ
 from socket import socket
 from traceback import format_exc
 
+from esp_socket.select_selector import SelectSelectorMod
 from esp_socket.socket_client import SocketClient
 
 
@@ -13,7 +14,7 @@ class SocketServer(socket):
         self._disposed = False
         self._keep_going = None
         self._esp_clients = _esp_clients or {}
-        self._selector = DefaultSelector()
+        self._selector = SelectSelectorMod()
 
     def __exit__(self, *arg):
         try:
@@ -115,7 +116,7 @@ class SocketServer(socket):
             log.info('Waiting connections...')
 
             while self._keep_going:
-                for key, mask in self._selector.select():
+                for key, mask in self._selector.select(1):
                     if not key.data:
                         self._accept_client()
                         continue

@@ -50,6 +50,7 @@ def stop_socket_server():
 
     socket_server.stop()
     if socket_thread:
+        # noinspection PyUnresolvedReferences
         socket_thread.join()
 
 
@@ -57,7 +58,7 @@ def main():
     try:
         set_buffer()
         if 'WERKZEUG_RUN_MAIN' in environ:
-            log.debug('Running Servers...')
+            log.info('Running Servers...')
             run_socket_server()
         run_web_server()
 

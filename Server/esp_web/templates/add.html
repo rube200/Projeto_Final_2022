@@ -1,55 +1,55 @@
-{% extends 'default.html' %}
+{% extends "default.html" %}
 
-{% set name = self._TemplateReference__context.name|replace('.html', '')|capitalize %}
+{% set name = self._TemplateReference__context.name|replace(".html", "")|capitalize %}
 
 {% block header %}
     <h1>Add a Doorbell</h1>
 {% endblock %}
 
 {% block content %}
-    <!---  <div class='topNav'>
-        <a href='{{ url_for('selection') }}' title='Selection'>
-            <img alt='' class='btnImage' src='{{ url_for('static', filename='back.png') }}'/>
+    <!---  <div class="topNav">
+        <a href="{{ url_for("selection") }}" title="Selection">
+            <img alt="" class="btnImage" src="{{ url_for("static", filename="back.png") }}"/>
         </a>
     </div> -->
-    <h3 id='center'>
-        <label for='name'>
-            Doorbell's name:
+    <h3 id="center">
+        <label for="name">
+            Doorbell"s name:
         </label>
         <br>
-        <input type='text' id='name' name='name'>
+        <input type="text" id="name" name="name">
         <br>
-        <label for='ip'>
+        <label for="ip">
             IP address:
         </label>
         <br>
-        <input type='text' id='ip' name='ip'>
+        <input type="text" id="ip" name="ip">
         <br>
         <br>
-        <button onclick='addDoorBell()' class='smallImage'> Submit</button>
+        <button onclick="addDoorBell()" class="smallImage"> Submit</button>
         <script>
             function addDoorBell() {
-                //document.ajax({type: 'POST', url: '/postESP', dataType: 'json'})
+                //document.ajax({type: "POST", url: "/postESP", dataType: "json"})
                 const xhr = new XMLHttpRequest();
                 const fd = new FormData();
 
-                if (!ValidateIPaddress(document.getElementById('ip').value)) {
+                if (!ValidateIPaddress(document.getElementById("ip").value)) {
                     return
                 }
-                fd.append('name', document.getElementById('name').value);
-                fd.append('ip', document.getElementById('ip').value);
-                //XHR.addEventListener( 'load', function( event ) {
-                //alert( 'Yeah! Data sent and response loaded.' );
+                fd.append("name", document.getElementById("name").value);
+                fd.append("ip", document.getElementById("ip").value);
+                //XHR.addEventListener( "load", function( event ) {
+                //alert( "Yeah! Data sent and response loaded." );
                 //} );
 
                 // Define what happens in case of error
-                xhr.addEventListener('error', function () {
-                    alert('Oops! Something went wrong.');
+                xhr.addEventListener("error", function () {
+                    alert("Oops! Something went wrong.");
                 });
 
                 // Set up our request
-                const host =  `${window.location.protocol}//${window.location.host}`;
-                xhr.open('POST', `${host}/esp32cam/postESP`);
+                const host = `${window.location.protocol}//${window.location.host}`;
+                xhr.open("POST", `${host}/esp32cam/postESP`);
 
                 // Send our FormData object; HTTP headers are set automatically
                 xhr.send(fd);
@@ -60,7 +60,7 @@
                 if (/^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(ipaddress)) {
                     return (true)
                 }
-                alert('You have entered an invalid IP address! ' + ipaddress);
+                alert("You have entered an invalid IP address! " + ipaddress);
                 return false
             }
         </script>

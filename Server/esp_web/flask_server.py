@@ -1,6 +1,12 @@
-import base64
+import logging as log
 import sqlite3
-from flask import abort, Flask, redirect, render_template, request, send_file, url_for, stream_with_context
+from io import BytesIO
+from sqlite3 import connect as sql_connect
+from time import sleep
+from traceback import format_exc
+
+from flask import abort, current_app, Flask, g, redirect, render_template, request, send_file, url_for, \
+    stream_with_context
 
 from esp_socket.socket_client import SocketClient
 
@@ -54,18 +60,18 @@ def index():
     return selection()
 
 #added
-@web.route('/login', methods = ['POST', 'GET'])
+@web.route('/login', methods=['GET', 'POST'])
 def login():
-    if request.method == 'POST':
-        usr = request.form.get('username')
-        pw = request.form.get('password')
-        conn = sqlite3.connect('proj.db')
-        c = conn.cursor()
-        c.execute("SELECT ID FROM USER WHERE NAME like ? AND PASSWORD like ?", (usr, pw))
-        m = [row[0] for row in c] [0]
-        return redirect(url_for("images", id = m))
-    else:
+    if request.method == 'GET':
         return render_template('login.html')
+
+    usr = request.form.get('username')
+    pw = request.form.get('password')
+    conn = sqlite3.connect('proj.db')
+    c = conn.cursor()
+    c.execute("SELECT ID FROM USER WHERE NAME like ? AND PASSWORD like ?", (usr, pw))
+    m = [row[0] for row in c][0]
+    return redirect(url_for("images", id=m))
     
 
 
@@ -123,21 +129,44 @@ def stats():
 
 @web.route('/<int:esp_id>/stream')
 def stream(esp_id: int):
-    client = web.get_client(esp_id)
+    try:
+        client = web.get_client(esp_id)
 
-    def generate():
-        try:
-            cl = client
-            while True:
-                if cl:
-                    yield b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + cl.camera + b'\r\n'
-                else:
-                    cl = web.get_client(esp_id)
+        def generate():
+            try:
+                cl = client
+                while True:
+                    if cl:
+                        yield b'--frame\r\nContent-Type: image/jpeg\r\nContent-Length: ' + bytes(
+                            len(cl.camera)) + b'\r\n\r\n' + cl.camera + b'\r\n'
+                    else:
+                        cl = web.get_client(esp_id)
 
-                sleep(.05)
+                    sleep(.05)
+            except Exception as ex:
+                log.exception(f'Exception while streaming: {ex!r}')
+                log.exception(f'{format_exc()}')
+            finally:
+                log.warning("Exiting stream")
 
-        finally:
-            logging.warning("Exiting stream")
+        stream_context = stream_with_context(generate())
+        print("stream_context")
+        print(stream_context)
+        a = web.response_class(stream_context, mimetype='multipart/x-mixed-replace; boundary=frame')
+        print("response")
+        print(a)
+        return a
 
-    stream_context = stream_with_context(generate())
-    return web.response_class(stream_context, mimetype='multipart/x-mixed-replace; boundary=frame')
+    except Exception as x:
+        log.exception(f'Exception while streaming2: {x!r}')
+        log.exception(f'{format_exc()}')
+
+    finally:
+        log.warning("Exiting stream")
+
+
+def get_db():
+    if 'db' in g:
+        return g.db
+
+    g.db = sql_connect(current_app.config, detect_types=sqlite3.PARSE_DECLTYPES)

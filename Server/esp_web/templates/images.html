@@ -1,39 +1,39 @@
-{% extends 'default.html' %}
+{% extends "default.html" %}
 
-{% set body_class='background' %}
-{% set name = self._TemplateReference__context.name|replace('.html', '')|capitalize %}
+{% set body_class="background" %}
+{% set name = self._TemplateReference__context.name|replace(".html", "")|capitalize %}
 
 {% block content %}
-    <div class='image'>
-        <img id='big' src='{{ url_for('static', filename='pfp1.jpg') }}'/>
-        <!--<img id='big2' src='/esp32static/pfp1.jpg'/>-->
-        <div class='alignRight'>
-            <button onclick='takePicture()'><img class='btnImage' src='{{ url_for('static', filename='camera.png') }}'/>
+    <div class="image">
+        <img id="big" src="{{ url_for("static", filename="pfp1.jpg") }}"/>
+        <!--<img id="big2" src="/esp32static/pfp1.jpg"/>-->
+        <div class="alignRight">
+            <button onclick="takePicture()"><img class="btnImage" src="{{ url_for("static", filename="camera.png") }}"/>
             </button>
-            <!--id='toggle-stream'-->
+            <!--id="toggle-stream"-->
         </div>
     </div>
-    <object type='text/html' class='img-thumbnail' data='http://192.168.137.87:81/stream' width='320'
-            height='240'></object>
+    <object type="text/html" class="img-thumbnail" data="http://192.168.137.87:81/stream" width="320"
+            height="240"></object>
     <h1>Other Images</h1>
-    <h3 id='center'>
-        <button onclick='changeImage1()'><img id='small1' class='smallImage'
-                                              src='{{ url_for('static', filename='pfp2.jpg') }}'/></button>
-        <button onclick='changeImage2()'><img id='small2' class='smallImage'
-                                              src='{{ url_for('static', filename='pfp3.jpg') }}'/></button>
-        <button onclick='changeImage3()'><img id='small3' class='smallImage'
-                                              src='{{ url_for('static', filename='pfp4.jpg') }}'/></button>
+    <h3 id="center">
+        <button onclick="changeImage1()"><img id="small1" class="smallImage"
+                                              src="{{ url_for("static", filename="pfp2.jpg") }}"/></button>
+        <button onclick="changeImage2()"><img id="small2" class="smallImage"
+                                              src="{{ url_for("static", filename="pfp3.jpg") }}"/></button>
+        <button onclick="changeImage3()"><img id="small3" class="smallImage"
+                                              src="{{ url_for("static", filename="pfp4.jpg") }}"/></button>
 
         <script>
-            document.addEventListener('DOMContentLoaded', function (event) {
+            document.addEventListener("DOMContentLoaded", function (event) {
                 function takePicture() {
-                    const view = document.getElementById('big');
+                    const view = document.getElementById("big");
                     view.src = `http://192.168.137.87/capture?_cb=${Date.now()}`
-                    //const view2 = document.getElementById('big2')
+                    //const view2 = document.getElementById("big2")
                     //view2.src = `http://192.168.137.87:81/stream`
                 }
 
-                /*const streamButton = document.getElementById('toggle-stream')
+                /*const streamButton = document.getElementById("toggle-stream")
                 streamButton.onclick = () => {
                   takePicture()
                 }
@@ -41,26 +41,26 @@
 
             });
 
-            currentImage = {myGlobal: '{{ url_for('static', filename='pfp1.jpg') }}'};
+            currentImage = {myGlobal: "{{ url_for("static", filename="pfp1.jpg") }}"};
 
             function changeImage1() {
-                tmp = document.getElementById('small1').src;
-                document.getElementById('big').src = document.getElementById('small1').src;
-                document.getElementById('small1').src = currentImage.myGlobal;
+                tmp = document.getElementById("small1").src;
+                document.getElementById("big").src = document.getElementById("small1").src;
+                document.getElementById("small1").src = currentImage.myGlobal;
                 currentImage.myGlobal = tmp;
             }
 
             function changeImage2() {
-                tmp = document.getElementById('small2').src;
-                document.getElementById('big').src = document.getElementById('small2').src;
-                document.getElementById('small2').src = currentImage.myGlobal;
+                tmp = document.getElementById("small2").src;
+                document.getElementById("big").src = document.getElementById("small2").src;
+                document.getElementById("small2").src = currentImage.myGlobal;
                 currentImage.myGlobal = tmp;
             }
 
             function changeImage3() {
-                tmp = document.getElementById('small3').src;
-                document.getElementById('big').src = document.getElementById('small3').src;
-                document.getElementById('small3').src = currentImage.myGlobal;
+                tmp = document.getElementById("small3").src;
+                document.getElementById("big").src = document.getElementById("small3").src;
+                document.getElementById("small3").src = currentImage.myGlobal;
                 currentImage.myGlobal = tmp;
             }
 

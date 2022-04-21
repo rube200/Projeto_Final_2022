@@ -6,6 +6,8 @@ from socket import socket
 from traceback import format_exc
 from typing import Any, Tuple, Union
 
+from esp_socket.select_selector import EVENT_EXCEPTION
+
 Address = Union[Tuple[Any, ...], str]
 BINARY_ZERO = int.to_bytes(0, 4, 'big')
 HEADER_SIZE = 5
@@ -70,6 +72,10 @@ class SocketClient:
         return self._camera or 0
 
     @property
+    def name(self) -> str:
+        return self._name or str(self._unique_id)
+
+    @property
     def unique_id(self) -> int:
         return self._unique_id
 
@@ -104,6 +110,9 @@ class SocketClient:
             log.error(format_exc())
 
     def process_events(self, mask: int):
+        if mask & EVENT_EXCEPTION:
+            log.warning(f'Exception for client {self._address}')
+
         if mask & EVENT_READ:
             self._read()
 
@@ -150,7 +159,9 @@ class SocketClient:
 
         if packet_type is PacketType.UUID:
             self._unique_id = int(data.hex(), base=16)
-            self._name = str(self._unique_id)
+
+            if not self._name:
+                self._name = str(self._unique_id)
 
             if self._unique_id_cd:
                 self._unique_id_cd(self)
@@ -161,20 +172,20 @@ class SocketClient:
             self._camera = data
             return
 
-        log.debug(f'Unknown {packet_type} from {self._address}')
+        log.warning(f'Unknown {packet_type} from {self._address}')
 
     def _recv(self):
         try:
             data = self._connection.recv(2048)
         except BlockingIOError as ex:
-            log.debug(f'Blocking error at recv for {self._address}: {ex!r}')
+            log.warning(f'Blocking error at recv for {self._address}: {ex!r}')
         except ConnectionResetError:
             pass
         else:
             if data:
                 self._recv_buffer += data
             else:
-                log.debug(f'Runtime error Peer closed for {self._address}')
+                log.warning(f'Runtime error Peer closed for {self._address}')
                 raise RuntimeError('Peer closed.')
 
     def _read(self):
