@@ -18,7 +18,7 @@ void Esp32Cam::begin() {
 
     startWifiManager();
     startCamera();
-    connectSocket();
+    startSocket();
 
     Serial.println("Setup Completed!");
 }
@@ -28,6 +28,23 @@ void Esp32Cam::startWifiManager() {
 
     wifiManager.setDebugOutput(debug);
     wifiManager.setDarkMode(true);
+
+    if (EEPROM.begin(64)) {
+        const auto ip = EEPROM.readString(0);
+        if (ip)
+            socket_host_parameter.setValue(ip.c_str(), 50);
+
+        const auto port = String(EEPROM.readUShort(50));
+        if (port)
+            socket_port_parameter.setValue(port.c_str(), 5);
+        EEPROM.end();
+    }
+    else {
+        Serial.println("Fail to begin EEPROM.");
+    }
+
+    wifiManager.addParameter(&socket_host_parameter);
+    wifiManager.addParameter(&socket_port_parameter);
     wifiManager.setMenu(wifiMenu);
 
     if (!wifiManager.autoConnect(ACCESS_POINT_NAME)) {
@@ -58,17 +75,57 @@ void Esp32Cam::startCamera() {
     Serial.println("Camera started.");
 }
 
-void Esp32Cam::connectSocket() {
+bool isSetupHost;
+void Esp32Cam::saveParamsCallback() {
+    isSetupHost = true;
+    wifiManager.stopConfigPortal();
+}
+
+void Esp32Cam::startSocket() {
+    wifiManager.setMenu(wifiMenuParam);
+    wifiManager.setSaveParamsCallback([this] { saveParamsCallback(); });
+
+    while (!connectSocket()) {
+        isSetupHost = false;
+        wifiManager.startConfigPortal(ACCESS_POINT_NAME);
+
+        if (!isSetupHost) {
+            Serial.println("Exit requested");
+            restartEsp();
+            return;
+        }
+    }
+
+    //online save valid connection to host
+    if (!EEPROM.begin(64)) {
+        Serial.println("Fail to begin EEPROM.");
+        return;
+    }
+
+    EEPROM.writeString(0, socket_host_parameter.getValue());
+    EEPROM.writeUShort(50, atoi(socket_port_parameter.getValue())); // NOLINT(cert-err34-c)
+    EEPROM.end();
+}
+
+void Esp32Cam::tryConnectSocket() {
+    if (connectSocket()) {
+        return;
+    }
+
+    Serial.println("Fail to connect to host.");
+    restartEsp();
+}
+
+bool Esp32Cam::connectSocket() {
     Serial.println("Connecting to host...");
 
-    if (!socket.connected() && !socket.connect(REMOTE_HOST, REMOTE_PORT)) {
-        Serial.println("Fail to connect to host.");
-        restartEsp();
-        return;
+    if (!socket.connected() && !socket.connect(socket_host_parameter.getValue(), atoi(socket_port_parameter.getValue()))) { // NOLINT(cert-err34-c)
+        return false;
     }
 
     socket.setNoDelay(true);
     Serial.println("Connected to host!");
+    return true;
 }
 
 void Esp32Cam::loop() {
@@ -82,7 +139,7 @@ void Esp32Cam::loop() {
     }
 
     if (!socket.connected()) {
-        connectSocket();
+        tryConnectSocket();
         espDelayUs(5000, [this]() { return !socket.connected(); });//wait for connect
         if (!socket.connected()) {
             Esp32Cam::restartEsp();
@@ -157,7 +214,7 @@ void Esp32Cam::sendCamera() {
         packetLen = PACKET_HEADER + fb->len;
         esp_camera_fb_return(fb);
     } else if (frame2jpg(fb, 80, &packet, &packetLen)) {
-        packet = createPacket(packet, packetLen, Image, PACKET_HEADER);
+        packet = createPacket(packet, packetLen, Image);
         packetLen += PACKET_HEADER;
         esp_camera_fb_return(fb);
     } else {
@@ -186,7 +243,7 @@ void Esp32Cam::sendCamera() {
 
 void Esp32Cam::sendUuid() {
     auto *mac = (char *) getMacAddress();
-    auto *packet = createPacket(mac, 6, Uuid, PACKET_HEADER);
+    auto *packet = createPacket(mac, 6, Uuid);
 
     const auto written = socket.write(packet, UUID_SIZE);
 

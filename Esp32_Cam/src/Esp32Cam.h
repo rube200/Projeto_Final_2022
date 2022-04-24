@@ -4,11 +4,12 @@
 #include <Arduino.h>
 #include <esp_camera.h>
 #include "Esp32Utils.h"
+#include <EEPROM.h>
 #include <WiFiManager.h>
 
 #define ACCESS_POINT_NAME "Video-Doorbell"
-#define REMOTE_HOST "192.168.137.1"
-#define REMOTE_PORT 45000
+#define REMOTE_HOST "192.168.137.1"//"rube200-pi4.duckdns.org"
+#define REMOTE_PORT "45000"
 #define SERIAL_BAUD 115200
 
 //Packet related
@@ -64,20 +65,30 @@ protected:
     bool isCameraOn;
     WiFiClient socket;
     WiFiManager wifiManager;
-    std::vector<const char *> wifiMenu = {"wifi", "exit"};// "param", "sep", "custom"
+
+    WiFiManagerParameter socket_host_parameter = WiFiManagerParameter("Host", "Socket host", REMOTE_HOST, 50);
+    WiFiManagerParameter socket_port_parameter  = WiFiManagerParameter("Port", "Socket port", REMOTE_PORT, 5);
+    std::vector<const char *> wifiMenu = {"wifi", "exit"};
+    std::vector<const char *> wifiMenuParam = {"param", "exit"};
 
 private:
     void startWifiManager();
 
     void startCamera();
 
-    void connectSocket();
+    void startSocket();
+
+    void tryConnectSocket();
+
+    bool connectSocket();
 
     void processPacket(const String &);
 
     void sendCamera();
 
     void sendUuid();
+
+    void saveParamsCallback();
 };
 
 #endif
