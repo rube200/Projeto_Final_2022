@@ -3,7 +3,7 @@ from selectors import SelectSelector, EVENT_READ, EVENT_WRITE
 
 import select
 
-EVENT_EXCEPTION = (1 << 2)
+EVENT_EXCEPTIONAL = (1 << 2)
 
 
 def _select(r, w, x, timeout=None):
@@ -14,17 +14,17 @@ def _select(r, w, x, timeout=None):
 class SelectSelectorMod(SelectSelector):
     def __init__(self):
         super().__init__()
-        self._exceptions = set()
+        self._exceptional = set()
 
     def register(self, fn, events, data=None):
         key = super().register(fn, events, data)
-        if events & EVENT_EXCEPTION:
-            self._exceptions.add(key.fd)
+        if events & EVENT_EXCEPTIONAL:
+            self._exceptional.add(key.fd)
         return key
 
     def unregister(self, fn):
         key = super().unregister(fn)
-        self._exceptions.discard(key.fd)
+        self._exceptional.discard(key.fd)
         return key
 
     if sys.platform != 'win32':
@@ -36,7 +36,7 @@ class SelectSelectorMod(SelectSelector):
 
         try:
             # noinspection PyUnresolvedReferences
-            r, w, x = self._select(self._readers, self._writers, self._exceptions, timeout)
+            r, w, x = self._select(self._readers, self._writers, self._exceptional, timeout)
         except InterruptedError:
             return ready
 
@@ -50,7 +50,7 @@ class SelectSelectorMod(SelectSelector):
             if fd in w:
                 events |= EVENT_WRITE
             if fd in x:
-                events |= EVENT_EXCEPTION
+                events |= EVENT_EXCEPTIONAL
             # noinspection PyUnresolvedReferences
             key = self._key_from_fd(fd)
             if key:
