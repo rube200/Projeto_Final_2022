@@ -4,6 +4,8 @@ from selectors import EVENT_READ
 from socket import socket
 from traceback import format_exc
 
+from _socket import SOL_SOCKET, SO_KEEPALIVE
+
 from esp_socket.select_selector import SelectSelectorMod
 from esp_socket.socket_client import SocketClient
 
@@ -42,7 +44,7 @@ class SocketServer(socket):
             self._keep_going = False
             del self._esp_clients
 
-            for fn in list(self._selector.get_map().keys()):
+            for fn in list(self._selector.get_map()):
                 key = self._selector.unregister(fn)
                 key.data.close()
 
@@ -145,8 +147,10 @@ class SocketServer(socket):
             self.bind((ip, port))
             self.listen()
             self.setblocking(False)
-            self._keep_going = True
+            self.setsockopt(SOL_SOCKET, SO_KEEPALIVE, True)
+
             log.info(f'Socket ready! {self.getsockname()}')
+            self._keep_going = True
             self._process_server()
 
         except Exception as ex:

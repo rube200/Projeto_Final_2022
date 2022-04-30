@@ -1,12 +1,14 @@
 import logging as log
-import struct
 from enum import Enum
 from selectors import BaseSelector, EVENT_READ, EVENT_WRITE
 from socket import socket
+from struct import pack, unpack
 from traceback import format_exc
 from typing import Any, Tuple, Union
 
-from esp_socket.select_selector import EVENT_EXCEPTION
+from _socket import SOL_SOCKET, SO_KEEPALIVE
+
+from esp_socket.select_selector import EVENT_EXCEPTIONAL
 
 Address = Union[Tuple[Any, ...], str]
 BINARY_ZERO = int.to_bytes(0, 4, 'big')
@@ -15,9 +17,12 @@ WRITE = EVENT_READ | EVENT_WRITE
 
 
 class PacketType(Enum):
-    RAW = 0
-    UUID = 1
-    IMAGE = 2
+    Uuid = 1
+    Image = 2
+    BellPressed = 3
+    MotionDetected = 4
+    StartStream = 5
+    StopStream = 6
 
 
 class SocketClient:
@@ -26,6 +31,7 @@ class SocketClient:
         self._closing_cd = None
         self._connection = connection
         self._connection.setblocking(False)
+        self._connection.setsockopt(SOL_SOCKET, SO_KEEPALIVE, True)
         self._selector = selector
         self._selector.register(self._connection, EVENT_READ, self)
         self._unique_id = 0
@@ -43,7 +49,7 @@ class SocketClient:
         self._recv_buffer = b''
         self._send_buffer = b''
 
-        self._write_packet(PacketType.UUID)
+        self._write_packet(PacketType.Uuid)
 
     def __exit__(self, *arg):
         try:
@@ -65,11 +71,15 @@ class SocketClient:
 
     @property
     def address(self) -> Address:
-        return self._address or 0
+        return self._address
 
     @property
     def camera(self) -> bytes:
-        return self._camera or 0
+        return self._camera
+
+    @property
+    def closed(self) -> bool:
+        return self._disposed
 
     @property
     def name(self) -> str:
@@ -110,7 +120,7 @@ class SocketClient:
             log.error(format_exc())
 
     def process_events(self, mask: int):
-        if mask & EVENT_EXCEPTION:
+        if mask & EVENT_EXCEPTIONAL:
             log.warning(f'Exception for client {self._address}')
 
         if mask & EVENT_READ:
@@ -118,6 +128,12 @@ class SocketClient:
 
         if mask & EVENT_WRITE:
             self._write()
+
+    def request_start_stream(self):
+        self._write_packet(PacketType.StartStream)
+
+    def request_stop_stream(self):
+        self._write_packet(PacketType.StopStream)
 
     def setCloseCb(self, fn):
         self._closing_cd = fn
@@ -132,8 +148,7 @@ class SocketClient:
         if len(self._recv_buffer) < HEADER_SIZE:
             return
 
-        self._packet_len = struct.unpack('>i', self._recv_buffer[:4])[0]
-        self._packet_type = int(self._recv_buffer[4])
+        self._packet_len, self._packet_type = unpack('>iB', self._recv_buffer[:HEADER_SIZE])
         self._recv_buffer = self._recv_buffer[HEADER_SIZE:]
 
     def _get_packet_data(self):
@@ -157,7 +172,7 @@ class SocketClient:
         self._packet_len = None
         self._packet_type = None
 
-        if packet_type is PacketType.UUID:
+        if packet_type is PacketType.Uuid:
             self._unique_id = int(data.hex(), base=16)
 
             if not self._name:
@@ -168,11 +183,11 @@ class SocketClient:
 
             return
 
-        if packet_type is PacketType.IMAGE:
+        if packet_type is PacketType.Image:
             self._camera = data
             return
 
-        log.warning(f'Unknown {packet_type} from {self._address}')
+        raise ValueError(f'Unknown {packet_type} from {self._address}')
 
     def _recv(self):
         try:
@@ -213,13 +228,11 @@ class SocketClient:
             raise ValueError(f'Invalid parameter packet_type: {packet_type}')
 
         try:
-            size = BINARY_ZERO if not data else struct.pack('>i', len(data))
-            pk_type = int.to_bytes(packet_type.value, 1, 'big')
-
+            header = pack('>iB', 0 if not data else len(data), packet_type.value)
             if data:
-                packet = size + pk_type + data
+                packet = header + data
             else:
-                packet = size + pk_type
+                packet = header
 
             self._send_buffer += packet
             self._selector.modify(self._connection, WRITE, self)
