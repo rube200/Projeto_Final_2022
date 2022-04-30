@@ -15,7 +15,7 @@
                     height="240"
                     type="image/jpeg">
             </object>
-            <button onclick="watchStream('{{ url_for("stream", esp_id=esp_id) }}')">
+            <button onclick="watchStream()">
                 <img alt="" class=alignPfp src="{{ url_for("static", filename="esp.png") }}"/>
             </button>
         </div>
@@ -23,8 +23,12 @@
     <script>
         const streamView = document.getElementById("stream-view");
 
-        function watchStream(streamUrl) {
-            streamView.data = streamUrl;
+        function watchStream() {
+            {% if not_request_stream %}
+                streamView.data = '{{ url_for("stream2", esp_id=esp_id) }}';
+            {% else %}
+                streamView.data = '{{ url_for("stream", esp_id=esp_id) }}';
+            {% endif %}
         }
     </script>
 {% endblock %}

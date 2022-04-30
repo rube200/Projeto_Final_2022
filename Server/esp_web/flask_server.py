@@ -1,8 +1,9 @@
+import base64
 import logging as log
 import sqlite3
 from io import BytesIO
 from sqlite3 import connect as sql_connect
-from time import sleep
+from time import sleep, monotonic
 from traceback import format_exc
 
 from flask import abort, current_app, Flask, g, redirect, render_template, request, send_file, url_for, \
@@ -74,8 +75,6 @@ def login():
     return redirect(url_for("images", id=m))
     
 
-
-
 @web.route('/images/<int:id>')
 def images(id):    
     conn = sqlite3.connect('proj.db')
@@ -117,6 +116,12 @@ def live(esp_id: int):
     return render_template('live.html', esp_id=esp_id) if client else abort(400)
 
 
+@web.route('/<int:esp_id>/live2')
+def live2(esp_id: int):
+    client = web.get_client(esp_id)
+    return render_template('live.html', esp_id=esp_id, not_request_stream=True) if client else abort(400)
+
+
 @web.route('/selection')
 def selection():
     return render_template('selection.html', doorbells=web.esp_clients)
@@ -127,35 +132,48 @@ def stats():
     return render_template('stats.html')
 
 
+def generate_stream(esp_id: int, stream_request: bool = True):
+    client = web.get_client(esp_id)
+    if not client:
+        return b'Content-Length: 0'
+
+    if stream_request:
+        client.request_start_stream()
+
+    try:
+
+        while True:
+            sleep(.05)
+            if not client or client.closed:
+                client = web.get_client(esp_id)
+                continue
+
+            if start_at <= monotonic():
+                start_at = monotonic() + 10
+                client.request_start_stream()
+
+            if not client.camera:
+                yield b'--frame\r\nContent-Length: 0'
+                continue
+
+            yield b'--frame\r\nContent-Length: ' + bytes(len(client.camera)) + \
+                  b'\r\nContent-Type: image/jpeg\r\nTransfer-Encoding: chunked\r\n\r\n' + client.camera + b'\r\n'
+    except Exception as ex:
+        log.exception(f'Exception while generate_stream: {ex!r}')
+        log.exception(f'{format_exc()}')
+    finally:
+        if stream_request:
+            client.request_stop_stream()
+
+        log.warning("Exiting generate_stream")
+        return b'Content-Length: 0'
+
+
 @web.route('/<int:esp_id>/stream')
 def stream(esp_id: int):
     try:
-        client = web.get_client(esp_id)
-
-        def generate():
-            try:
-                cl = client
-                while True:
-                    if cl:
-                        yield b'--frame\r\nContent-Type: image/jpeg\r\nContent-Length: ' + bytes(
-                            len(cl.camera)) + b'\r\n\r\n' + cl.camera + b'\r\n'
-                    else:
-                        cl = web.get_client(esp_id)
-
-                    sleep(.05)
-            except Exception as ex:
-                log.exception(f'Exception while streaming: {ex!r}')
-                log.exception(f'{format_exc()}')
-            finally:
-                log.warning("Exiting stream")
-
-        stream_context = stream_with_context(generate())
-        print("stream_context")
-        print(stream_context)
-        a = web.response_class(stream_context, mimetype='multipart/x-mixed-replace; boundary=frame')
-        print("response")
-        print(a)
-        return a
+        stream_context = stream_with_context(generate_stream(esp_id))
+        return web.response_class(stream_context, mimetype='multipart/x-mixed-replace; boundary=frame')
 
     except Exception as x:
         log.exception(f'Exception while streaming2: {x!r}')
@@ -163,6 +181,12 @@ def stream(esp_id: int):
 
     finally:
         log.warning("Exiting stream")
+
+
+@web.route('/<int:esp_id>/stream2')
+def stream2(esp_id: int):
+    stream_context = stream_with_context(generate_stream(esp_id, False))
+    return web.response_class(stream_context, mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
 def get_db():
