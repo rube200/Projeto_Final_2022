@@ -1,21 +1,24 @@
 #ifndef ESP32_CAM_ESP32UTILS_H
 #define ESP32_CAM_ESP32UTILS_H
 
-#ifndef PACKET_HEADER
-#define PACKET_HEADER 5
-#endif
-
 #define DEBUG 1
 #define DEBUG_CAMERA DEBUG & 0
+#define DEBUG_WIFI DEBUG & 0
+
+#define PACKET_HEADER 5
+#define STREAM_TIMEOUT 30500000//30.5s -> Py try to communicate every 10s
+#define STREAM_BELL_DURATION 5000000//5s
+#define BELL_PRESS_DELAY 1000000//1s
 
 enum packetType : char {
-    Raw = 0,
     Uuid = 1,
     Image = 2,
-    CloseCamera = 3
+    BellPressed = 3,
+    MotionDetected = 4,
+    StartStream = 5,
+    StopStream = 6
 };
 
-#include <Arduino.h>
 #include <cstdint>
 
 static inline void espDelayUs(uint32_t);
@@ -28,6 +31,11 @@ static bool espTryDelayUs(uint32_t, uint32_t);
 static uint8_t *createPacket(void *, size_t, packetType, size_t = PACKET_HEADER, bool = true);
 
 static uint8_t *espMalloc(size_t);
+
+template<typename T>
+static T * castArgSelf(void * arg) {
+    return reinterpret_cast<T *>(arg);
+}
 
 static inline void espDelayUs(uint32_t timeoutUs) {
     vTaskDelay(timeoutUs * configTICK_RATE_HZ / 1000000);

@@ -1,11 +1,10 @@
 #ifndef ESP32_CAM_ESP32CAM_H
 #define ESP32_CAM_ESP32CAM_H
 
-#include <Arduino.h>
+#include <EEPROM.h>
 #include <esp_camera.h>
 #include "Esp32Utils.h"
-#include <EEPROM.h>
-#include <WiFiManager.h>
+#include "WiFiManager.h"
 
 #define ACCESS_POINT_NAME "Video-Doorbell"
 #define REMOTE_HOST "192.168.137.1"//"rube200-pi4.duckdns.org"
@@ -14,6 +13,8 @@
 
 //Packet related
 #define UUID_SIZE 11
+
+#define BELL_PIN 14
 
 class Esp32Cam {
 public:
@@ -34,7 +35,11 @@ public:
         assert(0);
     }
 
-protected:
+private:
+    bool bellNeedSend = false;
+    int64_t bellPressedUntil = 0;//maybe remove
+    int64_t bellRecordUntil = 0;
+
     camera_config_t cameraConfig = {
             .pin_pwdn = 32,
             .pin_reset = -1,
@@ -62,16 +67,21 @@ protected:
             .fb_count = 2,
     };
 
-    bool isCameraOn;
-    WiFiClient socket;
-    WiFiManager wifiManager;
+    bool isCameraOn = false;
 
+    WiFiClient socket;
     WiFiManagerParameter socket_host_parameter = WiFiManagerParameter("Host", "Socket host", REMOTE_HOST, 50);
     WiFiManagerParameter socket_port_parameter  = WiFiManagerParameter("Port", "Socket port", REMOTE_PORT, 5);
+    int64_t streamUntil = 0;
+
+    WiFiManager wifiManager;
     std::vector<const char *> wifiMenu = {"wifi", "exit"};
     std::vector<const char *> wifiMenuParam = {"param", "exit"};
 
-private:
+    void setupPins();
+
+    static void bellPressed(void *);
+
     void startWifiManager();
 
     void startCamera();
@@ -82,13 +92,21 @@ private:
 
     bool connectSocket();
 
-    void processPacket(const String &);
+    void processRecvBytes(const String &);
 
-    void sendCamera();
+    void processSensors();
 
-    void sendUuid();
+    inline bool shouldSendCamera();
+
+    bool sendCamera();
+
+    bool sendBellPressed();
+
+    bool sendUuid();
 
     void saveParamsCallback();
+
+    static void saveWifiConfig(const char * ssid, const char * pass);
 };
 
 #endif
