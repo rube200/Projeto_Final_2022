@@ -2,90 +2,98 @@
 #define ESP32_CAM_ESP32UTILS_H
 
 #define DEBUG 1
-#define DEBUG_CAMERA DEBUG & 0
-#define DEBUG_WIFI DEBUG & 0
+#define DEBUG_CAMERA (DEBUG & 0)
+#define DEBUG_WIFI (DEBUG & 0)
 
-#define PACKET_HEADER 5
-#define STREAM_TIMEOUT 30500000//30.5s -> Py try to communicate every 10s
-#define STREAM_BELL_DURATION 5000000//5s
-#define BELL_PRESS_DELAY 1000000//1s
+/*
+ * Delays explanation
+ * ms -> milliseconds
+ * portTICK_PERIOD_MS(const) ->  1000 / configTICK_RATE_HZ
+ *
+ * vTaskDelay(ms / portTICK_PERIOD_MS)
+ * ms / portTICK_PERIOD_MS == ms / (1000 / configTICK_RATE_HZ) ==
+ * ms * configTICK_RATE_HZ / 1000
+ *
+ * μs/us -> microseconds
+ * us / 1000 -> ms
+ *
+ * vTaskDelay(ms / portTICK_PERIOD_MS)
+ * ms / portTICK_PERIOD_MS == (us / 1000) / portTICK_PERIOD_MS ==
+ * (us / 1000) / (1000 / configTICK_RATE_HZ) ==
+ * us * configTICK_RATE_HZ / 1000000
+*/
 
-enum packetType : char {
-    Uuid = 1,
-    Image = 2,
-    BellPressed = 3,
-    MotionDetected = 4,
-    StartStream = 5,
-    StopStream = 6
-};
+#define microSecondTicks (configTICK_RATE_HZ / 1000000)
 
-#include <cstdint>
-
-static inline void espDelayUs(uint32_t);
-
-template<typename T>
-static inline void espDelayUs(uint32_t, const T &&blocked);
-
-static bool espTryDelayUs(uint32_t, uint32_t);
-
-static uint8_t *createPacket(void *, size_t, packetType, size_t = PACKET_HEADER, bool = true);
-
-static uint8_t *espMalloc(size_t);
+static inline void espDelayUs(const uint32_t timeoutUs) {
+    vTaskDelay(timeoutUs * microSecondTicks);
+}
 
 template<typename T>
-static T * castArgSelf(void * arg) {
+static inline bool espDelayUs(const size_t timeoutUs, const T &&blocked, const uint32_t intervalUs = 50) {
+    const auto endAtUs = esp_timer_get_time() + timeoutUs;
+    const auto intervalTicks = intervalUs * microSecondTicks;
+
+    while (blocked()) {//Means it should continue delaying
+        const auto timeLeftUs = endAtUs - esp_timer_get_time();
+        if (timeLeftUs <= 0) {//Delay ended
+            return false;//timeout reached
+        }
+
+        if (timeLeftUs < intervalUs) {//Wait only for left time
+            espDelayUs(timeLeftUs);
+            return false;//timeout reached
+        }
+
+        vTaskDelay(intervalTicks);//Delay interval before next check
+    }
+
+    return true;
+}
+
+
+#define MALLOC_CAPS (MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT)
+
+static inline uint8_t *espMalloc(const size_t size) {
+    auto prt = (uint8_t *) malloc(size);
+    if (prt) {
+        return prt;
+    }
+
+    return (uint8_t *) heap_caps_malloc(size, MALLOC_CAPS);
+}
+
+static inline uint8_t *espRealloc(uint8_t *prt, const size_t size) {
+    if (!prt) {
+        prt = espMalloc(size);
+        return prt;
+    }
+
+    prt = (uint8_t *) realloc(prt, size);
+    if (prt) {
+        return prt;
+    }
+
+    return (uint8_t *) heap_caps_realloc(prt, size, MALLOC_CAPS);
+}
+
+template<typename T>
+static inline T *castArg(void *arg) {
     return reinterpret_cast<T *>(arg);
 }
 
-static inline void espDelayUs(uint32_t timeoutUs) {
-    vTaskDelay(timeoutUs * configTICK_RATE_HZ / 1000000);
+static inline int getIntFromBuf(const uint8_t buf[4]) {
+    return (static_cast<uint8_t>(buf[0] << 24) |
+            static_cast<uint8_t>(buf[1] << 16) |
+            static_cast<uint8_t>(buf[2] << 8) |
+            static_cast<uint8_t>(buf[3]));
 }
 
-template<typename T>
-static inline void espDelayUs(const uint32_t timeoutUs, const T &&blocked) {
-    const auto startUs = esp_timer_get_time();
-    while (!espTryDelayUs(startUs, timeoutUs) && blocked());
-}
-
-static bool espTryDelayUs(const uint32_t startUs, const uint32_t timeoutUs) {
-    if (esp_timer_get_time() >= startUs + timeoutUs) {
-        return true;
-    }
-
-    vTaskDelay(configTICK_RATE_HZ / 1000);
-    return false;
-}
-
-static uint8_t *createPacket(void *data, size_t size, packetType type, size_t headerSize, bool shouldFree) {
-    auto *res = espMalloc(headerSize + size);
-    if (!res) {
-        return res;
-    }
-
-    if (data && size > 0) {
-        memcpy(res + headerSize, data, size);
-    }
-
-    if (data && shouldFree) {
-        free(data);
-    }
-
-    res[0] = static_cast<char>(size >> 24);
-    res[1] = static_cast<char>(size >> 16);
-    res[2] = static_cast<char>(size >> 8);
-    res[3] = static_cast<char>(size);
-    res[4] = static_cast<char>(type);
-
-    return res;
-}
-
-static uint8_t *espMalloc(size_t size) {
-    auto *res = (uint8_t *) malloc(size);
-    if (res) {
-        return res;
-    }
-
-    return (uint8_t *) heap_caps_malloc(size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+static inline void restartEsp() {
+    Serial.println("Restarting ESP in 3s...");
+    vTaskDelay(3 * configTICK_RATE_HZ);
+    ESP.restart();
+    assert(0);
 }
 
 #endif
