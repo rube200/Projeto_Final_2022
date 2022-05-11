@@ -1,14 +1,10 @@
 #ifndef ESP32_CAM_ESP32CAM_H
 #define ESP32_CAM_ESP32CAM_H
 
-#include <EEPROM.h>
-#include <esp_camera.h>
 #include "Esp32CamCamera.h"
 #include "Esp32CamGpio.h"
 #include "Esp32CamSocket.h"
 #include "Esp32CamWifi.h"
-#include "Esp32Utils.h"
-#include "WiFiManager.h"
 
 #define SERIAL_BAUD 115200
 

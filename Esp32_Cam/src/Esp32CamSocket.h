@@ -1,9 +1,9 @@
 #ifndef ESP32_CAM_ESP32CAMSOCKET_H
 #define ESP32_CAM_ESP32CAMSOCKET_H
 
+#include "Esp32CamPacket.h"
 #include "Esp32Utils.h"
 #include "WiFiClient.h"
-#include "Esp32CamPacket.h"
 
 #define STREAM_TIMEOUT 30500000//30.5s -> Py try to communicate every 10s
 

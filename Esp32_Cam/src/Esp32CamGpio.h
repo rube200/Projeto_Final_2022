@@ -1,8 +1,6 @@
 #ifndef ESP32_CAM_ESP32CAMGPIO_H
 #define ESP32_CAM_ESP32CAMGPIO_H
 
-#include <Arduino.h>
-#include <driver/gpio.h>
 #include "Esp32Utils.h"
 
 #define DEBOUNCE_DELAY 50000//50ms

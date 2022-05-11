@@ -2,7 +2,6 @@
 #define ESP32_CAM_ESP32CAMPACKET_H
 
 #include "Esp32Utils.h"
-#include <WString.h>
 
 #define HEADER_SIZE 5
 
@@ -14,10 +13,12 @@ enum packetType : char {
     Image = 4,
     BellPressed = 5,
     MotionDetected = 6,
-    OpenRelay = 7
+    OpenRelay = 7,
+    Test = 8
 };
 
-const char *getTypeToString(packetType type) {
+static const char *getTypeToString(packetType type) {
+    static auto unknown_type = String("Unknown type: 0");
     switch (type) {
         case Invalid:
             return "Invalid";
@@ -36,6 +37,9 @@ const char *getTypeToString(packetType type) {
         case OpenRelay:
             return "OpenRelay";
     }
+
+    unknown_type[14] = (char)type;
+    return unknown_type.c_str();
 }
 
 class Esp32CamPacket {

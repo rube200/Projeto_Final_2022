@@ -1,7 +1,6 @@
 #ifndef ESP32_CAM_ESP32CAMCAMERA_H
 #define ESP32_CAM_ESP32CAMCAMERA_H
 
-#include <Arduino.h>
 #include <esp_camera.h>
 #include "Esp32Utils.h"
 

@@ -1,6 +1,9 @@
 #ifndef ESP32_CAM_ESP32UTILS_H
 #define ESP32_CAM_ESP32UTILS_H
 
+#include <Arduino.h>
+#include <cstdint>
+
 #define DEBUG 1
 #define DEBUG_CAMERA (DEBUG & 0)
 #define DEBUG_WIFI (DEBUG & 0)
@@ -25,12 +28,12 @@
 
 #define microSecondTicks (configTICK_RATE_HZ / 1000000)
 
-static inline void espDelayUs(const uint32_t timeoutUs) {
+static inline void espDelayUs(const uint64_t timeoutUs) {
     vTaskDelay(timeoutUs * microSecondTicks);
 }
 
 template<typename T>
-static inline bool espDelayUs(const size_t timeoutUs, const T &&blocked, const uint32_t intervalUs = 50) {
+static inline bool espDelayUs(const size_t timeoutUs, const T &&blocked, const uint64_t intervalUs = 50) {
     const auto endAtUs = esp_timer_get_time() + timeoutUs;
     const auto intervalTicks = intervalUs * microSecondTicks;
 

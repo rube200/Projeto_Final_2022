@@ -167,8 +167,8 @@ void Esp32CamSocket::processHandShake(const uint8_t *data, const size_t data_len
         return;
     }
 
-    bellCaptureDuration = std::max(bellCaptureDuration, getIntFromBuf(data));
-    relayOpenDuration = std::max(relayOpenDuration, getIntFromBuf(data + 4));//4 size of int
+    bellCaptureDuration = std::max(bellCaptureDuration, (uint64_t)getIntFromBuf(data));
+    relayOpenDuration = std::max(relayOpenDuration, (uint64_t)getIntFromBuf(data + 4));//4 size of int
 
     uint8_t *baseMac = espMalloc(MAC_SIZE);
     if (!baseMac) {

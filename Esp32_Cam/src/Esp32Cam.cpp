@@ -6,7 +6,7 @@ static int64_t calculateTime(int64_t start) {
 }
 #endif
 
-inline void Esp32Cam::begin() {
+void Esp32Cam::begin() {
     Serial.begin(SERIAL_BAUD);
 #if DEBUG
     Serial.setDebugOutput(true);
@@ -34,7 +34,7 @@ void Esp32Cam::startSocket() {
     }
 }
 
-inline void Esp32Cam::loop() {
+void Esp32Cam::loop() {
     if (!Esp32CamWifi::isReady()) {
         restartEsp();
         return;
