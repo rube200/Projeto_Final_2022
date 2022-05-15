@@ -7,13 +7,14 @@
 
 enum packetType : char {
     Invalid = 0,
-    HandShake = 1,
-    StartStream = 2,
-    StopStream = 3,
-    Image = 4,
-    BellPressed = 5,
-    MotionDetected = 6,
-    OpenRelay = 7,
+    Uuid = 1,
+    Config = 2,
+    StartStream = 3,
+    StopStream = 4,
+    Image = 5,
+    BellPressed = 6,
+    MotionDetected = 7,
+    OpenRelay = 8,
     Test = 8
 };
 
@@ -22,8 +23,10 @@ static const char *getTypeToString(packetType type) {
     switch (type) {
         case Invalid:
             return "Invalid";
-        case HandShake:
-            return "HandShake";
+        case Uuid:
+            return "Uuid";
+        case Config:
+            return "Config";
         case StartStream:
             return "StartStream";
         case StopStream:
