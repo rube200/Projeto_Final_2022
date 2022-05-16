@@ -26,13 +26,15 @@ public:
     void sendMotionDetected();
 
 private:
-    void processHandShake(const uint8_t *, size_t);
+    void processConfig(const uint8_t *, size_t);
 
     void precessPacket();
 
-    size_t receiveHeader();
+    size_t receiveHeader(int);
 
     void sendPacket(const Esp32CamPacket &, const String & = String());
+
+    void sendUuid();
 
     const char *host = nullptr;
     uint16_t port = 0;
@@ -42,6 +44,7 @@ private:
     uint64_t bellCaptureDuration = 0;//0 means single frame
     bool bellSent = false;
 
+    bool isConfigured = false;
     uint64_t openRelayUntil = 0;
     uint64_t relayOpenDuration = 5000000;//5s
 };

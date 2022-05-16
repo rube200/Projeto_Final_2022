@@ -5,7 +5,7 @@
 
 #define HEADER_SIZE 5
 
-enum packetType : char {
+enum packetType {
     Invalid = 0,
     Uuid = 1,
     Config = 2,
@@ -14,12 +14,10 @@ enum packetType : char {
     Image = 5,
     BellPressed = 6,
     MotionDetected = 7,
-    OpenRelay = 8,
-    Test = 8
+    OpenRelay = 8
 };
 
 static const char *getTypeToString(packetType type) {
-    static auto unknown_type = String("Unknown type: 0");
     switch (type) {
         case Invalid:
             return "Invalid";
@@ -39,10 +37,9 @@ static const char *getTypeToString(packetType type) {
             return "MotionDetected";
         case OpenRelay:
             return "OpenRelay";
+        default:
+            return "Unknown packet type";
     }
-
-    unknown_type[14] = (char)type;
-    return unknown_type.c_str();
 }
 
 class Esp32CamPacket {

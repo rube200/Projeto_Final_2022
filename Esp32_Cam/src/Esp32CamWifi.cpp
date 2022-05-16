@@ -8,7 +8,7 @@ Esp32CamWifi::Esp32CamWifi() {
 
     addParameter(&socket_host_parameter);
     addParameter(&socket_port_parameter);
-    loadCostumeParameters();
+
     setNormalMode();
     setSaveParamsCallback([this] {
 #pragma clang diagnostic push
@@ -18,6 +18,12 @@ Esp32CamWifi::Esp32CamWifi() {
         saveCostumeParameters();
         stopConfigPortal();
     });
+}
+
+void Esp32CamWifi::begin() {
+    Serial.println("Starting WiFiManager...");
+
+    loadCostumeParameters();
 
     //Fix bug related to params and EEPROM save
     if (!getWiFiIsSaved()) {
@@ -35,10 +41,6 @@ Esp32CamWifi::Esp32CamWifi() {
             esp_wifi_set_config(WIFI_IF_STA, &conf);
         }
     }
-}
-
-void Esp32CamWifi::begin() {
-    Serial.println("Starting WiFiManager...");
 
     if (!autoConnect(ACCESS_POINT_NAME)) {
         Serial.println("Failed to connect to WiFi.");

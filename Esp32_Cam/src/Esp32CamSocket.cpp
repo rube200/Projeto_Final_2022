@@ -40,7 +40,11 @@ bool Esp32CamSocket::isRelayRequested() {
 }
 
 bool Esp32CamSocket::isStreamRequested() {
-    if (!bellSent) {
+    if (!isConfigured) {
+        return false;
+    }
+
+    if (bellSent) {
         bellSent = false;
         return true;
     }
@@ -59,11 +63,22 @@ bool Esp32CamSocket::isStreamRequested() {
 
 void Esp32CamSocket::precessPacket() {
     const auto type = readPacket.getPacketType();
-    switch (type) {
-        case HandShake:
-            processHandShake(readPacket.getData(), readPacket.getDataLen());
-            break;
+    if (type == Uuid) {
+        sendUuid();
+        return;
+    }
 
+    if (type == Config) {
+        processConfig(readPacket.getData(), readPacket.getDataLen());
+        return;
+    }
+
+    if (!isConfigured) {
+        Serial.printf("Received a packet(%s) but esp is not configured yet.\n", getTypeToString(type));
+        return;
+    }
+
+    switch (type) {
         case StartStream:
             streamUntil = esp_timer_get_time() + STREAM_TIMEOUT;
             break;
@@ -77,20 +92,19 @@ void Esp32CamSocket::precessPacket() {
             break;
 
         default:
-#if DEBUG
-            Serial.printf("Unknown packet %i\n", type);
-#endif
+            Serial.printf("Unknown packet %s\n", getTypeToString(type));
             break;
     }
 }
 
 void Esp32CamSocket::processSocket() {
-    if (available() <= 0) {
-        return;
-    }
-
     do {
-        auto lenLeft = receiveHeader() - readPacket.packetLen();
+        const auto av = available();
+        if (av <= 0) {
+            return;
+        }
+
+        auto lenLeft = receiveHeader(av) - readPacket.packetLen();
         if (lenLeft < 0) {//fail at receiveHeader()
             return;
         }
@@ -101,7 +115,7 @@ void Esp32CamSocket::processSocket() {
             continue;
         }
 
-        const auto toRead = std::min((size_t) available(), lenLeft);
+        const auto toRead = std::min((size_t) av, lenLeft);
         if (toRead <= 0) {
             return;
         }
@@ -124,14 +138,14 @@ void Esp32CamSocket::processSocket() {
     } while (true);
 }
 
-size_t Esp32CamSocket::receiveHeader() {
+size_t Esp32CamSocket::receiveHeader(int av) {
     //If type != Invalid we already set header
     if (readPacket.getPacketType() != Invalid) {
         return HEADER_SIZE + readPacket.getDataLen();
     }
 
     //Header min size
-    if (available() < 5) {
+    if (av < 5) {
         return 0;
     }
 
@@ -160,28 +174,34 @@ void Esp32CamSocket::setHost(const char *host_ip, const uint16_t host_port) {
 #define MAC_SIZE 6
 #define HANDSHAKE_RECV_SIZE 1
 
-void Esp32CamSocket::processHandShake(const uint8_t *data, const size_t data_len) {
+void Esp32CamSocket::processConfig(const uint8_t *data, const size_t data_len) {
     if (!data || data_len < HANDSHAKE_RECV_SIZE) {
-        const auto packet = Esp32CamPacket(Invalid, nullptr, 0);
-        sendPacket(packet, "Invalid HandShake data");
+        Serial.printf("Invalid config received: %i\n", data_len);
         return;
     }
 
-    bellCaptureDuration = std::max(bellCaptureDuration, (uint64_t)getIntFromBuf(data));
-    relayOpenDuration = std::max(relayOpenDuration, (uint64_t)getIntFromBuf(data + 4));//4 size of int
+    bellCaptureDuration = std::max(bellCaptureDuration, (uint64_t) getIntFromBuf(data));
+    relayOpenDuration = std::max(relayOpenDuration, (uint64_t) getIntFromBuf(data + 4));//4 size of int
+    isConfigured = true;
+}
 
+void Esp32CamSocket::sendUuid() {
     uint8_t *baseMac = espMalloc(MAC_SIZE);
     if (!baseMac) {
         return;
     }
 
     esp_read_mac(baseMac, ESP_MAC_WIFI_STA);
-    const auto packet = Esp32CamPacket(HandShake, baseMac, MAC_SIZE);
-    sendPacket(packet, "HandShake");
+    const auto packet = Esp32CamPacket(Uuid, baseMac, MAC_SIZE);
+    sendPacket(packet, "Uuid");
     free(baseMac);
 }
 
 void Esp32CamSocket::sendBellPressed() {
+    if (!isConfigured) {
+        return;
+    }
+
     const auto packet = Esp32CamPacket(BellPressed, nullptr, 0);
     sendPacket(packet, "BellPressed");
     if (bellCaptureDuration > 0) {
@@ -192,12 +212,20 @@ void Esp32CamSocket::sendBellPressed() {
 }
 
 void Esp32CamSocket::sendFrame(uint8_t *image, const size_t image_len) {
+    if (!isConfigured) {
+        return;
+    }
+
     const auto packet = Esp32CamPacket(Image, image, image_len);
     free(image);
     sendPacket(packet, "SendFrame");
 }
 
 void Esp32CamSocket::sendMotionDetected() {
+    if (!isConfigured) {
+        return;
+    }
+
     const auto packet = Esp32CamPacket(MotionDetected, nullptr, 0);
     sendPacket(packet, "MotionDetected");
 }

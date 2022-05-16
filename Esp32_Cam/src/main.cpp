@@ -3,7 +3,6 @@
 Esp32Cam espController; // NOLINT(cert-err58-cpp)
 void setup() {
     espController.begin();
-    Serial.println(getTypeToString(Test));//todo
 }
 
 void loop() {
