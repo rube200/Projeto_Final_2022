@@ -1,241 +1,150 @@
 import logging as log
-from enum import Enum
-from selectors import BaseSelector, EVENT_READ, EVENT_WRITE
 from socket import socket
-from struct import pack, unpack
-from traceback import format_exc
-from typing import Any, Tuple, Union
+from struct import pack
+from typing import Any, Callable, Tuple
 
-from _socket import SOL_SOCKET, SO_KEEPALIVE
+from esp_socket.socket_packet import Packet, PacketType
+from esp_socket.socket_selector import BaseSelector, EVENT_EXCEPTIONAL, EVENT_READ, EVENT_WRITE
 
-from esp_socket.select_selector import EVENT_EXCEPTIONAL
-
-Address = Union[Tuple[Any, ...], str]
 BINARY_ZERO = int.to_bytes(0, 4, 'big')
-HEADER_SIZE = 5
-WRITE = EVENT_READ | EVENT_WRITE
+READ = EVENT_READ | EVENT_EXCEPTIONAL
+WRITE = READ | EVENT_WRITE
 
 
-class PacketType(Enum):
-    Uuid = 1
-    Image = 2
-    BellPressed = 3
-    MotionDetected = 4
-    StartStream = 5
-    StopStream = 6
+class SocketClient(Packet):
+    def __init__(self, address: Tuple[str, int], selector: BaseSelector, tcp_socket: socket, udp_socket: socket,
+                 uuid_cb: Callable[[Any], None]):
+        super(SocketClient, self).__init__()
+        self.__address = address
+        self.__selector = selector
+        self.__tcp_socket = tcp_socket
+        self.__udp_socket = udp_socket
+        self.__uuid_cb = uuid_cb
 
+        self.__camera = b''
+        self.__can_accept_image = False
+        self.__selector.register(self.__tcp_socket, READ, self)
+        self.__uuid = 0
+        self.__write_buffer = b''
 
-class SocketClient:
-    def __init__(self, address: Address, connection: socket, selector: BaseSelector):
-        self._address = address
-        self._closing_cd = None
-        self._connection = connection
-        self._connection.setblocking(False)
-        self._connection.setsockopt(SOL_SOCKET, SO_KEEPALIVE, True)
-        self._selector = selector
-        self._selector.register(self._connection, EVENT_READ, self)
-        self._unique_id = 0
-        self._unique_id_cd = None
+        self.send_uuid()
 
-        self._camera = b''
-        self._deleted = False
-        self._disposed = False
-        self._name = None
+    def close(self):
+        self.reset_packet(True)
+        self.__address = None
+        self.__camera = None
+        self.__selector.unregister(self.__tcp_socket)
+        self.__selector = None
+        self.__tcp_socket.close()
+        self.__tcp_socket = None
+        self.__udp_socket = None
+        self.__uuid = 0
+        self.__uuid_cb = None
+        self.__write_buffer = None
 
-        self._packet_data = b''
-        self._packet_len = None
-        self._packet_type = None
-
-        self._recv_buffer = b''
-        self._send_buffer = b''
-
-        self._write_packet(PacketType.Uuid)
-
-    def __exit__(self, *arg):
+    def __recv(self) -> None:
         try:
-            self.close()
-        except Exception as ex:
-            log.error(f'Exception while exiting socket server: {ex!r}')
-            log.error(format_exc())
+            data = self.__tcp_socket.recv(1024)  # todo change if using udp
+            if not data:
+                raise RuntimeError('Peer closed.')
 
-    def __del__(self):
+            self.append_data(data)
+
+        except BlockingIOError as ex:
+            log.warning(f'Blocking error at recv for {self.__address}: {ex!r}')
+
+    def __process_recv(self) -> None:
+        self.process_header()
+        if not self.is_ready_to_process():
+            return
+
         try:
-            if self._deleted:
-                return
+            self.__process_packet()
+        finally:
+            self.reset_packet(False)
 
-            self._deleted = True
-            self.close()
-        except Exception as ex:
-            log.error(f'Exception while deleting socket server: {ex!r}')
-            log.error(format_exc())
+    def __process_packet(self) -> None:
+        pkt_type = self.get_type()
+        data = self.get_data()
+        if pkt_type is PacketType.Uuid:
+            self.__process_uuid(data)
+            return
+
+        if not self.__uuid:
+            log.debug(f'Receive a packet of type {pkt_type!r} {self.__address!r} from but handshake was not completed!')
+            return
+
+        if pkt_type is PacketType.Image:
+            self.__camera = data
+            return
+
+        # todo finish
+        raise ValueError(f'Unknown {pkt_type!r} from {self.__address!r}')
+
+    def __process_uuid(self, data: bytes) -> None:
+        self.__uuid = int(data.hex(), base=16)
+        self.__uuid_cb(self)
+
+    def __write(self) -> None:
+        if not self.__write_buffer:
+            self.__selector.modify(self.__tcp_socket, READ, self)
+            return
+
+        try:
+            sent = self.__tcp_socket.send(self.__write_buffer)
+            self.__write_buffer = self.__write_buffer[sent:]
+            if not self.__write_buffer:
+                self.__selector.modify(self.__tcp_socket, EVENT_READ, self)
+
+        except BlockingIOError as ex:
+            log.debug(f'Blocking error at send for {self.__address!r}: {ex!r}')
+
+    def __write_data(self, data: bytes) -> None:
+        self.__write_buffer += data
+        self.__selector.modify(self.__tcp_socket, WRITE, self)
+
+    def process_udp_data(self, _, data: bytes) -> None:
+        if not self.__can_accept_image:
+            return
+
+        self.__camera = data
+
+    def process_events(self, mask: int) -> None:
+        if mask & EVENT_READ:
+            self.__recv()
+            self.__process_recv()
+
+        if mask & EVENT_WRITE:
+            self.__write()
+
+    def send_uuid(self) -> None:
+        self.send_empty_packet(PacketType.Uuid)
+
+    def send_config(self, bell_duration: int, relay_duration: int) -> None:
+        data = pack('>iBii', 8, PacketType.Config.value, bell_duration, relay_duration)  # 8 is 2*int size
+        self.__write_data(data)
+
+    def send_start_stream(self):
+        self.send_empty_packet(PacketType.StartStream)
+
+    def send_stop_stream(self):
+        self.send_empty_packet(PacketType.StopStream)
+
+    def send_empty_packet(self, packet_type: PacketType):
+        data = pack('>iB', int(0), packet_type.value)
+        self.__write_data(data)
+
+    def setup_client(self, bell_duration: int, relay_duration: int) -> None:
+        self.send_config(bell_duration, relay_duration)
 
     @property
-    def address(self) -> Address:
-        return self._address
+    def address(self) -> Tuple[str, int]:
+        return self.__address
 
     @property
     def camera(self) -> bytes:
-        return self._camera
+        return self.__camera
 
     @property
-    def closed(self) -> bool:
-        return self._disposed
-
-    @property
-    def name(self) -> str:
-        return self._name or str(self._unique_id)
-
-    @property
-    def unique_id(self) -> int:
-        return self._unique_id
-
-    def close(self):
-        if self._disposed:
-            return
-
-        self._disposed = True
-
-        if self._closing_cd:
-            self._closing_cd(self)
-
-        try:
-            del self._address
-
-            self._connection.close()
-            self._selector.unregister(self._connection)
-
-            del self._connection
-            self._selector = None
-
-            del self._camera
-            del self._name
-            del self._packet_data
-            del self._packet_len
-            del self._packet_type
-            del self._recv_buffer
-            del self._send_buffer
-
-        except Exception as ex:
-            log.error(f'Exception while disposing socket server: {ex!r}')
-            log.error(format_exc())
-
-    def process_events(self, mask: int):
-        if mask & EVENT_EXCEPTIONAL:
-            log.warning(f'Exception for client {self._address}')
-
-        if mask & EVENT_READ:
-            self._read()
-
-        if mask & EVENT_WRITE:
-            self._write()
-
-    def request_start_stream(self):
-        self._write_packet(PacketType.StartStream)
-
-    def request_stop_stream(self):
-        self._write_packet(PacketType.StopStream)
-
-    def setCloseCb(self, fn):
-        self._closing_cd = fn
-
-    def setUniqueIdCb(self, fn):
-        self._unique_id_cd = fn
-
-    def _get_packet_header(self):
-        if self._packet_type:
-            return
-
-        if len(self._recv_buffer) < HEADER_SIZE:
-            return
-
-        self._packet_len, self._packet_type = unpack('>iB', self._recv_buffer[:HEADER_SIZE])
-        self._recv_buffer = self._recv_buffer[HEADER_SIZE:]
-
-    def _get_packet_data(self):
-        if not self._packet_type or self._packet_data:
-            return
-
-        if len(self._recv_buffer) < self._packet_len:
-            return
-
-        self._packet_data = self._recv_buffer[:self._packet_len]
-        self._recv_buffer = self._recv_buffer[self._packet_len:]
-
-    def _process_packet(self):
-        if not self._packet_type or not self._packet_data:
-            return
-
-        data = self._packet_data
-        packet_type = PacketType(self._packet_type)
-
-        self._packet_data = b''
-        self._packet_len = None
-        self._packet_type = None
-
-        if packet_type is PacketType.Uuid:
-            self._unique_id = int(data.hex(), base=16)
-
-            if not self._name:
-                self._name = str(self._unique_id)
-
-            if self._unique_id_cd:
-                self._unique_id_cd(self)
-
-            return
-
-        if packet_type is PacketType.Image:
-            self._camera = data
-            return
-
-        raise ValueError(f'Unknown {packet_type} from {self._address}')
-
-    def _recv(self):
-        try:
-            data = self._connection.recv(2048)
-        except BlockingIOError as ex:
-            log.warning(f'Blocking error at recv for {self._address}: {ex!r}')
-        except ConnectionResetError:
-            pass
-        else:
-            if data:
-                self._recv_buffer += data
-            else:
-                log.warning(f'Runtime error Peer closed for {self._address}')
-                raise RuntimeError('Peer closed.')
-
-    def _read(self):
-        self._recv()
-
-        self._get_packet_header()
-        self._get_packet_data()
-        self._process_packet()
-
-    def _write(self):
-        if not self._send_buffer:
-            return
-
-        try:
-            sent = self._connection.send(self._send_buffer)
-        except BlockingIOError as ex:
-            log.debug(f'Blocking error at send for {self._address}: {ex!r}')
-        else:
-            self._send_buffer = self._send_buffer[sent:]
-            if sent and not self._send_buffer:
-                self._selector.modify(self._connection, EVENT_READ, self)
-
-    def _write_packet(self, packet_type: PacketType, data: bytes = None):
-        if not packet_type:
-            raise ValueError(f'Invalid parameter packet_type: {packet_type}')
-
-        try:
-            header = pack('>iB', 0 if not data else len(data), packet_type.value)
-            if data:
-                packet = header + data
-            else:
-                packet = header
-
-            self._send_buffer += packet
-            self._selector.modify(self._connection, WRITE, self)
-        except Exception as ex:
-            log.exception(f'Exception while writing packet for {self._address}: {ex!r}')
-            log.exception(f'{format_exc()}')
+    def uuid(self) -> int:
+        return self.__uuid

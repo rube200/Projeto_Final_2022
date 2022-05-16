@@ -21,7 +21,7 @@ NAV_DICT = [
 
 class WebServer(Flask):
     def __init__(self, _esp_clients: dict = None):
-        super().__init__(import_name=__name__, static_url_path='/esp32static')
+        super(WebServer, self).__init__(import_name=__name__, static_url_path='/esp32static')
         self._esp_clients = _esp_clients or {}
 
     @property
@@ -70,25 +70,26 @@ def login():
     pw = request.form.get('password')
     conn = sqlite3.connect('proj.db')
     c = conn.cursor()
-    c.execute("SELECT ID FROM USER WHERE NAME like ? AND PASSWORD like ?", (usr, pw))
+    c.execute('SELECT ID FROM USER WHERE NAME like ? AND PASSWORD like ?', (usr, pw))
     m = [row[0] for row in c][0]
-    return redirect(url_for("images", id=m))
+    return redirect(url_for('images', id=m))
     
 
 @web.route('/images/<int:id>')
 def images(id):    
     conn = sqlite3.connect('proj.db')
     c = conn.cursor()
-    fiveMostRecent = c.execute("SELECT DATA,DATE,ESP_NAME FROM PICTURE  WHERE USER_ID LIKE ? ORDER BY DATE desc LIMIT 5", (id,))
+    fiveMostRecent = c.execute(
+        'SELECT DATA,DATE,ESP_NAME FROM PICTURE  WHERE USER_ID LIKE ? ORDER BY DATE desc LIMIT 5', (id,))
     #    GROUP BY USER_ID 
-    #imgs = c.execute("SELECT * FROM PICTURE WHERE USER_ID LIKE ?", (id)) 
+    # imgs = c.execute('SELECT * FROM PICTURE WHERE USER_ID LIKE ?', (id))
     data = []
     names = []
     dates = []
     for img in fiveMostRecent:
-        data.append("data:image/png;charset=UTF-8;base64," + base64.b64encode(img[0]).decode('utf-8'))
+        data.append('data:image/png;charset=UTF-8;base64,' + base64.b64encode(img[0]).decode('utf-8'))
         #data.append('iVBORw0KGgoAAAANSUhEUgAAAAoAAAAJCAIAAACExCpEAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAASSURBVChTY5DutMGDRqZ0pw0A4ZNOwQNf')
-        dates.append(img[1])#.split(".")[0]) #split to remove miliseconds
+        dates.append(img[1])  # .split('.')[0]) #split to remove miliseconds
         names.append(img[2])
     
     
@@ -138,19 +139,21 @@ def generate_stream(esp_id: int, stream_request: bool = True):
         return b'Content-Length: 0'
 
     if stream_request:
-        client.request_start_stream()
+        start_at = monotonic() + 10
+        client.send_start_stream()
 
     try:
-
+        start_at = monotonic()
         while True:
             sleep(.05)
-            if not client or client.closed:
+            if not client or not client.uuid:
                 client = web.get_client(esp_id)
                 continue
 
-            if start_at <= monotonic():
+            # noinspection PyUnboundLocalVariable
+            if stream_request and start_at <= monotonic():
                 start_at = monotonic() + 10
-                client.request_start_stream()
+                client.send_start_stream()
 
             if not client.camera:
                 yield b'--frame\r\nContent-Length: 0'
@@ -160,12 +163,12 @@ def generate_stream(esp_id: int, stream_request: bool = True):
                   b'\r\nContent-Type: image/jpeg\r\nTransfer-Encoding: chunked\r\n\r\n' + client.camera + b'\r\n'
     except Exception as ex:
         log.exception(f'Exception while generate_stream: {ex!r}')
-        log.exception(f'{format_exc()}')
+        log.exception(format_exc())
     finally:
         if stream_request:
-            client.request_stop_stream()
+            client.send_stop_stream()
 
-        log.warning("Exiting generate_stream")
+        log.warning('Exiting generate_stream')
         return b'Content-Length: 0'
 
 
@@ -177,10 +180,10 @@ def stream(esp_id: int):
 
     except Exception as x:
         log.exception(f'Exception while streaming2: {x!r}')
-        log.exception(f'{format_exc()}')
+        log.exception(format_exc())
 
     finally:
-        log.warning("Exiting stream")
+        log.warning('Exiting stream')
 
 
 @web.route('/<int:esp_id>/stream2')

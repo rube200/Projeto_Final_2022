@@ -3,7 +3,7 @@ from os import environ
 from threading import Thread
 from traceback import format_exc
 
-from esp_socket.socket_server import socket as socket_server
+from esp_socket.socket_server import sv as socket_server
 from esp_web.flask_server import web as web_server
 
 environ['ESP32_DEBUG'] = environ['FLASK_DEBUG'] = '1'
@@ -31,7 +31,7 @@ def config_logger(filename: str = 'esp32server.py.log'):
 
 def run_socket_server():
     global socket_thread
-    socket_thread = Thread(daemon=True, target=socket_server.run)
+    socket_thread = Thread(daemon=True, target=socket_server.run_forever)
     socket_thread.start()
 
 
@@ -48,7 +48,8 @@ def set_buffer():
 def stop_socket_server():
     global socket_thread
 
-    socket_server.stop()
+    socket_server.shutdown()
+    del socket_server
     if socket_thread:
         # noinspection PyUnresolvedReferences
         socket_thread.join()

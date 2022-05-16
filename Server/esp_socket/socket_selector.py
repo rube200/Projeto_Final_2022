@@ -2,9 +2,10 @@ from collections import namedtuple
 from collections.abc import Mapping
 from math import ceil
 from sys import platform
+from typing import Any, Tuple
 
-from _socket import SocketType
 import select
+from _socket import SocketType
 
 EVENT_READ = (1 << 0)
 EVENT_WRITE = (1 << 1)
@@ -13,10 +14,10 @@ EVENT_EXCEPTIONAL = (1 << 2)
 SelectorKey = namedtuple('SelectorKey', ['fo', 'fd', 'events', 'data'])
 
 
-def _fd_from_fo(fo: SocketType):
+def _fd_from_fo(fo: SocketType) -> int:
     fd = int(fo.fileno())
     if fd < 0:
-        raise ValueError(f"Invalid file descriptor: {fd}")
+        raise ValueError(f'Invalid file descriptor: {fd!r}')
     return fd
 
 
@@ -31,30 +32,30 @@ class BaseSelector(Mapping):
         fd = _fd_from_fo(fo)
         if fd in self._fd_key:
             return self._fd_key.get(fd)
-        raise KeyError(f"{fo!r} is not registered") from None
+        raise KeyError(f'{fo!r} is not registered') from None
 
     def __iter__(self):
         return iter(self._fd_key)
 
-    def register(self, fo: SocketType, events, data=None):
+    def register(self, fo: SocketType, events: int, data: Any = None) -> SelectorKey:
         if not events or events & ~(EVENT_READ | EVENT_WRITE | EVENT_EXCEPTIONAL):
-            raise ValueError(f"Invalid events: {events!r}")
+            raise ValueError(f'Invalid events: {events!r}')
 
         fd = _fd_from_fo(fo)
         key = SelectorKey(fo, fd, events, data)
         if key.fd in self._fd_key:
-            raise KeyError(f"{fo!r} (FD {key.fd}) is already registered")
+            raise KeyError(f'{fo!r} (FD {key.fd!r}) is already registered')
 
         self._fd_key[key.fd] = key
         return key
 
-    def unregister(self, fo: SocketType):
+    def unregister(self, fo: SocketType) -> SelectorKey:
         fd = _fd_from_fo(fo)
         if fd in self._fd_key:
             return self._fd_key.pop(fd)
-        raise KeyError(f"{fo!r} is not registered") from None
+        raise KeyError(f'{fo!r} is not registered') from None
 
-    def modify(self, fo: SocketType, events, data=None):
+    def modify(self, fo: SocketType, events: int, data: Any = None) -> SelectorKey:
         key = self[fo]  # __getitem__
         if events != key.events:
             self.unregister(fo)
@@ -66,7 +67,7 @@ class BaseSelector(Mapping):
             self._fd_key[key.fd] = key
         return key
 
-    def close(self):
+    def close(self) -> None:
         self._fd_key.clear()
 
     def __enter__(self):
@@ -76,7 +77,7 @@ class BaseSelector(Mapping):
         self.close()
 
 
-def _select(r, w, x, timeout=None):
+def _select(r, w, x, timeout=None) -> Tuple[list, list, list]:
     r, w, x = select.select(r, w, x, timeout)
     return r, w, x
 
@@ -88,7 +89,7 @@ class NormalSelector(BaseSelector):
         self._writers = set()
         self._exceptional = set()
 
-    def register(self, fo: SocketType, events, data=None):
+    def register(self, fo: SocketType, events: int, data: Any = None) -> SelectorKey:
         key = super(NormalSelector, self).register(fo, events, data)
         if events & EVENT_READ:
             self._readers.add(key.fd)
@@ -98,8 +99,8 @@ class NormalSelector(BaseSelector):
             self._exceptional.add(key.fd)
         return key
 
-    def unregister(self, fileobj):
-        key = super().unregister(fileobj)
+    def unregister(self, fo: SocketType) -> SelectorKey:
+        key = super(NormalSelector, self).unregister(fo)
         self._readers.discard(key.fd)
         self._writers.discard(key.fd)
         self._exceptional.discard(key.fd)
@@ -108,7 +109,7 @@ class NormalSelector(BaseSelector):
     if platform != 'win32':
         _select = select.select
 
-    def select(self, timeout=None):
+    def select(self, timeout: float = None) -> list:
         timeout = None if timeout is None else max(timeout, 0)
         ready = []
         try:
@@ -144,7 +145,7 @@ if hasattr(select, 'poll'):
             super(PollSelector, self).__init__()
             self._poll = select.poll()
 
-        def register(self, fo: SocketType, events, data=None):
+        def register(self, fo: SocketType, events: int, data: Any = None) -> SelectorKey:
             key = super(PollSelector, self).register(fo, events, data)
             poll_events = 0
             if events & EVENT_READ:
@@ -160,7 +161,7 @@ if hasattr(select, 'poll'):
                 raise
             return key
 
-        def unregister(self, fo: SocketType):
+        def unregister(self, fo: SocketType) -> SelectorKey:
             key = super(PollSelector, self).unregister(fo)
             try:
                 self._poll.unregister(key.fd)
@@ -168,7 +169,7 @@ if hasattr(select, 'poll'):
                 pass
             return key
 
-        def modify(self, fo: SocketType, events, data=None):
+        def modify(self, fo: SocketType, events: int, data: Any = None) -> SelectorKey:
             key = self[fo]  # __getitem__
             if events == key.events and data == key.data:
                 return key
@@ -192,7 +193,7 @@ if hasattr(select, 'poll'):
             self._fd_key[key.fd] = key
             return key
 
-        def select(self, timeout=None):
+        def select(self, timeout: float = None) -> list:
             timeout = None if timeout is None else max(ceil(timeout * 1e3), 0)
             ready = []
             try:

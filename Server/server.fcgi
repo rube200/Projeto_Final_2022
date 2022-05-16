@@ -17,7 +17,7 @@ def main():
         stop_socket_server()
     except Exception as ex:
         log.exception(f'Exception while executing wsgi server: {ex!r}')
-        log.exception(f'{format_exc()}')
+        log.exception(format_exc())
 
 
 if __name__ == '__main__':
