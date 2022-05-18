@@ -1,45 +1,30 @@
 #include "Esp32CamGpio.h"
 
-void Esp32CamGpio::begin() const {
-    //Config bell button using esp system
-    auto pin = static_cast<gpio_num_t>(BELL_PIN);
-    auto err = gpio_set_intr_type(pin, GPIO_INTR_POSEDGE);
-    if (err != ESP_OK) {
-        Serial.printf("Fail to set intr type - %i %s %i\n", pin, esp_err_to_name(err), err);
-        restartEsp();
-        return;
-    }
+void Esp32CamGpio::begin() {
+    gpio_config_t io_conf {
+        .pin_bit_mask = BELL_PIN_BIT,
+        .mode = GPIO_MODE_INPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE
+    };
 
-    err = gpio_isr_handler_add(pin, bellPressed, (void *) this);
-    if (err != ESP_OK) {
-        Serial.printf("Fail to isr handler add - %i %s %i\n", pin, esp_err_to_name(err), err);
-        restartEsp();
-        return;
-    }
-    //Finish bell button config
-
-    //Config pir sensor using esp
-    pin = static_cast<gpio_num_t>(PIR_PIN);
-    err = gpio_set_intr_type(pin, GPIO_INTR_POSEDGE);
-    if (err != ESP_OK) {
-        Serial.printf("Fail to set intr type - %i %s %i\n", pin, esp_err_to_name(err), err);
-        restartEsp();
-        return;
-    }
-
-    err = gpio_isr_handler_add(pin, movementDetected, (void *) this);
-    if (err != ESP_OK) {
-        Serial.printf("Fail to isr handler add - %i %s %i\n", pin, esp_err_to_name(err), err);
-        restartEsp();
-        return;
-    }
-    //Finish pir sensor config
+    //Config bell button and pir sensor using esp system
+    configGpio(&io_conf, BELL_PIN);
+    //configGpio(&io_conf, PIR_PIN); //todo pir
+    //Finish bell button and pir sensor config
 
     //Config relay using esp
-    pin = static_cast<gpio_num_t>(RELAY_PIN);
-    err = gpio_set_direction(pin, GPIO_MODE_INPUT_OUTPUT);
+    io_conf.pin_bit_mask = RELAY_PIN_BIT;
+    io_conf.mode = GPIO_MODE_OUTPUT;
+    configGpio(&io_conf, RELAY_PIN);
+    //Finish relay config
+}
+
+void Esp32CamGpio::configGpio(gpio_config_t * io_conf, gpio_num_t pin) {
+    auto err = gpio_config(io_conf);
     if (err != ESP_OK) {
-        Serial.printf("Fail to set direction output - %i %s %i\n", pin, esp_err_to_name(err), err);
+        Serial.printf("Fail to set gpio config - %llu %s %i\n", io_conf->pin_bit_mask, esp_err_to_name(err), err);
         restartEsp();
         return;
     }
@@ -50,7 +35,6 @@ void Esp32CamGpio::begin() const {
         restartEsp();
         return;
     }
-    //Finish relay config
 }
 
 void Esp32CamGpio::changeRelay(const bool newState) {
@@ -60,6 +44,9 @@ void Esp32CamGpio::changeRelay(const bool newState) {
         relayState = newState;
     }
 
+#if DEBUG
+    Serial.printf("changeRelay %i\n", newState);
+#endif
     const auto pin = static_cast<gpio_num_t>(RELAY_PIN);
     const auto err = gpio_set_level(pin, relayState);
     if (err != ESP_OK) {
@@ -69,50 +56,30 @@ void Esp32CamGpio::changeRelay(const bool newState) {
     }
 }
 
-bool Esp32CamGpio::peekBellState(const bool clearState) {
-    if (!clearState) {
-        return bellState;
-    }
-
-    const auto state = bellState;
-    bellState = false;
-    return state;
-}
-
-bool Esp32CamGpio::peekPirState(const bool clearState) {
-    if (!clearState) {
-        return pirState;
-    }
-
-    const auto state = pirState;
-    pirState = false;
-    return state;
-}
-
 uint32_t bellDebounceTime = 0;
-
-void Esp32CamGpio::bellPressed(void *arg) {
+bool Esp32CamGpio::peekBellState() {
     const auto currentTime = esp_timer_get_time();
-    if (bellDebounceTime >= currentTime) {
-        return;
-    } else {
+    if (gpio_get_level(BELL_PIN) && bellDebounceTime < currentTime) {
         bellDebounceTime = currentTime + DEBOUNCE_DELAY;
+#if DEBUG
+        Serial.println("Bell pressed");
+#endif
+        return true;
     }
 
-    const auto self = castArg<Esp32CamGpio>(arg);
-    self->bellState = true;
+    return false;
 }
 
 uint32_t pirDebounceTime = 0;
-
-void Esp32CamGpio::movementDetected(void *arg) {
+bool Esp32CamGpio::peekPirState() {/*
     const auto currentTime = esp_timer_get_time();
-    if (pirDebounceTime >= currentTime) {
-        return;
-    } else {
+    if (!gpio_get_level(PIR_PIN) && pirDebounceTime < currentTime) {
         pirDebounceTime = currentTime + DEBOUNCE_DELAY;
-    }
+#if DEBUG
+        Serial.println("Movemente detected");
+#endif
+        return true;
+    }*///todo pir
 
-    const auto self = castArg<Esp32CamGpio>(arg);
-    self->pirState = true;
+    return false;
 }

@@ -14,7 +14,7 @@ void Esp32Cam::begin() {
     wifi.begin();
     camera.begin();
     startSocket();
-    gpio.begin();
+    Esp32CamGpio::begin();
 
     Serial.println("Setup Completed!");
 }
@@ -36,6 +36,7 @@ void Esp32Cam::startSocket() {
 }
 
 void Esp32Cam::loop() {
+    processGpio();
     if (!Esp32CamWifi::isReady()) {
         restartEsp();
         return;
@@ -48,7 +49,6 @@ void Esp32Cam::loop() {
 
     const auto start = esp_timer_get_time();
     socket.processSocket();
-    processGpio();
 
     if (shouldSendFrame()) {
         sendFrame();
@@ -63,11 +63,11 @@ void Esp32Cam::loop() {
 }
 
 void Esp32Cam::processGpio() {
-    if (gpio.peekBellState()) {
+    if (Esp32CamGpio::peekBellState()) {
         socket.sendBellPressed();
     }
 
-    if (gpio.peekPirState()) {
+    if (Esp32CamGpio::peekPirState()) {
         socket.sendMotionDetected();
     }
 
