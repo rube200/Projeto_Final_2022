@@ -1,25 +1,25 @@
 <!DOCTYPE html>
-<link rel="icon" href="{{ url_for("static", filename="favicon.ico") }}" type="image/x-icon">
-<link rel="stylesheet" href="{{ url_for("static", filename="style.css") }}"/>
-<meta charset="UTF-8" content="width=device-width, initial-scale=1.0" name="viewport">
+<link rel='icon' href='{{ url_for('static', filename='favicon.ico') }}' type='image/x-icon'>
+<link rel='stylesheet' href='{{ url_for('static', filename='style.css') }}'/>
+<meta charset='UTF-8' content='width=device-width, initial-scale=1.0' name='viewport'>
 <title>{{ name }}</title>
-<body class="{{ body_class }}">
-<nav class="topNav">
+<body class='{{ body_class }}'>
+<nav class='topNav'>
     {% for nv in nav %}
-        <a href="{{ url_for(nv.url) }}" title="Nav {{ nv.name }} button">
+        <a href='{{ url_for(nv.url) }}' title='Nav {{ nv.name }} button'>
             <img
-                    alt="Nav {{ nv.name }} image"
-                    class="btnImage {% if nv.name|lower == name|lower %} border {% endif %}"
-                    src="{{ url_for("static", filename=nv.image) }}">
+                    alt='Nav {{ nv.name }} image'
+                    class='btnImage {% if nv.name|lower == name|lower %} border {% endif %}'
+                    src='{{ url_for('static', filename=nv.image) }}'>
         </a>
     {% endfor %}
 </nav>
-<section class="content">
+<section class='content'>
     <header>
         {% block header %}{% endblock %}
     </header>
     {% for message in get_flashed_messages() %}
-        <div class="flash">
+        <div class='flash'>
             {{ message }}
         </div>W
     {% endfor %}

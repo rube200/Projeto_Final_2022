@@ -21,15 +21,15 @@ class SocketClient(Packet):
         self.__udp_socket = udp_socket
         self.__uuid_cb = uuid_cb
 
+        self.__bell_pressed = False
         self.__camera = b''
-        self.__can_accept_image = False
         self.__selector.register(self.__tcp_socket, READ, self)
         self.__uuid = 0
         self.__write_buffer = b''
 
-        self.send_uuid()
+        self.__send_uuid()
 
-    def close(self):
+    def close(self) -> None:
         self.reset_packet(True)
         self.__address = None
         self.__camera = None
@@ -78,6 +78,10 @@ class SocketClient(Packet):
             self.__camera = data
             return
 
+        if pkt_type is PacketType.BellPressed:
+            self.__bell_pressed = True
+            return
+
         # todo finish
         raise ValueError(f'Unknown {pkt_type!r} from {self.__address!r}')
 
@@ -104,7 +108,7 @@ class SocketClient(Packet):
         self.__selector.modify(self.__tcp_socket, WRITE, self)
 
     def process_udp_data(self, _, data: bytes) -> None:
-        if not self.__can_accept_image:
+        if not self.__uuid:
             return
 
         self.__camera = data
@@ -117,25 +121,28 @@ class SocketClient(Packet):
         if mask & EVENT_WRITE:
             self.__write()
 
-    def send_uuid(self) -> None:
-        self.send_empty_packet(PacketType.Uuid)
+    def __send_uuid(self) -> None:
+        self.__send_empty_packet(PacketType.Uuid)
 
-    def send_config(self, bell_duration: int, relay_duration: int) -> None:
+    def __send_config(self, bell_duration: int, relay_duration: int) -> None:
         data = pack('>iBii', 8, PacketType.Config.value, bell_duration, relay_duration)  # 8 is 2*int size
         self.__write_data(data)
 
-    def send_start_stream(self):
-        self.send_empty_packet(PacketType.StartStream)
+    def send_start_stream(self) -> None:
+        self.__send_empty_packet(PacketType.StartStream)
 
-    def send_stop_stream(self):
-        self.send_empty_packet(PacketType.StopStream)
+    def send_stop_stream(self) -> None:
+        self.__send_empty_packet(PacketType.StopStream)
 
-    def send_empty_packet(self, packet_type: PacketType):
+    def open_relay(self) -> None:
+        self.__send_empty_packet(PacketType.OpenRelay)
+
+    def __send_empty_packet(self, packet_type: PacketType) -> None:
         data = pack('>iB', int(0), packet_type.value)
         self.__write_data(data)
 
     def setup_client(self, bell_duration: int, relay_duration: int) -> None:
-        self.send_config(bell_duration, relay_duration)
+        self.__send_config(bell_duration, relay_duration)
 
     @property
     def address(self) -> Tuple[str, int]:
@@ -148,3 +155,10 @@ class SocketClient(Packet):
     @property
     def uuid(self) -> int:
         return self.__uuid
+
+    def peek_bell_pressed(self) -> bool:
+        if not self.__bell_pressed:
+            return False
+
+        self.__bell_pressed = False
+        return True

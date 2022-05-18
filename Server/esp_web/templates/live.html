@@ -1,33 +1,42 @@
-{% extends "default.html" %}
+{% extends 'default.html' %}
 
-{% set body_class="background" %}
-{% set name = self._TemplateReference__context.name|replace(".html", "")|capitalize %}
+{% set body_class='background' %}
+{% set name = self._TemplateReference__context.name|replace('.html', '')|capitalize %}
 
-{% set source_url = url_for("static", filename="pfp1.jpg") %}
+{% set source_url = url_for('static', filename='pfp1.jpg') %}
 
 {% block content %}
     <div>
-        <div class="image">
-            <object class="img-thumbnail"
-                    data="{{ source_url }}"
-                    id="stream-view"
-                    width="320"
-                    height="240"
-                    type="image/jpeg">
+        <div class='image'>
+            <button onclick='openRelay()'>
+                <img class=alignPfp src='{{ url_for('static', filename='home.jpg') }}'/>
+            </button>
+            <object class='img-thumbnail'
+                    data='{{ source_url }}'
+                    id='stream-view'
+                    width='320'
+                    height='240'
+                    type='image/jpeg'>
             </object>
-            <button onclick="watchStream()">
-                <img alt="" class=alignPfp src="{{ url_for("static", filename="esp.png") }}"/>
+            <button onclick='watchStream()'>
+                <img class=alignPfp src='{{ url_for('static', filename='esp.png') }}'/>
             </button>
         </div>
     </div>
     <script>
-        const streamView = document.getElementById("stream-view");
+        function openRelay() {
+            fetch('{{ url_for('open_relay', esp_id=esp_id) }}', {method: 'POST'})
+                .then(rp => console.debug(`Open relay with success: ${rp}`))
+                .catch(ex => console.error(`Exception while requesting to open relay: ${ex}`));
+        }
+
+        const streamView = document.getElementById('stream-view');
 
         function watchStream() {
             {% if not_request_stream %}
-                streamView.data = '{{ url_for("stream2", esp_id=esp_id) }}';
+                streamView.data = '{{ url_for('stream2', esp_id=esp_id) }}';
             {% else %}
-                streamView.data = '{{ url_for("stream", esp_id=esp_id) }}';
+                streamView.data = '{{ url_for('stream', esp_id=esp_id) }}';
             {% endif %}
         }
     </script>

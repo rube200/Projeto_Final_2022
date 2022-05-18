@@ -173,7 +173,7 @@ class SocketServer:
                             log.info(f'Client disconnect/timeout from {client.address!r}')
                             self.remove_client(client.uuid, client)
                             client.close()
-                            return
+                            continue
 
                         log.error(f'Exception while processing client {client.address}: {ex!r}')
                         log.error(format_exc())

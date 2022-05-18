@@ -60,7 +60,8 @@ def invalid_request(e):
 def index():
     return selection()
 
-#added
+
+# added
 @web.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'GET':
@@ -73,10 +74,10 @@ def login():
     c.execute('SELECT ID FROM USER WHERE NAME like ? AND PASSWORD like ?', (usr, pw))
     m = [row[0] for row in c][0]
     return redirect(url_for('images', id=m))
-    
 
-@web.route('/images/<int:id>')
-def images(id):    
+
+@web.route('/images/<int:img_id>')
+def images(img_id: int):
     conn = sqlite3.connect('proj.db')
     c = conn.cursor()
     fiveMostRecent = c.execute(
@@ -88,21 +89,22 @@ def images(id):
     dates = []
     for img in fiveMostRecent:
         data.append('data:image/png;charset=UTF-8;base64,' + base64.b64encode(img[0]).decode('utf-8'))
-        #data.append('iVBORw0KGgoAAAANSUhEUgAAAAoAAAAJCAIAAACExCpEAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAASSURBVChTY5DutMGDRqZ0pw0A4ZNOwQNf')
+        # data.append('iVBORw0KGgoAAAANSUhEUgAAAAoAAAAJCAIAAACExCpEAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAASSURBVChTY5DutMGDRqZ0pw0A4ZNOwQNf')
         dates.append(img[1])  # .split('.')[0]) #split to remove miliseconds
         names.append(img[2])
-    
-    
-    c.close()
-    conn.close()    
-    #print(data)
-    return render_template('images2.html', imgs = data, dates = dates, esps = names)
 
-#end added
+    c.close()
+    conn.close()
+    # print(data)
+    return render_template('images2.html', imgs=data, dates=dates, esps=names)
+
 
 @web.route('/addEsp')
-def addEsp():
+def add_esp():
     return render_template('add.html')
+
+
+# end added
 
 
 @web.route('/<int:esp_id>/image')
@@ -123,14 +125,11 @@ def live2(esp_id: int):
     return render_template('live.html', esp_id=esp_id, not_request_stream=True) if client else abort(400)
 
 
-@web.route('/selection')
-def selection():
-    return render_template('selection.html', doorbells=web.esp_clients)
-
-
-@web.route('/stats')
-def stats():
-    return render_template('stats.html')
+@web.route('/<int:esp_id>/open', methods=['POST'])
+def open_relay(esp_id: int):
+    client = web.get_client(esp_id)
+    client.open_relay()
+    return '', 200
 
 
 def generate_stream(esp_id: int, stream_request: bool = True):
@@ -143,7 +142,6 @@ def generate_stream(esp_id: int, stream_request: bool = True):
         client.send_start_stream()
 
     try:
-        start_at = monotonic()
         while True:
             sleep(.05)
             if not client or not client.uuid:
@@ -190,6 +188,16 @@ def stream(esp_id: int):
 def stream2(esp_id: int):
     stream_context = stream_with_context(generate_stream(esp_id, False))
     return web.response_class(stream_context, mimetype='multipart/x-mixed-replace; boundary=frame')
+
+
+@web.route('/selection')
+def selection():
+    return render_template('selection.html', doorbells=web.esp_clients)
+
+
+@web.route('/stats')
+def stats():
+    return render_template('stats.html')
 
 
 def get_db():
