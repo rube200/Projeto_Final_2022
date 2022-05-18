@@ -23,7 +23,7 @@ void Esp32Cam::startSocket() {
     socket.setHost(wifi.getHostParam(), wifi.getPortParam());
     wifi.setSocketMode();
 
-    espDelayUs(10000);//10ms delay to fix connect fail at first try
+    socket.connectSocket();//first try will likely to fail
     while (!socket.connectSocket()) {
         if (!wifi.requestConfig()) {
             Serial.println("Exit requested");
