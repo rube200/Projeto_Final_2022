@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 import logging as log
 from traceback import format_exc
 

@@ -49,7 +49,7 @@ def stop_socket_server():
     global socket_thread
 
     socket_server.shutdown()
-    del socket_server
+    socket_server.close()
     if socket_thread:
         # noinspection PyUnresolvedReferences
         socket_thread.join()

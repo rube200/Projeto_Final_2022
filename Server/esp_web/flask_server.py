@@ -21,7 +21,7 @@ NAV_DICT = [
 
 class WebServer(Flask):
     def __init__(self, _esp_clients: dict = None):
-        super(WebServer, self).__init__(import_name=__name__, static_url_path='/esp32static')
+        super(WebServer, self).__init__(import_name=__name__)
         self._esp_clients = _esp_clients or {}
 
     @property
