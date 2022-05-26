@@ -32,7 +32,7 @@
       <nav class="navbar default-layout-navbar col-lg-12 col-12 p-0 fixed-top d-flex flex-row">
         <div class="navbar-brand-wrapper d-flex align-items-center">
             <a class="brand-logo" href= "{{ url_for('dashboard') }}">
-              <img src="../static/images/logo.png" alt="logo" class="logo-dark"/>
+              <img src="../static/logo.png" alt="logo" class="logo-dark"/>
           </a>
           <a class="navbar-brand brand-logo-mini" href="index.html"><img src="../static/images/logo-mini.svg" alt="logo" /></a>
         </div>
@@ -270,15 +270,17 @@
                 <div class="form-group row">
                   <label for="exampleInputEmail2" class="col-sm-3 col-form-label">IP</label>
                   <div class="col-sm-9">
-                    <input type="email" class="form-control" id="exampleInputEmail2" placeholder="Doorbel IP">
+                    <input class="form-control" id="exampleInputEmail2" placeholder="{{ ip }}">
                   </div>
                 </div>
                 <button type="submit" class="btn btn-primary mr-2">Take Picture</button>
                 <button class="btn btn-light">Save Recording</button>
+                <button class="btn btn-light">Save Settings</button>
               </form>
             </div>
           </div>
         </div>
+      </div>
         
 
 
