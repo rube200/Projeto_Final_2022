@@ -246,7 +246,7 @@
   <div class="col-sm-6 col-md-4 col-lg-3 image-container">
 
   <figure>
-  <div class="pic image"><img src='{{ vid }}' class="img-thumbnail grayscale"></div>
+  <div class="pic image"><video src='{{ vid }}' class="img-thumbnail grayscale"></div>
     <figcaption>
       {{ esps[loop.index0]}}</br>
       {{ dates[loop.index0]}}
@@ -259,14 +259,14 @@
 </div>
 <div class="popup-pic">
   <span>&times;</span>
-  <img src='{{ vids[0] }}' alt="">
+  <video src='{{ vids[0] }}' alt="" controls>
 </div>
 <script src="static/vendors/js/vendor.bundle.base.js"></script>
 <script>
-    document.querySelectorAll('.image-container img').forEach(image =>{
+    document.querySelectorAll('.image-container video').forEach(image =>{
       image.onclick = () =>{
         document.querySelector('.popup-pic').style.display = 'block';
-        document.querySelector('.popup-pic img').src = image.getAttribute('src');
+        document.querySelector('.popup-pic video').src = image.getAttribute('src');
         console.log('src to: '+ image.getAttribute('src'));
       }
         
