@@ -42,10 +42,8 @@ void Esp32CamWifi::begin() {
         }
     }
 
-    if (!autoConnect(ACCESS_POINT_NAME)) {
+    while (!autoConnect(ACCESS_POINT_NAME)) {
         Serial.println("Failed to connect to WiFi.");
-        restartEsp();
-        return;
     }
 
     Serial.println("Successfully connected to WiFi.");
