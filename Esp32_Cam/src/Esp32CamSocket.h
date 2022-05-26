@@ -5,6 +5,7 @@
 #include "Esp32Utils.h"
 #include "WiFiClient.h"
 
+#define CONNECT_TRY 5
 #define STREAM_TIMEOUT 30500000//30.5s -> Py try to communicate every 10s
 
 class Esp32CamSocket : WiFiClient {
@@ -28,7 +29,7 @@ public:
 private:
     void processConfig(const uint8_t *, size_t);
 
-    void precessPacket();
+    void processPacket();
 
     size_t receiveHeader(int);
 
