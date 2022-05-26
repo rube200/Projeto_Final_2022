@@ -62,8 +62,6 @@ def cards():
     if "user" in session:
         user = session["user"]
         print("happy if")
-        res = isinstance(user, int)
-        print(res)
         conn = sqlite3.connect('static/proj.db')
         c = conn.cursor()
         c.execute("SELECT NAME,IP,ID FROM DOORBELL WHERE USER_ID like ?", (user,))
@@ -99,30 +97,16 @@ def doorbell(id):
     if "user" in session:
         conn = sqlite3.connect('static/proj.db')
         c = conn.cursor()
-        c.execute("SELECT DATA,DATE FROM PICTURE WHERE DOORBELL_ID LIKE ? ORDER BY DATE", (id,))
+        c.execute("SELECT PICTURE.DATA, PICTURE.DATE, DOORBELL.NAME, DOORBELL.IP FROM PICTURE JOIN DOORBELL ON DOORBELL.ID = PICTURE.DOORBELL_ID  WHERE DOORBELL.ID LIKE ? ORDER BY DATE desc", (id,))
         pics = c.fetchall()
-        c.execute("SELECT NAME FROM DOORBELL WHERE ID LIKE ?", (id,))
-        name = c.fetchall()
-        #    GROUP BY USER_ID 
-        #imgs = c.execute("SELECT * FROM PICTURE WHERE USER_ID LIKE ?", (id)) 
         data = []
         dates = []
         for img in pics:
-            #Base64 Encoding
-            
-            #base64_encoded= base64.b64encode(x[1])
-            #base64_encoded_string= base64_encoded.decode('utf-8')
-            #print("printing img1")
-            #print(img[1])
-            #with open(img[0] + '.png','wb') as f:
-            #    f.write(img[1])
             data.append(img[0])
-            #data.append('iVBORw0KGgoAAAANSUhEUgAAAAoAAAAJCAIAAACExCpEAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAASSURBVChTY5DutMGDRqZ0pw0A4ZNOwQNf')
             dates.append(img[1].split(".")[0]) #split to remove miliseconds  
         c.close()
         conn.close()    
-        #print(data)
-        return render_template('doorbell.html', imgs = data, dates = dates, name = name[0][0])
+        return render_template('doorbell.html', imgs = data, dates = dates, name = pics[0][2], ip = pics[0][3])
     return redirect(url_for("login")) 
 
 @app.route('/image')
@@ -131,29 +115,13 @@ def image():
         user = session["user"]
         conn = sqlite3.connect('static/proj.db')
         c = conn.cursor()
-        c.execute("SELECT PICTURE.DATA, PICTURE.DATE, DOORBELL.NAME FROM PICTURE JOIN DOORBELL ON PICTURE.DOORBELL_ID = DOORBELL.ID WHERE DOORBELL.USER_ID LIKE ?", (user,))
+        c.execute("SELECT PICTURE.DATA, PICTURE.DATE, DOORBELL.NAME FROM PICTURE JOIN DOORBELL ON PICTURE.DOORBELL_ID = DOORBELL.ID WHERE DOORBELL.USER_ID LIKE ? order by PICTURE.DATE desc", (user,))
         bell_ids = c.fetchall()
         data = []
         names = []
         dates = []
         for bell in bell_ids:
-            """c.execute("SELECT DATA,DATE FROM PICTURE WHERE DOORBELL_ID LIKE ? ORDER BY DATE", (bell[0],))
-            pics = c.fetchall()"""
-            #    GROUP BY USER_ID 
-            #imgs = c.execute("SELECT * FROM PICTURE WHERE USER_ID LIKE ?", (id)) 
-            
-            #for img in pics:
-            
-                #Base64 Encoding
-                
-                #base64_encoded= base64.b64encode(x[1])
-                #base64_encoded_string= base64_encoded.decode('utf-8')
-                #print("printing img1")
-                #print(img[1])
-                #with open(img[0] + '.png','wb') as f:
-                #    f.write(img[1])
             data.append(bell[0])
-            #data.append('iVBORw0KGgoAAAANSUhEUgAAAAoAAAAJCAIAAACExCpEAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAASSURBVChTY5DutMGDRqZ0pw0A4ZNOwQNf')
             dates.append(bell[1].split(".")[0]) #split to remove miliseconds
             names.append(bell[2])   
         c.close()
@@ -172,36 +140,20 @@ def video():
         user = session["user"]
         conn = sqlite3.connect('static/proj.db')
         c = conn.cursor()
-        c.execute("SELECT VIDEO.DATA, VIDEO.DATE, DOORBELL.NAME FROM VIDEO JOIN DOORBELL ON VIDEO.DOORBELL_ID = DOORBELL.ID WHERE DOORBELL.USER_ID LIKE ?", (user,))
+        c.execute("SELECT VIDEO.DATA, VIDEO.DATE, DOORBELL.NAME FROM VIDEO JOIN DOORBELL ON VIDEO.DOORBELL_ID = DOORBELL.ID WHERE DOORBELL.USER_ID LIKE ? order by VIDEO.DATE desc", (user,))
         bell_ids = c.fetchall()
         data = []
         names = []
         dates = []
         for bell in bell_ids:
-            """c.execute("SELECT DATA,DATE FROM PICTURE WHERE DOORBELL_ID LIKE ? ORDER BY DATE", (bell[0],))
-            pics = c.fetchall()"""
-            #    GROUP BY USER_ID 
-            #imgs = c.execute("SELECT * FROM PICTURE WHERE USER_ID LIKE ?", (id)) 
-            
-            #for img in pics:
-            
-                #Base64 Encoding
-                
-                #base64_encoded= base64.b64encode(x[1])
-                #base64_encoded_string= base64_encoded.decode('utf-8')
-                #print("printing img1")
-                #print(img[1])
-                #with open(img[0] + '.png','wb') as f:
-                #    f.write(img[1])
             data.append(bell[0])
-            #data.append('iVBORw0KGgoAAAANSUhEUgAAAAoAAAAJCAIAAACExCpEAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAASSURBVChTY5DutMGDRqZ0pw0A4ZNOwQNf')
             dates.append(bell[1].split(".")[0]) #split to remove miliseconds
             names.append(bell[2])   
         c.close()
         conn.close()    
-        #print(data)
         return render_template('videoGal.html', vids = data, dates = dates, esps = names)
     return redirect(url_for("login"))
+
 
 
 def getNewUserId():
