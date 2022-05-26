@@ -80,16 +80,8 @@ static inline uint8_t *espRealloc(uint8_t *prt, const size_t size) {
     return (uint8_t *) heap_caps_realloc(prt, size, MALLOC_CAPS);
 }
 
-template<typename T>
-static inline T *castArg(void *arg) {
-    return reinterpret_cast<T *>(arg);
-}
-
 static inline int getIntFromBuf(const uint8_t buf[4]) {
-    return (static_cast<uint8_t>(buf[0] << 24) |
-            static_cast<uint8_t>(buf[1] << 16) |
-            static_cast<uint8_t>(buf[2] << 8) |
-            static_cast<uint8_t>(buf[3]));
+    return buf[0] << 24 | buf[1] << 16 | buf[2] << 8 | buf[3];
 }
 
 static inline void restartEsp() {
