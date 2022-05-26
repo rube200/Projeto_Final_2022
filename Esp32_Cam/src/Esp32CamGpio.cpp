@@ -10,8 +10,9 @@ void Esp32CamGpio::begin() {
     };
 
     //Config bell button and pir sensor using esp system
-    configGpio(&io_conf, BELL_PIN);
-    //configGpio(&io_conf, PIR_PIN); //todo pir
+    //configGpio(&io_conf, BELL_PIN);
+    io_conf.pin_bit_mask = PIR_PIN_BIT;
+    configGpio(&io_conf, PIR_PIN);
     //Finish bell button and pir sensor config
 
     //Config relay using esp
@@ -70,16 +71,23 @@ bool Esp32CamGpio::peekBellState() {
     return false;
 }
 
-uint32_t pirDebounceTime = 0;
-bool Esp32CamGpio::peekPirState() {/*
-    const auto currentTime = esp_timer_get_time();
-    if (!gpio_get_level(PIR_PIN) && pirDebounceTime < currentTime) {
-        pirDebounceTime = currentTime + DEBOUNCE_DELAY;
+bool pirLastState = true;//default sensor state if missing
+bool Esp32CamGpio::peekPirState() {
+    if (gpio_get_level(PIR_PIN)) {
+        if (pirLastState) {
+            return false;
+        }
+
+        pirLastState = true;
 #if DEBUG
-        Serial.println("Movemente detected");
+        Serial.println("Movement detected");
 #endif
         return true;
-    }*///todo pir
+    }
+
+    if (pirLastState) {
+        pirLastState = false;
+    }
 
     return false;
 }
