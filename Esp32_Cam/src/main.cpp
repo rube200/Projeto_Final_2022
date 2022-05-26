@@ -11,6 +11,8 @@ void loop() {
     }
     catch (const std::exception &e) {
         Serial.printf("Exception while writing to tcp.\n%s\n", e.what());
-        espDelayUs(50000);
+        espDelayUs(50000);//50ms
     }
 }
+
+//todo flash

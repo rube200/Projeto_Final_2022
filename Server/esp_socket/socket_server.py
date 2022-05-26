@@ -26,7 +26,7 @@ class SocketServer:
 
         if not server_address:
             ip = environ.get('ESP32_IP') or '0.0.0.0'
-            port = int(environ.get('ESP32_PORT') or 45000)
+            port = int(environ.get('ESP32_PORT') or 1352)
             server_address = (ip, port)
 
         self._server_address = server_address

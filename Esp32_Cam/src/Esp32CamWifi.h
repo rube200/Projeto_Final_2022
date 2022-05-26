@@ -7,7 +7,7 @@
 
 #define ACCESS_POINT_NAME "Video-Doorbell"
 #define REMOTE_HOST "192.168.137.1"
-#define REMOTE_PORT "45000"
+#define REMOTE_PORT "1352"
 
 class Esp32CamWifi : WiFiManager {
 public:

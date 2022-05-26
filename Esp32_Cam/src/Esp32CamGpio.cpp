@@ -46,7 +46,7 @@ void Esp32CamGpio::changeRelay(const bool newState) {
     }
 
 #if DEBUG
-    Serial.printf("changeRelay %i\n", newState);
+    Serial.printf("changeRelay %i\n", relayState);
 #endif
     const auto pin = static_cast<gpio_num_t>(RELAY_PIN);
     const auto err = gpio_set_level(pin, relayState);
