@@ -43,7 +43,9 @@ private:
 
     uint64_t streamUntil = 0;
     uint64_t bellCaptureDuration = 0;//0 means single frame
+    uint64_t motionCaptureDuration = 0;//0 means single frame
     bool bellSent = false;
+    bool motionSent = false;
 
     bool isConfigured = false;
     uint64_t openRelayUntil = 0;

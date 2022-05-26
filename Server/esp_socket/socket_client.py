@@ -130,8 +130,9 @@ class SocketClient(Packet):
     def __send_uuid(self) -> None:
         self.__send_empty_packet(PacketType.Uuid)
 
-    def __send_config(self, bell_duration: int, relay_duration: int) -> None:
-        data = pack('>iBii', 8, PacketType.Config.value, bell_duration, relay_duration)  # 8 is 2*int size
+    def __send_config(self, bell_duration: int, motion_duration: int, relay_duration: int) -> None:
+        data = pack('>iBiii', 12, PacketType.Config.value, bell_duration, motion_duration, relay_duration)
+        # 12 is 3*int size
         self.__write_data(data)
 
     def send_start_stream(self) -> None:
@@ -147,8 +148,8 @@ class SocketClient(Packet):
         data = pack('>iB', int(0), packet_type.value)
         self.__write_data(data)
 
-    def setup_client(self, bell_duration: int, relay_duration: int) -> None:
-        self.__send_config(bell_duration, relay_duration)
+    def setup_client(self, bell_duration: int, motion_duration: int, relay_duration: int) -> None:
+        self.__send_config(bell_duration, motion_duration, relay_duration)
 
     @property
     def address(self) -> Tuple[str, int]:

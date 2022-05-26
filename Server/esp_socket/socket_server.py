@@ -73,7 +73,7 @@ class SocketServer:
             del cl
 
         self.__esp_clients[uuid] = client
-        client.setup_client(5000, 5000)
+        client.setup_client(5000, 5000, 5000)
 
     def __process_exceptional(self, key) -> None:
         self.__selector.unregister(key)

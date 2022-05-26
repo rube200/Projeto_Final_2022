@@ -21,9 +21,18 @@
             <button onclick='watchStream()'>
                 <img class=alignPfp src='{{ url_for('static', filename='esp.png') }}'/>
             </button>
+            <button onclick='watchOtherStream()' class="float-left submit-button">Another live</button>
         </div>
     </div>
     <script>
+        function watchOtherStream() {
+            {% if not_request_stream %}
+                location.href = '{{ url_for('live', esp_id=esp_id) }}';
+            {% else %}
+                location.href = '{{ url_for('live2', esp_id=esp_id) }}';
+            {% endif %}
+        }
+
         function openRelay() {
             fetch('{{ url_for('open_relay', esp_id=esp_id) }}', {method: 'POST'})
                 .then(rp => console.debug(`Open relay with success: ${rp}`))
