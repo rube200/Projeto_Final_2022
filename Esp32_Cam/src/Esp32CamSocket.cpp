@@ -11,19 +11,21 @@ bool Esp32CamSocket::connectSocket(const bool should_restart_esp) {
     }
 
     Serial.printf("Connecting to host %s:%hu...\n", host, port);
-    if (!connect(host, port)) {
-        Serial.println("Fail to connect to host.");
-        if (should_restart_esp) {
-            restartEsp();
-            assert(0);
+    for (auto i = 0; i < CONNECT_TRY; i++) {
+        if (connect(host, port)) {
+            setNoDelay(true);
+            Serial.println("Connected to host!");
+            return true;
         }
-
-        return false;
     }
 
-    setNoDelay(true);
-    Serial.println("Connected to host!");
-    return true;
+    Serial.println("Fail to connect to host.");
+    if (should_restart_esp) {
+        restartEsp();
+        assert(0);
+    }
+
+    return false;
 }
 
 bool Esp32CamSocket::isRelayRequested() {
@@ -61,7 +63,7 @@ bool Esp32CamSocket::isStreamRequested() {
     return true;
 }
 
-void Esp32CamSocket::precessPacket() {
+void Esp32CamSocket::processPacket() {
     const auto type = readPacket.getPacketType();
     if (type == Uuid) {
         sendUuid();
@@ -110,7 +112,7 @@ void Esp32CamSocket::processSocket() {
         }
 
         if (lenLeft == 0) {//we already have all bytes needed
-            precessPacket();
+            processPacket();
             readPacket.resetPacket();
             continue;
         }
@@ -133,15 +135,18 @@ void Esp32CamSocket::processSocket() {
 #pragma clang diagnostic pop
 
         if (recvLen < lenLeft) {
-            return;
+            continue;
         }
+
+        processPacket();
+        readPacket.resetPacket();
     } while (true);
 }
 
 size_t Esp32CamSocket::receiveHeader(int av) {
     //If type != Invalid we already set header
     if (readPacket.getPacketType() != Invalid) {
-        return HEADER_SIZE + readPacket.getDataLen();
+        return HEADER_SIZE + readPacket.getExpectedLen();
     }
 
     //Header min size
@@ -149,21 +154,21 @@ size_t Esp32CamSocket::receiveHeader(int av) {
         return 0;
     }
 
-    uint8_t *data = espMalloc(5);
-    if (!data) {
+    uint8_t *header = espMalloc(5);
+    if (!header) {
         return 0;
     }
 
-    const auto headerLen = readBytes(data, 5);
+    const auto headerLen = readBytes(header, 5);
     if (headerLen != 5) {
         Serial.printf("FATAL ERROR!! Fail to get header - %d\n", headerLen);
         restartEsp();
         return 0;
     }
 
-    readPacket.fromHeader(data);
-    free(data);
-    return HEADER_SIZE + readPacket.getDataLen();
+    readPacket.fromHeader(header);
+    free(header);
+    return HEADER_SIZE + readPacket.getExpectedLen();
 }
 
 void Esp32CamSocket::setHost(const char *host_ip, const uint16_t host_port) {
@@ -180,8 +185,8 @@ void Esp32CamSocket::processConfig(const uint8_t *data, const size_t data_len) {
         return;
     }
 
-    bellCaptureDuration = std::max(bellCaptureDuration, (uint64_t) getIntFromBuf(data));
-    relayOpenDuration = std::max(relayOpenDuration, (uint64_t) getIntFromBuf(data + 4));//4 size of int
+    bellCaptureDuration = std::max(bellCaptureDuration, (uint64_t) getIntFromBuf(data) * 1000);
+    relayOpenDuration = std::max(relayOpenDuration, (uint64_t) getIntFromBuf(data + 4) * 1000);//4 size of int
     isConfigured = true;
 }
 
