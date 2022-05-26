@@ -12,13 +12,12 @@ WRITE = READ | EVENT_WRITE
 
 
 class SocketClient(Packet):
-    def __init__(self, address: Tuple[str, int], selector: BaseSelector, tcp_socket: socket, udp_socket: socket,
+    def __init__(self, address: Tuple[str, int], selector: BaseSelector, tcp_socket: socket,
                  uuid_cb: Callable[[Any], None]):
         super(SocketClient, self).__init__()
         self.__address = address
         self.__selector = selector
         self.__tcp_socket = tcp_socket
-        self.__udp_socket = udp_socket
         self.__uuid_cb = uuid_cb
 
         self.__bell_pressed = False
@@ -38,14 +37,13 @@ class SocketClient(Packet):
         self.__tcp_socket.shutdown(SHUT_RDWR)
         self.__tcp_socket.close()
         self.__tcp_socket = None
-        self.__udp_socket = None
         self.__uuid = 0
         self.__uuid_cb = None
         self.__write_buffer = None
 
     def __recv(self) -> None:
         try:
-            data = self.__tcp_socket.recv(1024)  # todo change if using udp
+            data = self.__tcp_socket.recv(1024)
             if not data:
                 raise RuntimeError('Peer closed.')
 
@@ -113,12 +111,6 @@ class SocketClient(Packet):
         self.__write_buffer += data
         self.__selector.modify(self.__tcp_socket, WRITE, self)
 
-    def process_udp_data(self, _, data: bytes) -> None:
-        if not self.__uuid:
-            return
-
-        self.__camera = data
-
     def process_events(self, mask: int) -> None:
         if mask & EVENT_READ:
             self.__recv()
@@ -130,8 +122,9 @@ class SocketClient(Packet):
     def __send_uuid(self) -> None:
         self.__send_empty_packet(PacketType.Uuid)
 
-    def __send_config(self, bell_duration: int, relay_duration: int) -> None:
-        data = pack('>iBii', 8, PacketType.Config.value, bell_duration, relay_duration)  # 8 is 2*int size
+    def __send_config(self, bell_duration: int, motion_duration: int, relay_duration: int) -> None:
+        data = pack('>iBiii', 12, PacketType.Config.value, bell_duration, motion_duration, relay_duration)
+        # 12 is 3*int size
         self.__write_data(data)
 
     def send_start_stream(self) -> None:
@@ -147,8 +140,8 @@ class SocketClient(Packet):
         data = pack('>iB', int(0), packet_type.value)
         self.__write_data(data)
 
-    def setup_client(self, bell_duration: int, relay_duration: int) -> None:
-        self.__send_config(bell_duration, relay_duration)
+    def setup_client(self, bell_duration: int, motion_duration: int, relay_duration: int) -> None:
+        self.__send_config(bell_duration, motion_duration, relay_duration)
 
     @property
     def address(self) -> Tuple[str, int]:

@@ -1,8 +1,7 @@
 import logging as log
 import selectors
 from os import environ
-from socket import socket, AF_INET, SOCK_DGRAM, SOCK_STREAM
-from struct import unpack
+from socket import socket, AF_INET, SOCK_STREAM
 from threading import Event
 from traceback import format_exc
 from typing import NoReturn, Optional, Tuple
@@ -26,13 +25,12 @@ class SocketServer:
 
         if not server_address:
             ip = environ.get('ESP32_IP') or '0.0.0.0'
-            port = int(environ.get('ESP32_PORT') or 45000)
+            port = int(environ.get('ESP32_PORT') or 1352)
             server_address = (ip, port)
 
         self._server_address = server_address
         self.__selector = ServerSelector()
         self.__tcp_socket = socket(AF_INET, SOCK_STREAM)
-        self.__udp_socket = socket(AF_INET, SOCK_DGRAM)
 
     def __del__(self):  # todo
         pass
@@ -42,7 +40,7 @@ class SocketServer:
             connection, client_address = self.__tcp_socket.accept()
             socket_opt(connection)
 
-            SocketClient(client_address, self.__selector, connection, self.__udp_socket, self.__on_uuid_recv)
+            SocketClient(client_address, self.__selector, connection, self.__on_uuid_recv)
             log.info(f'Accepted a connection from {client_address!r}')
 
         except OSError as ex:
@@ -51,14 +49,6 @@ class SocketServer:
         except Exception as ex:
             log.error(f'Exception while accepting client: {ex!r}')
             log.error(format_exc())
-
-    def __bind_listen(self, sock: SocketType) -> None:
-        sock.bind(self._server_address)
-        if sock.type is SOCK_DGRAM:
-            sock.setblocking(False)
-            return
-        sock.listen()
-        socket_opt(sock)
 
     def __on_uuid_recv(self, client: SocketClient) -> None:
         uuid = client.uuid
@@ -73,7 +63,7 @@ class SocketServer:
             del cl
 
         self.__esp_clients[uuid] = client
-        client.setup_client(5000, 5000)
+        client.setup_client(5000, 5000, 5000)
 
     def __process_exceptional(self, key) -> None:
         self.__selector.unregister(key)
@@ -89,36 +79,15 @@ class SocketServer:
 
         log.warning(f'Exceptional mask detected for: {key!r}')
 
-    def __process_udp_request(self) -> None:
-        data, client_address = self.__udp_socket.recvfrom(4086)
-        if len(data) < 10:
-            log.debug(f'Invalid data from {client_address!r}: {data!r}')
-            return
-
-        uuid = int(data[:6].hex(), base=16)
-        data_len = unpack('>i', data[6:10])[0]
-        data = data[10:]
-
-        if not uuid or not data_len or len(data) < data_len:
-            log.debug(f'Invalid data from {client_address!r}: {uuid!r} - {data_len!r} - {data!r}')
-            return
-
-        client = self.get_client(uuid)
-        if not client:
-            return
-
-        client.process_udp_data(client_address, data)
-
     def close(self) -> None:
         self.__tcp_socket.close()
-        self.__udp_socket.close()
 
     def prepare(self) -> None:
         try:
-            self.__bind_listen(self.__tcp_socket)
-            self.__bind_listen(self.__udp_socket)
-            log.info(
-                f'Socket ready! Tcp: {self.__tcp_socket.getsockname()!r} | Udp: {self.__udp_socket.getsockname()!r}')
+            self.__tcp_socket.bind(self._server_address)
+            self.__tcp_socket.listen()
+            socket_opt(self.__tcp_socket)
+            log.info(f'Socket ready! Tcp: {self.__tcp_socket.getsockname()!r}')
 
         except Exception:
             self.close()
@@ -132,7 +101,6 @@ class SocketServer:
 
         try:
             self.__selector.register(self.__tcp_socket, selectors.EVENT_READ)
-            self.__selector.register(self.__udp_socket, selectors.EVENT_READ)
             log.info('Waiting connections...')
 
             while not self.__shutdown_request:
@@ -146,13 +114,6 @@ class SocketServer:
                             log.warning(f'Exceptional at tcp {key!r}')
 
                         self.__accept_new_client()
-                        continue
-
-                    if key.fo is self.__udp_socket:
-                        if mask & EVENT_EXCEPTIONAL:
-                            log.warning(f'Exceptional at tcp {key!r}')
-
-                        self.__process_udp_request()
                         continue
 
                     if mask & EVENT_EXCEPTIONAL:

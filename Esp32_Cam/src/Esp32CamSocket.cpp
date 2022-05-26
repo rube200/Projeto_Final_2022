@@ -51,6 +51,11 @@ bool Esp32CamSocket::isStreamRequested() {
         return true;
     }
 
+    if (motionSent) {
+        motionSent = false;
+        return true;
+    }
+
     if (!streamUntil) {
         return false;
     }
@@ -186,7 +191,8 @@ void Esp32CamSocket::processConfig(const uint8_t *data, const size_t data_len) {
     }
 
     bellCaptureDuration = std::max(bellCaptureDuration, (uint64_t) getIntFromBuf(data) * 1000);
-    relayOpenDuration = std::max(relayOpenDuration, (uint64_t) getIntFromBuf(data + 4) * 1000);//4 size of int
+    motionCaptureDuration = std::max(motionCaptureDuration, (uint64_t) getIntFromBuf(data + 4) * 1000);//4 size of int
+    relayOpenDuration = std::max(relayOpenDuration, (uint64_t) getIntFromBuf(data + 8) * 1000);
     isConfigured = true;
 }
 
@@ -233,6 +239,11 @@ void Esp32CamSocket::sendMotionDetected() {
 
     const auto packet = Esp32CamPacket(MotionDetected, nullptr, 0);
     sendPacket(packet, "MotionDetected");
+    if (motionCaptureDuration > 0) {
+        streamUntil = std::max(streamUntil, (uint64_t) esp_timer_get_time() + motionCaptureDuration);
+    } else {
+        motionSent = true;
+    }
 }
 
 void Esp32CamSocket::sendPacket(const Esp32CamPacket &packet, const String &name) {
