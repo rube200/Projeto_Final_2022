@@ -1,5 +1,5 @@
 import logging as log
-from socket import socket
+from socket import socket, SHUT_RDWR
 from struct import pack
 from typing import Any, Callable, Tuple
 
@@ -35,6 +35,7 @@ class SocketClient(Packet):
         self.__camera = None
         self.__selector.unregister(self.__tcp_socket)
         self.__selector = None
+        self.__tcp_socket.shutdown(SHUT_RDWR)
         self.__tcp_socket.close()
         self.__tcp_socket = None
         self.__udp_socket = None
@@ -80,6 +81,11 @@ class SocketClient(Packet):
 
         if pkt_type is PacketType.BellPressed:
             self.__bell_pressed = True
+            log.debug("BELL")
+            return
+
+        if pkt_type is PacketType.MotionDetected:
+            log.debug("MOTION")
             return
 
         # todo finish
