@@ -36,7 +36,6 @@ void Esp32Cam::startSocket() {
 }
 
 void Esp32Cam::loop() {
-    processGpio();
     if (!Esp32CamWifi::isReady()) {
         restartEsp();
         return;
@@ -49,6 +48,8 @@ void Esp32Cam::loop() {
 
     const auto start = esp_timer_get_time();
     socket.processSocket();
+
+    processGpio();
 
     if (shouldSendFrame()) {
         sendFrame();
