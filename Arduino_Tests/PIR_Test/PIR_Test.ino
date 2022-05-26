@@ -1,4 +1,4 @@
-#define PIN_PIR 13
+#define PIN_PIR 15
 
 void low_pir() {
   Serial.println(millis());
@@ -7,6 +7,7 @@ void low_pir() {
 
 void change_pir() {
   Serial.println(millis());
+  Serial.println(digitalRead(PIN_PIR)); 
   Serial.println("Change pir detected.");
 }
 
@@ -37,27 +38,21 @@ void setup() {
   //attachInterrupt(pin, falling_pir, FALLING);//Trigger when pass from high to low
   //attachInterrupt(pin, high_pir, HIGH);//Trigger when is high
 
-  /*
-  in this mode pin will be triggered when movement is detected 
-  and it will reamains high for a short time
-  then it will return to low
-  
   pinMode(PIN_PIR, INPUT);
-  detectInLoop = true;*/
+  digitalWrite(PIN_PIR, LOW);
+  delay(50);
 }
 
+bool pirState = false;
 void loop() {
-  delay(500);
-  if (!detectInLoop) {
-    return;
-  }
-
   if (digitalRead(PIN_PIR)) {
-    Serial.println(millis());
-    Serial.println("High");
+    if (!pirState) {
+      Serial.println("MOTION ON");
+      pirState = true;
+    }
   }
-  else {
-    Serial.println(millis());
-    Serial.println("Low");
+  else if (pirState) {
+    Serial.println("MOTION OFF");
+    pirState = false;
   }
 }
