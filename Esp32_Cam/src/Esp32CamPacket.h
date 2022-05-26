@@ -60,6 +60,8 @@ public:
 
     size_t getDataLen() const;
 
+    size_t getExpectedLen() const;
+
     packetType getPacketType() const;
 
     void appendData(const uint8_t *, size_t);
@@ -77,6 +79,7 @@ private:
     size_t pkt_len = 0;
 
     size_t data_len = 0;
+    size_t expected_len = 0;
     packetType type = Invalid;
 };
 

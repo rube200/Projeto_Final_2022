@@ -3,6 +3,7 @@
 Esp32CamPacket::Esp32CamPacket(const packetType packet_type, const uint8_t *data, const size_t data_len) {
     type = packet_type;
     this->data_len = data_len;
+    expected_len = data_len;
 
     allocPacket(data_len);
     setData(data);
@@ -28,6 +29,7 @@ void Esp32CamPacket::resetPacket() {
     }
 
     data_len = 0;
+    expected_len = 0;
     pkt_len = 0;
     type = Invalid;
 }
@@ -42,6 +44,10 @@ uint8_t *Esp32CamPacket::getData() const {
 
 size_t Esp32CamPacket::getDataLen() const {
     return data_len;
+}
+
+size_t Esp32CamPacket::getExpectedLen() const {
+    return expected_len;
 }
 
 packetType Esp32CamPacket::getPacketType() const {
@@ -62,7 +68,7 @@ void Esp32CamPacket::appendData(const uint8_t *dt, const size_t len) {
         return;
     }
 
-    memcpy(pkt + data_len, dt, len);
+    memcpy(pkt + HEADER_SIZE + data_len, dt, len);
     data_len = new_data_len;
 }
 
@@ -71,9 +77,11 @@ void Esp32CamPacket::fromHeader(const uint8_t *header) {
         return;
     }
 
-    data_len = getIntFromBuf(header);
+    data_len = expected_len = getIntFromBuf(header);//Data len need to be set for header
     type = static_cast<packetType>(header[4]);
     allocPacket(0);
+    toHeader();
+    data_len = 0;
 }
 
 void Esp32CamPacket::allocPacket(const size_t data_size) {
