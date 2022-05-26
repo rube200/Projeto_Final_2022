@@ -49,13 +49,6 @@ def register():
 def logout():
     session.pop("user", None)
     return redirect(url_for("login"))
-    
-@app.route('/')
-def dashboard():
-    if "user" in session:
-        return redirect(url_for("cards"))
-    return redirect(url_for("login"))
-
 
 @app.route('/doorbells')
 def cards():
