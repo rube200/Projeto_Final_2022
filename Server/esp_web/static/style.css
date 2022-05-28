@@ -6283,7 +6283,6 @@ input[type="button"].btn-block {
 
 .alert {
   position: relative;
-  padding: 0.75rem 1.25rem;
   margin-bottom: 1rem;
   border: 1px solid transparent;
   border-radius: 0.25rem; }
@@ -13331,5 +13330,9 @@ dl {
   @media screen and (max-width: 576px) {
     .pagination .page-item .page-link {
       padding: 0.25rem 0.5rem; } }
+
+.z-index-1 {
+  z-index: 1;
+}
 
 /*# sourceMappingURL=style.css.map */

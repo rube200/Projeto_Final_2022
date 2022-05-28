@@ -1,0 +1,11 @@
+{% extends 'default.html' %}
+
+{% block content %}
+    <div class="row flex-grow mt-5">
+        <div class="col-lg-4 mx-auto">
+            <div class="auth-form-light text-left p-5">
+                {% block auth_content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+{% endblock %}
