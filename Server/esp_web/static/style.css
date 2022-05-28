@@ -10362,12 +10362,10 @@ input:focus,
 select:focus,
 textarea:focus,
 button:focus {
-  outline: none;
-  outline-width: 0;
-  outline-color: transparent;
   -webkit-box-shadow: none;
   box-shadow: none;
-  outline-style: none; }
+  outline: transparent none 0;
+}
 
 textarea {
   resize: none;
@@ -11492,8 +11490,7 @@ code {
       width: 18px;
       height: 18px;
       border-radius: 2px;
-      border: solid #1bdbe0;
-      border-width: 2px;
+      border: 2px solid #1bdbe0;
       -webkit-transition: all;
       transition: all;
       transition-duration: 0s;
@@ -11535,8 +11532,7 @@ code {
       content: "";
       top: 0;
       left: 0;
-      border: solid #1bdbe0;
-      border-width: 2px;
+      border: 2px solid #1bdbe0;
       width: 20px;
       height: 20px;
       border-radius: 50%;
@@ -12374,18 +12370,6 @@ dl {
 /*-------------------------------------------------------------------*/
 /* === Landing screens === */
 /* Auth */
-.auth .login-half-bg {
-  background: url("../../images/auth/login-bg.jpg");
-  background-size: cover; }
-
-.auth .register-half-bg {
-  background: url("../../images/auth/register-bg.jpg");
-  background-size: cover; }
-
-.auth.lock-full-bg {
-  background: url("../../images/auth/lockscreen-bg.jpg");
-  background-size: cover; }
-
 .auth .lock-profile-img {
   width: 90px;
   height: 90px;
