@@ -1,22 +1,23 @@
-import base64
 import logging as log
-import sqlite3
 from io import BytesIO
-from sqlite3 import connect as sql_connect
+from sqlite3 import connect as sql_connect, PARSE_DECLTYPES, Row as sqlRow
 from time import sleep, monotonic
 from traceback import format_exc
 
+from bcrypt import checkpw, gensalt, hashpw
 from flask import abort, current_app, Flask, g, redirect, render_template, request, send_file, url_for, \
-    stream_with_context
+    stream_with_context, session, flash
 
 from esp_socket.socket_client import SocketClient
 
-NAV_DICT = [
-    {'name': 'Home', 'image': 'home.jpg', 'url': 'index'},
-    # {'name': 'Live', 'image': 'esp.png', 'url': 'live'},
-    # {'name': 'Images', 'image': 'camera.png', 'url': 'images'},
-    {'name': 'Stats', 'image': 'stats.png', 'url': 'stats'},
-]
+
+# permanent_session_lifetime
+# NAV_DICT = [
+#    {'name': 'Home', 'image': 'home.jpg', 'url': 'index'},
+# {'name': 'Live', 'image': 'esp.png', 'url': 'live'},
+# {'name': 'Images', 'image': 'camera.png', 'url': 'images'},
+#    {'name': 'Stats', 'image': 'stats.png', 'url': 'stats'},
+# ]
 
 
 class WebServer(Flask):
@@ -37,11 +38,41 @@ class WebServer(Flask):
 
 
 web = WebServer()
+web.config.from_pyfile('flask.cfg')
 
 
-@web.context_processor
-def inject_nav():
-    return dict(nav=NAV_DICT)
+@web.before_first_request
+def init_db():
+    with web.app_context():
+        db = get_db()
+
+        with current_app.open_resource(current_app.config['SCHEMA_FILE']) as f:
+            db.cursor().executescript(f.read().decode('utf-8'))
+
+        db.commit()
+        close_db(None)
+
+
+def get_db():
+    if 'db' in g:
+        return g.db
+
+    g.db = sql_connect(current_app.config['DATABASE'], detect_types=PARSE_DECLTYPES)
+    g.db.row_factory = sqlRow
+    return g.db
+
+
+# noinspection PyUnusedLocal
+@web.teardown_appcontext
+def close_db(e=None):
+    db = g.pop('db', None)
+    if db:
+        db.close()
+
+
+# @web.context_processor
+# def inject_nav():
+#    return dict(nav=NAV_DICT)
 
 
 # noinspection PyUnusedLocal
@@ -58,53 +89,102 @@ def invalid_request(e):
 
 @web.route('/')
 def index():
-    return selection()
+    return redirect(url_for('doorbells' if 'user' in session else 'login'))
 
 
-# added
+@web.route('/doorbells')
+def doorbells():
+    return redirect('www.youtube.com')
+    user_id = session.get('user_id')  # todo authenticate user
+    if not user_id:
+        return redirect(url_for('index'))
+
+    cursor = get_db().cursor()
+    cursor.execute("SELECT ID, NAME FROM doorbell", (user_id,))
+    doorbells = cursor.fetchall()
+
+    return render_template('doorbells.html', doorbells=doorbells)
+
+
 @web.route('/login', methods=['GET', 'POST'])
 def login():
+    user_id = session.get('user_id')  # todo authenticate user
+    if user_id:
+        return redirect(url_for('doorbells'))
+
     if request.method == 'GET':
         return render_template('login.html')
 
     usr = request.form.get('username')
-    pw = request.form.get('password')
-    conn = sqlite3.connect('proj.db')
-    c = conn.cursor()
-    c.execute('SELECT ID FROM USER WHERE NAME like ? AND PASSWORD like ?', (usr, pw))
-    m = [row[0] for row in c][0]
-    return redirect(url_for('images', id=m))
+    pwd = request.form.get('password')
+    if not usr or not pwd:
+        flash('Invalid form input.', 'danger')
+        return render_template('login.html')
+
+    cursor = get_db().cursor()
+    try:
+        cursor.execute("SELECT username, password FROM user WHERE username = ?", (usr,)),
+        db_row = cursor.fetchone()
+    finally:
+        cursor.close()
+    if not db_row or not db_row[0] or not db_row[1] or not checkpw(pwd.encode('utf-8'), db_row[1]):
+        flash('Invalid credentials.', 'danger')
+        return render_template('login.html')
+
+    flash('You were successfully logged in.', 'success')
+    session.permanent = True if request.form.get('keep_sign') else False
+    session['user_id'] = db_row[0]  # username sanitized
+    # todo set login
+    return redirect(url_for('doorbells'))
 
 
-@web.route('/images/<int:img_id>')
-def images(img_id: int):
-    conn = sqlite3.connect('proj.db')
-    c = conn.cursor()
-    fiveMostRecent = c.execute(
-        'SELECT DATA,DATE,ESP_NAME FROM PICTURE  WHERE USER_ID LIKE ? ORDER BY DATE desc LIMIT 5', (id,))
-    #    GROUP BY USER_ID 
-    # imgs = c.execute('SELECT * FROM PICTURE WHERE USER_ID LIKE ?', (id))
-    data = []
-    names = []
-    dates = []
-    for img in fiveMostRecent:
-        data.append('data:image/png;charset=UTF-8;base64,' + base64.b64encode(img[0]).decode('utf-8'))
-        # data.append('iVBORw0KGgoAAAANSUhEUgAAAAoAAAAJCAIAAACExCpEAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAASSURBVChTY5DutMGDRqZ0pw0A4ZNOwQNf')
-        dates.append(img[1])  # .split('.')[0]) #split to remove miliseconds
-        names.append(img[2])
+@web.route('/register', methods=['GET', 'POST'])
+def register():
+    user_id = session.get('user_id')  # todo authenticate user
+    if user_id:
+        return redirect(url_for('doorbells'))
 
-    c.close()
-    conn.close()
-    # print(data)
-    return render_template('images2.html', imgs=data, dates=dates, esps=names)
+    if request.method == 'GET':
+        return render_template('register.html')
+
+    usr = request.form.get('username')
+    email = request.form.get('email')
+    pwd = request.form.get('password')
+    if not usr or not email or not pwd:
+        flash('Invalid form input.', 'danger')
+        return render_template('register.html')
+
+    hash_pwd = hashpw(pwd.encode('utf-8'), gensalt())
+
+    con = get_db()
+    cursor = con.cursor()
+    try:
+        cursor.execute("INSERT OR IGNORE INTO user (username, email, password, name) VALUES (?, ?, ?, ?)",
+                       (usr, email, hash_pwd, usr))
+        con.commit()
+        usr = cursor.lastrowid
+    finally:
+        cursor.close()
+    if not usr:
+        flash('Username or email already taken.', 'danger')
+        return render_template('register.html')
+
+    flash('You were successfully registered.', 'success')
+    session.permanent = True  # todo set login
+    session['user_id'] = usr  # username sanitized
+    return redirect(url_for('doorbells'))
 
 
-@web.route('/addEsp')
-def add_esp():
-    return render_template('add.html')
+@web.route('/logout')
+def logout():
+    user_id = session.get('user_id')  # todo authenticate user
+    if not user_id:  # if not auth do not anything
+        return redirect(url_for('index'))
 
-
-# end added
+    # todo remove auth
+    session.permanent = False
+    session.pop("user_id", None)
+    return redirect(url_for('index'))
 
 
 @web.route('/<int:esp_id>/image')
@@ -198,10 +278,3 @@ def selection():
 @web.route('/stats')
 def stats():
     return render_template('stats.html')
-
-
-def get_db():
-    if 'db' in g:
-        return g.db
-
-    g.db = sql_connect(current_app.config, detect_types=sqlite3.PARSE_DECLTYPES)
