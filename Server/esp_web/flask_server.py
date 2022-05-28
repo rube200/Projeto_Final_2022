@@ -92,20 +92,6 @@ def index():
     return redirect(url_for('doorbells' if 'user' in session else 'login'))
 
 
-@web.route('/doorbells')
-def doorbells():
-    return redirect('www.youtube.com')
-    user_id = session.get('user_id')  # todo authenticate user
-    if not user_id:
-        return redirect(url_for('index'))
-
-    cursor = get_db().cursor()
-    cursor.execute("SELECT ID, NAME FROM doorbell", (user_id,))
-    doorbells = cursor.fetchall()
-
-    return render_template('doorbells.html', doorbells=doorbells)
-
-
 @web.route('/login', methods=['GET', 'POST'])
 def login():
     user_id = session.get('user_id')  # todo authenticate user
@@ -133,6 +119,7 @@ def login():
 
     flash('You were successfully logged in.', 'success')
     session.permanent = True if request.form.get('keep_sign') else False
+    session['name'] = db_row[0]
     session['user_id'] = db_row[0]  # username sanitized
     # todo set login
     return redirect(url_for('doorbells'))
@@ -171,6 +158,7 @@ def register():
 
     flash('You were successfully registered.', 'success')
     session.permanent = True  # todo set login
+    session['name'] = usr
     session['user_id'] = usr  # username sanitized
     return redirect(url_for('doorbells'))
 
@@ -185,6 +173,46 @@ def logout():
     session.permanent = False
     session.pop("user_id", None)
     return redirect(url_for('index'))
+
+
+@web.route('/doorbells')
+def doorbells():
+    user_id = session.get('user_id')  # todo authenticate user
+    if not user_id:
+        return redirect(url_for('index'))
+
+    # cursor = get_db().cursor()
+    # cursor.execute("SELECT ID, NAME FROM doorbell", (user_id,))
+    # doorbells = cursor.fetchall()*/
+
+    return render_template('doorbells.html', doorbells=())
+
+
+@web.route('/all_streams')
+def all_streams():
+    user_id = session.get('user_id')  # todo authenticate user
+    if not user_id:
+        return redirect(url_for('index'))
+
+    return redirect(url_for('index'))
+    #user = session["user"]
+    #conn = sqlite3.connect('static/proj.db')
+    #c = conn.cursor()
+    #c.execute(
+    #    "SELECT PICTURE.DATA, PICTURE.DATE, DOORBELL.NAME FROM PICTURE JOIN DOORBELL ON PICTURE.DOORBELL_ID = DOORBELL.ID WHERE DOORBELL.USER_ID LIKE ? order by PICTURE.DATE desc",
+    #    (user,))
+    #bell_ids = c.fetchall()
+    #data = []
+    #names = []
+    #dates = []
+    #for bell in bell_ids:
+    #    data.append(bell[0])
+    #    dates.append(bell[1].split(".")[0])  # split to remove miliseconds
+    #    names.append(bell[2])
+    #c.close()
+    #conn.close()
+    # print(data)
+    #return render_template('imageGal.html', imgs=data, dates=dates, esps=names)
 
 
 @web.route('/<int:esp_id>/image')
