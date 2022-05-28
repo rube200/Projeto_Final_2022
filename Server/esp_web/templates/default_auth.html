@@ -1,10 +1,23 @@
 {% extends 'default.html' %}
 
+{% set flash_msg_handler = true %}
+
 {% block content %}
-    <div class="row flex-grow mt-5">
-        <div class="col-lg-4 mx-auto">
-            <div class="auth-form-light text-left p-5">
-                {% block auth_content %}{% endblock %}
+    <div class="content-wrapper align-items-center auth">
+        {% for category, message in get_flashed_messages(true) %}
+            <div class="d-flex justify-content-center top-0">
+                <div class="alert-{{ category }} alert-dismissible alert fade position-absolute show z-index-1"
+                     role="alert">
+                    {{ message }}
+                    <button aria-label="Close" class="btn-close" data-bs-dismiss="alert" type="button"></button>
+                </div>
+            </div>
+        {% endfor %}
+        <div class="row flex-grow mt-5">
+            <div class="col-lg-4 mx-auto">
+                <div class="auth-form-light text-left p-5">
+                    {% block auth_content %}{% endblock %}
+                </div>
             </div>
         </div>
     </div>

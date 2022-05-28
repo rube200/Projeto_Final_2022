@@ -24,17 +24,18 @@
 <div class="container-scroller">
     {% block main_nav %}{% endblock %}
     <div class="container-fluid page-body-wrapper full-page-wrapper">
-        <div class="content-wrapper align-items-center auth">
+        {% if not flash_msg_handler %}
             {% for category, message in get_flashed_messages(true) %}
                 <div class="d-flex justify-content-center top-0">
-                    <div class="alert-{{ category }} alert-dismissible alert fade position-absolute show z-index-1" role="alert">
+                    <div class="alert-{{ category }} alert-dismissible alert fade position-absolute show z-index-1"
+                         role="alert">
                         {{ message }}
                         <button aria-label="Close" class="btn-close" data-bs-dismiss="alert" type="button"></button>
                     </div>
                 </div>
             {% endfor %}
-            {% block content %}{% endblock %}
-        </div>
+        {% endif %}
+        {% block content %}{% endblock %}
     </div>
 </div>
 <script crossorigin="anonymous" integrity="sha384-pprn3073KE6tl6bjs2QrFaJGz5/SUsLqktiwsUTF55Jfv3qYSDhgCecCxMW52nD2"
