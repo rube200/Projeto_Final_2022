@@ -42,7 +42,7 @@ bool Esp32CamSocket::isRelayRequested() {
 }
 
 bool Esp32CamSocket::isStreamRequested() {
-    if (!isConfigured) {
+    if (!isReady) {
         return false;
     }
 
@@ -80,7 +80,7 @@ void Esp32CamSocket::processPacket() {
         return;
     }
 
-    if (!isConfigured) {
+    if (!isReady) {
         Serial.printf("Received a packet(%s) but esp is not configured yet.\n", getTypeToString(type));
         return;
     }
@@ -193,7 +193,7 @@ void Esp32CamSocket::processConfig(const uint8_t *data, const size_t data_len) {
     bellCaptureDuration = std::max(bellCaptureDuration, (uint64_t) getIntFromBuf(data) * 1000);
     motionCaptureDuration = std::max(motionCaptureDuration, (uint64_t) getIntFromBuf(data + 4) * 1000);//4 size of int
     relayOpenDuration = std::max(relayOpenDuration, (uint64_t) getIntFromBuf(data + 8) * 1000);
-    isConfigured = true;
+    isReady = true;
 }
 
 void Esp32CamSocket::sendUuid() {
@@ -209,7 +209,7 @@ void Esp32CamSocket::sendUuid() {
 }
 
 void Esp32CamSocket::sendBellPressed() {
-    if (!isConfigured) {
+    if (!isReady) {
         return;
     }
 
@@ -223,7 +223,7 @@ void Esp32CamSocket::sendBellPressed() {
 }
 
 void Esp32CamSocket::sendFrame(uint8_t *image, const size_t image_len) {
-    if (!isConfigured) {
+    if (!isReady) {
         return;
     }
 
@@ -233,7 +233,7 @@ void Esp32CamSocket::sendFrame(uint8_t *image, const size_t image_len) {
 }
 
 void Esp32CamSocket::sendMotionDetected() {
-    if (!isConfigured) {
+    if (!isReady) {
         return;
     }
 

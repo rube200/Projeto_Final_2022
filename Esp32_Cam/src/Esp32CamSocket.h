@@ -26,6 +26,8 @@ public:
 
     void sendMotionDetected();
 
+    bool isReady = true;
+
 private:
     void processConfig(const uint8_t *, size_t);
 
@@ -47,7 +49,6 @@ private:
     bool bellSent = false;
     bool motionSent = false;
 
-    bool isConfigured = false;
     uint64_t openRelayUntil = 0;
     uint64_t relayOpenDuration = 5000000;//5s
 };

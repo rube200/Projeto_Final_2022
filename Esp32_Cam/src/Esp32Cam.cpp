@@ -49,6 +49,11 @@ void Esp32Cam::loop() {
     const auto start = esp_timer_get_time();
     socket.processSocket();
 
+    if (!socket.isReady) {
+        espDelayUs(5000);//5ms
+        return;
+    }
+
     processGpio();
 
     if (shouldSendFrame()) {
