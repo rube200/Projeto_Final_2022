@@ -7,6 +7,16 @@ app = Flask(__name__)
 app.secret_key = "secret_Key.avi" #need secret key for session (can be any string)
 app.permanent_session_lifetime = timedelta(hours=16)
 
+
+
+@app.route('/')
+def dashboard():
+    if "user" in session:
+        return redirect(url_for("cards"))
+    return redirect(url_for("login"))
+
+
+
 @app.route('/login', methods = ['POST', 'GET'])
 def login():
     if request.method == 'POST':
@@ -54,7 +64,6 @@ def logout():
 def cards():
     if "user" in session:
         user = session["user"]
-        print("happy if")
         conn = sqlite3.connect('static/proj.db')
         c = conn.cursor()
         c.execute("SELECT NAME,IP,ID FROM DOORBELL WHERE USER_ID like ?", (user,))
@@ -68,13 +77,12 @@ def cards():
             ips.append(doorbell[1])
             c.execute("SELECT DATA,DATE FROM PICTURE WHERE DOORBELL_ID like ? ORDER BY DATE desc", (doorbell[2],))
             pics = c.fetchall()
-            print(pics[0][1])
             pic.append(pics[0][0])
             date.append(pics[0][1].split(".")[0])
         c.close()
         conn.close() 
         return render_template('cards.html', name = names, ip = ips, pic = pic, date = date)
-    return redirect(url_for(login))
+    return redirect(url_for("login"))
 
 @app.route('/addDoorbells',  methods = ['POST', 'GET'])
 def addDoorbell():
@@ -82,9 +90,14 @@ def addDoorbell():
         if request.method == 'POST':
             return    
         return render_template('addDoorbell.html')
-    return redirect(url_for(login))
+    return redirect(url_for("login"))
 
     
+@app.route('/doorbell')
+def badDoorbell(): 
+    return redirect(url_for("cards"))
+
+
 @app.route('/doorbell/<id>')
 def doorbell(id): 
     if "user" in session:
@@ -102,7 +115,7 @@ def doorbell(id):
         return render_template('doorbell.html', imgs = data, dates = dates, name = pics[0][2], ip = pics[0][3])
     return redirect(url_for("login")) 
 
-@app.route('/image')
+@app.route('/images')
 def image():
     if "user" in session:
         user = session["user"]
