@@ -1,0 +1,25 @@
+{% extends 'default.html' %}
+
+{% set name = self._TemplateReference__context.name|replace('.html', '')|capitalize %}
+
+{% block content %}
+    <div class="container-fluid">
+        <div class="card-group">
+            {% for doorbell in doorbells %}
+                <div class="card m-2" onclick="location.href={{ url_for('doorbell', esp_id=doorbell.id) }}">
+                    <img alt="Last image from stream for {{ doorbell.name }}" class="card-img-top"
+                         src="{{ doorbell.image }}">
+                    <div class="card-body card-colour">
+                        <h2 class="card-title">{{ doorbell.name }}</h2>
+                        <p class="card-text">Current State:</p>
+                        <h3 class="card-subtitle text-muted">{{ doorbell.state }}</h3>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        <button class="auth-form-btn btn btn-primary btn-lg font-weight-medium text-center"
+                onclick='location.href={{ url_for('image') }};'>
+            Show All Streams
+        </button>
+    </div>
+{% endblock %}

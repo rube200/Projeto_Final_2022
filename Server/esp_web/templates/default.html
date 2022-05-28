@@ -1,28 +1,40 @@
+{% if not name %}
+    {% set name = self._TemplateReference__context.name|replace('.html', '')|capitalize %}
+{% endif %}
+
 <!DOCTYPE html>
-<link rel='icon' href='{{ url_for('static', filename='favicon.ico') }}' type='image/x-icon'>
-<link rel='stylesheet' href='{{ url_for('static', filename='style.css') }}'/>
-<meta charset='UTF-8' content='width=device-width, initial-scale=1.0' name='viewport'>
-<title>{{ name }}</title>
-<body class='{{ body_class }}'>
-<nav class='topNav'>
-    {% for nv in nav %}
-        <a href='{{ url_for(nv.url) }}' title='Nav {{ nv.name }} button'>
-            <img
-                    alt='Nav {{ nv.name }} image'
-                    class='btnImage {% if nv.name|lower == name|lower %} border {% endif %}'
-                    src='{{ url_for('static', filename=nv.image) }}'>
-        </a>
-    {% endfor %}
-</nav>
-<section class='content'>
-    <header>
-        {% block header %}{% endblock %}
-    </header>
-    {% for message in get_flashed_messages() %}
-        <div class='flash'>
-            {{ message }}
-        </div>W
-    {% endfor %}
-    {% block content %}{% endblock %}
-</section>
+<html lang="en">
+<head>
+    <meta charset='UTF-8' content='width=device-width, initial-scale=1' name='viewport'>
+    <!-- met content shrink-to-fit=no -->
+    <title>{{ name }}</title>
+
+    <link href='{{ url_for('static', filename='favicon.png') }}' rel='icon'>
+
+    <link crossorigin="anonymous" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/css/bootstrap.min.css"
+          integrity="sha384-0evHe/X+R7YkIZDRvuzKMRqM+OrBnVFBL6DOitfPri4tjfHxaWutUpFmBp4vmVor" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/simple-line-icons/2.5.5/css/simple-line-icons.min.css" rel="stylesheet" >
+    <link href='{{ url_for('static', filename='style.css') }}' rel='stylesheet'>
+    <!--<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/simple-line-icons/2.4.1/css/simple-line-icons.css">
+        <link rel="stylesheet" href="static/vendors/flag-icon-css/css/flag-icon.min.css">
+<link rel="stylesheet" href="static/vendors/css/vendor.bundle.base.css">
+    -->
+</head>
+<body {% if body_class %} class='{{ body_class }}' {% endif %}>
+<div class="container-scroller">
+    <div class=" container-fluid page-body-wrapper full-page-wrapper">
+        <div class="content-wrapper align-items-center auth">
+            {% for category, message in get_flashed_messages(true) %}
+                <div class="alert-{{ category }} alert-dismissible alert fade position-absolute show" role="alert">
+                    {{ message }}
+                    <button aria-label="Close" class="btn-close" data-bs-dismiss="alert" type="button"></button>
+                </div>
+            {% endfor %}
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+</div>
+<script crossorigin="anonymous" integrity="sha384-pprn3073KE6tl6bjs2QrFaJGz5/SUsLqktiwsUTF55Jfv3qYSDhgCecCxMW52nD2"
+        src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
+</html>
