@@ -1,12 +1,12 @@
 #include "Esp32CamGpio.h"
 
 void Esp32CamGpio::begin() {
-    gpio_config_t io_conf {
-        .pin_bit_mask = BELL_PIN_BIT,
-        .mode = GPIO_MODE_INPUT,
-        .pull_up_en = GPIO_PULLUP_DISABLE,
-        .pull_down_en = GPIO_PULLDOWN_DISABLE,
-        .intr_type = GPIO_INTR_DISABLE
+    gpio_config_t io_conf{
+            .pin_bit_mask = BELL_PIN_BIT,
+            .mode = GPIO_MODE_INPUT,
+            .pull_up_en = GPIO_PULLUP_DISABLE,
+            .pull_down_en = GPIO_PULLDOWN_DISABLE,
+            .intr_type = GPIO_INTR_DISABLE
     };
 
     //Config bell button and pir sensor using esp system
@@ -22,7 +22,7 @@ void Esp32CamGpio::begin() {
     //Finish relay config
 }
 
-void Esp32CamGpio::configGpio(gpio_config_t * io_conf, gpio_num_t pin) {
+void Esp32CamGpio::configGpio(gpio_config_t *io_conf, gpio_num_t pin) {
     auto err = gpio_config(io_conf);
     if (err != ESP_OK) {
         Serial.printf("Fail to set gpio config - %llu %s %i\n", io_conf->pin_bit_mask, esp_err_to_name(err), err);
@@ -58,6 +58,7 @@ void Esp32CamGpio::changeRelay(const bool newState) {
 }
 
 uint32_t bellDebounceTime = 0;
+
 bool Esp32CamGpio::peekBellState() {
     const auto currentTime = esp_timer_get_time();
     if (gpio_get_level(BELL_PIN) && bellDebounceTime < currentTime) {
