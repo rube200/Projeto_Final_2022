@@ -45,7 +45,7 @@ class SocketClient(Packet):
         try:
             data = self.__tcp_socket.recv(1024)
             if not data:
-                raise RuntimeError('Peer closed.')
+                raise ConnectionResetError(104, 'Connection reset by peer.')
 
             self.append_data(data)
 
