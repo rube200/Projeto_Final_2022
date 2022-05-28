@@ -1,45 +1,37 @@
-{% extends 'default.html' %}
+{% extends 'default_auth.html' %}
 
-{% set name = self._TemplateReference__context.name|replace('.html', '')|capitalize %}
-
-{% block content %}
-    <div class="row flex-grow">
-        <div class="col-lg-4 mx-auto">
-            <div class="auth-form-light text-left p-5">
-                <h4>Hello! let's get started</h4>
-                <h6 class="font-weight-light">Sign in to continue.</h6>
-                <form action="{{ url_for('login') }}" class="pt-3" method="POST">
-                    <div class="form-group">
-                        <!--suppress HtmlFormInputWithoutLabel -->
-                        <input class="form-control form-control-lg" placeholder="Username" name="username"
-                               type="text">
-                    </div>
-                    <div class="form-group">
-                        <!--suppress HtmlFormInputWithoutLabel -->
-                        <input class="form-control form-control-lg" placeholder="Password" name="password"
-                               type="password">
-                    </div>
-                    <div class="my-2 d-flex justify-content-between align-items-center">
-                        <div class="form-check">
-                            <input class="form-check-input ml-0 " id="keep_sign" name="keep_sign" type="checkbox">
-                            <label class="form-check-label text-muted" for="keep_sign">
-                                Keep me signed in
-                            </label>
-                        </div>
-                        <a class="auth-link text-black" href="#">Forgot password?</a>
-                        <!-- todo -->
-                    </div>
-                    <button class="btn btn-block btn-primary btn-lg font-weight-medium auth-form-btn" type="submit">
-                        SIGN IN
-                    </button>
-                    <div class="text-center mt-4 font-weight-light">
-                        Don't have an account?
-                        <a href="{{ url_for('register') }}" class="text-primary">
-                            Create
-                        </a>
-                    </div>
-                </form>
-            </div>
+{% block auth_content %}
+    <h4>Hello! let's get started</h4>
+    <h6 class="font-weight-light">Sign in to continue.</h6>
+    <form action="{{ url_for('login') }}" class="pt-3" method="POST">
+        <div class="form-group">
+            <!--suppress HtmlFormInputWithoutLabel -->
+            <input class="form-control form-control-lg" placeholder="Username" name="username"
+                   type="text">
         </div>
-    </div>
+        <div class="form-group">
+            <!--suppress HtmlFormInputWithoutLabel -->
+            <input class="form-control form-control-lg" placeholder="Password" name="password"
+                   type="password">
+        </div>
+        <div class="my-2 d-flex justify-content-between align-items-center">
+            <div class="form-check">
+                <input class="form-check-input ml-0 " id="keep_sign" name="keep_sign" type="checkbox">
+                <label class="form-check-label text-muted" for="keep_sign">
+                    Keep me signed in
+                </label>
+            </div>
+            <a class="auth-link text-black" href="#">Forgot password?</a>
+            <!-- todo -->
+        </div>
+        <button class="btn btn-block btn-primary btn-lg font-weight-medium auth-form-btn" type="submit">
+            SIGN IN
+        </button>
+        <div class="text-center mt-4 font-weight-light">
+            Don't have an account?
+            <a href="{{ url_for('register') }}" class="text-primary">
+                Create
+            </a>
+        </div>
+    </form>
 {% endblock %}
