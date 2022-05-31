@@ -1,0 +1,27 @@
+{% extends 'default_e_bell.html' %}
+
+{% set title='All streams' %}
+{% set nav_title='Streams from all doorbells' %}
+{% set no_bells=doorbells|length <= 0 %}
+
+{% block e_bell_content %}
+    <div class="d-flex flex-wrap">
+        {% for doorbell in doorbells %}
+            <div class="m-2">
+                <figure class="figure">
+                    <video
+                            width="320"
+                            height="240"
+                            class="figure-img img-fluid rounded"
+                            id="stream-view"
+                            poster="{{ url_for('static', filename='default_profile.png') }}"
+                            preload="none">
+                    </video>
+                    <figcaption class="figure-caption text-center">{{ doorbell.name }}</figcaption>
+                    <figcaption class="figure-caption text-center">{% if doorbell.live %}Online{% else %}
+                        Offline{% endif %}</figcaption>
+                </figure>
+            </div>
+        {% endfor %}
+    </div>
+{% endblock %}

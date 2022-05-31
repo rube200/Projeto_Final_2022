@@ -1,104 +1,23 @@
-{% extends 'default.html' %}
+{% extends 'default_e_bell.html' %}
 
-{% block main_nav %}
-    <nav class="navbar default-layout-navbar col-lg-12 col-12 p-0 fixed-top d-flex flex-row">
-        <div class="navbar-brand-wrapper d-flex align-items-center">
-            <img alt="logo" class="logo-dark" src='{{ url_for('static', filename='favicon.png') }}'>
-        </div>
-        <div class="navbar-menu-wrapper d-flex align-items-center flex-grow-1">
-            <h5 class="mb-0 font-weight-medium d-none d-lg-flex">Doorbells registered to this user</h5>
-            <ul class="navbar-nav navbar-nav-right ml-auto">
-                <!--
-                <li class="nav-item dropdown">
-                  <a aria-expanded="false" class="nav-link count-indicator message-dropdown" data-toggle="dropdown" id="messageDropdown" href="#">
-                    <i class="icon-speech"></i>
-                    <span class="count">7</span>
-                  </a>
-                  <div class="dropdown-menu dropdown-menu-right navbar-dropdown preview-list pb-0" aria-labelledby="messageDropdown">
+{% set nav_title='Doorbells registered to this user' %}
+{% set no_bells=doorbells|length <= 0 %}
 
-                    <a class="dropdown-item py-3">
-                      <p class="mb-0 font-weight-medium float-left">You have 7 unread mails </p>
-                      <span class="badge badge-pill badge-primary float-right">View all</span>
-                    </a>
-
-                    <a class="dropdown-item preview-item">
-                      <div class="preview-thumbnail">
-                        <img src='{{ url_for('static', filename='default_profile.png') }}' alt="Profile Picture" class="img-sm profile-pic">
-                      </div>
-                      <div class="preview-item-content flex-grow py-2">
-                        <p class="preview-subject ellipsis font-weight-medium text-dark">Marian Garner </p>
-                        <p class="font-weight-light small-text"> The meeting is cancelled </p>
-                      </div>
-                    </a>
-                    <a class="dropdown-item preview-item">
-                      <div class="preview-thumbnail">
-                        <img src="static/db/3/output.png" alt="image" class="img-sm profile-pic">
-                      </div>
-                      <div class="preview-item-content flex-grow py-2">
-                        <p class="preview-subject ellipsis font-weight-medium text-dark">David Grey </p>
-                        <p class="font-weight-light small-text"> The meeting is cancelled </p>
-                      </div>
-                    </a>
-                    <a class="dropdown-item preview-item">
-                      <div class="preview-thumbnail">
-                        <img src="static/db/3/output.png" alt="image" class="img-sm profile-pic">
-                      </div>
-                      <div class="preview-item-content flex-grow py-2">
-                        <p class="preview-subject ellipsis font-weight-medium text-dark">Travis Jenkins </p>
-                        <p class="font-weight-light small-text"> The meeting is cancelled </p>
-                      </div>
-                    </a>
-                  </div>
-                </li>
-                -->
-                <li class="nav-item dropdown d-none d-xl-inline-flex user-dropdown">
-                    <a class="nav-link dropdown-toggle" id="UserDropdown" href="#" data-toggle="dropdown"
-                       aria-expanded="false">
-                        <img class="img-xs rounded-circle ml-2" src='{{ url_for('static', filename='default_profile.png') }}' alt="Profile picture"/>
-                        <span class="font-weight-normal">
-                            {{ session.name }}
-                        </span>
-                    </a>
-                    <div class="dropdown-menu dropdown-menu-right navbar-dropdown" aria-labelledby="UserDropdown">
-                        <div class="dropdown-header text-center">
-                            <img class="img-md rounded-circle" src="" alt="Profile image">
-                            <p class="mb-1 mt-3">Allen Moreno</p>
-                            <p class="font-weight-light text-muted mb-0">allenmoreno@gmail.com</p>
-                        </div>
-                        <a class="dropdown-item"><i class="dropdown-item-icon icon-user text-primary"></i>My Profile
-                            <span class="badge badge-pill badge-danger">1</span></a>
-                        <a class="dropdown-item"><i class="dropdown-item-icon icon-speech text-primary"></i>Messages</a>
-                        <a class="dropdown-item"><i class="dropdown-item-icon icon-energy text-primary"></i>Activity</a>
-                        <a class="dropdown-item"><i class="dropdown-item-icon icon-power text-primary"></i>Sign Out</a>
-                    </div>
-                </li>
-            </ul>
-            <button class="navbar-toggler navbar-toggler-right d-lg-none align-self-center" type="button"
-                    data-toggle="offcanvas">
-                <span class="icon-menu"></span>
-            </button>
-        </div>
-    </nav>
-{% endblock %}
-
-{% block content %}
-    <div class="container-fluid">
-        <div class="card-group">
-            {% for doorbell in doorbells %}
-                <div class="card m-2" onclick='location.href=&quot;{{ url_for('doorbell', esp_id=doorbell.id) }}&quot;'>
-                    <img alt="Last image from stream for {{ doorbell.name }}" class="card-img-top"
-                         src="{{ doorbell.image }}"/>
-                    <div class="card-body card-colour">
-                        <h2 class="card-title">{{ doorbell.name }}</h2>
-                        <p class="card-text">Current State:</p>
-                        <h3 class="card-subtitle text-muted">{{ doorbell.state }}</h3>
-                    </div>
+{% block e_bell_content %}
+    <div class="d-flex flex-wrap justify-content-around">
+        {% for doorbell in doorbells %}
+            <div class="card mt-4" onclick="location.href=&quot;{{ url_for('doorbell', esp_id=doorbell.id) }}&quot;">
+                <img alt="Last image from stream for {{ doorbell.name }}"
+                     class="card-img-top"
+                     src="{{ doorbell.image }}"
+                     width="320"
+                     height="240"/>
+                <div class="card-body card-colour">
+                    <h2 class="card-title">{{ doorbell.name }}</h2>
+                    <p class="card-text">Current State:</p>
+                    <h3 class="card-subtitle text-muted">{{ doorbell.state }}</h3>
                 </div>
-            {% endfor %}
-        </div>
-        <button class="auth-form-btn btn btn-primary btn-lg font-weight-medium text-center"
-                onclick='location.href=&quot;{{ url_for('all_streams') }}&quot;'>
-            Show All Streams
-        </button>
+            </div>
+        {% endfor %}
     </div>
 {% endblock %}
