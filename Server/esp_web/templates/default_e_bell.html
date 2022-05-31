@@ -1,0 +1,93 @@
+{% extends 'default.html' %}
+
+{% block main_nav %}
+    <header class="bg-dark navbar navbar-dark navbar-expand-lg">
+        <nav class="container-fluid flex-nowrap p-1">
+            <a class="navbar-brand sidebar-width text-center" href="{{ url_for('index') }}">
+                <img alt="E-Bell logo" class="my-auto" src="{{ url_for('static', filename='logo.png') }}" width="130"
+                     height="65"/>
+            </a>
+            <div class="align-items-center d-flex flex-grow-1 ms-3">
+                <div class="me-auto">
+                    <span class="h5 navbar-text text-nowrap">
+                        {% if nav_title %}
+                            {{ nav_title }}
+                        {% else %}
+                            "Missing Nav Title"
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="ms-4">
+                    <ul class="align-items-center flex-row navbar-nav ms-auto">
+                        <li class="nav-item dropdown">
+                            <button aria-expanded="false" aria-haspopup="true"
+                                    class="bi bi-bell-fill btn btn-dark btn-link dropdown-toggle nav-link shadow-none"
+                                    data-bs-display="static" data-bs-toggle="dropdown" id="dropdown-notifications">
+                                <span class="badge bg-danger position-absolute rounded-circle start-75 text-center translate-middle top-0">{{ notifications|count }}</span>
+                            </button>
+                            <ul aria-labelledby="dropdown-notifications" class="dropdown-menu dropdown-menu-end pb-0">
+                                <li>
+                                    <div class="dropdown-item py-3">
+                                        <p class="float-left font-weight-medium mb-0">You have {{ notifications|count }}
+                                            notifications</p>
+                                        <button class="badge badge-pill bg-secondary float-right">View all</button>
+                                    </div>
+                                </li>
+                                {% for notification in nofications %}
+                                    <li>
+                                        <div class="card dropdown-item flex-row">
+                                            <img alt="Image for notification {{ loop.index }}"
+                                                 class="card-img img-sm m-auto"
+                                                 src="{{ url_for('static', filename=notification.image) }}">
+                                            <div class="card-body">
+                                                <p class="card-text">{{ notification.type }}</p>
+                                                <p class="card-text">{{ notification.message }}</p>
+                                            </div>
+                                        </div>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </li>
+                        <li class="nav-item ms-4 me-2">
+                            <img alt="Profile picture for {{ session.name }}"
+                                 class="img-sm rounded-circle"
+                                 src="{{ url_for('static', filename='default_profile.png') }}">
+                            <!-- todo profile image-->
+                            <span class="navbar-text ms-1">{{ session.name }}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+{% endblock %}
+
+{% block content %}
+    <div class="container d-flex flex-nowrap mx-0 px-0 min-vh-100 min-vw-100">
+        <div class="bg-dark d-flex flex-column py-3">
+            <ul class="nav nav-pills flex-column list-group list-group-flush text-center text-nowrap">
+                <li class="nav-item">
+                    <a class="disabled nav-link text-white" href="#">
+                        UI Elements
+                    </a>
+                </li>
+                <hr/>
+                {% for nv in nav %}
+                    <li class="bg-dark border-white list-group-item nav-item">
+                        <a class="{% if nv.id|lower == name|lower %} active disabled {% endif %} nav-link text-white"
+                           href="{{ url_for(nv.url) }}">
+                            <span class="menu-title me-2">{{ nv.title }}</span>
+                            <i class="bi {{ nv.icon }}"></i>
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+        <div class="container-fluid">
+            {% block e_bell_content %}{% endblock %}
+            {% if no_bells == True %}
+                <h1 class="p-5 text-center">No doorbells.</h1>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
