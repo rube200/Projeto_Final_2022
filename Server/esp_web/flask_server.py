@@ -10,14 +10,15 @@ from flask import abort, current_app, Flask, g, redirect, render_template, reque
 
 from esp_socket.socket_client import SocketClient
 
+# todo checkar se u user id existe na base de dados
+# todo may usar token
 
-# permanent_session_lifetime
-# NAV_DICT = [
-#    {'name': 'Home', 'image': 'home.jpg', 'url': 'index'},
-# {'name': 'Live', 'image': 'esp.png', 'url': 'live'},
-# {'name': 'Images', 'image': 'camera.png', 'url': 'images'},
-#    {'name': 'Stats', 'image': 'stats.png', 'url': 'stats'},
-# ]
+NAV_DICT = [
+    {'id': 'doorbells', 'title': 'Manage Doorbells', 'icon': 'bi-book-fill', 'url': 'doorbells'},
+    {'id': 'all_streams', 'title': 'All Streams', 'icon': 'bi-cast', 'url': 'all_streams'},
+    {'id': 'pictures', 'title': 'Pictures', 'icon': 'bi-globe', 'url': 'doorbells'},
+    {'id': 'statistics', 'title': 'Statistics', 'icon': 'bi-bar-chart-fill', 'url': 'doorbells'},
+]
 
 
 class WebServer(Flask):
@@ -41,9 +42,8 @@ web = WebServer()
 web.config.from_pyfile('flask.cfg')
 
 
-@web.before_first_request
-def init_db():
-    with web.app_context():
+def init_db(wb: WebServer) -> None:
+    with wb.app_context():
         db = get_db()
 
         with current_app.open_resource(current_app.config['SCHEMA_FILE']) as f:
@@ -70,9 +70,12 @@ def close_db(e=None):
         db.close()
 
 
-# @web.context_processor
-# def inject_nav():
-#    return dict(nav=NAV_DICT)
+init_db(web)
+
+
+@web.context_processor
+def inject_nav():
+    return dict(nav=NAV_DICT)
 
 
 # noinspection PyUnusedLocal
@@ -109,7 +112,7 @@ def login():
 
     cursor = get_db().cursor()
     try:
-        cursor.execute("SELECT username, password FROM user WHERE username = ?", (usr,)),
+        cursor.execute('SELECT username, password FROM user WHERE username = ?', (usr,)),
         db_row = cursor.fetchone()
     finally:
         cursor.close()
@@ -121,7 +124,6 @@ def login():
     session.permanent = True if request.form.get('keep_sign') else False
     session['name'] = db_row[0]
     session['user_id'] = db_row[0]  # username sanitized
-    # todo set login
     return redirect(url_for('doorbells'))
 
 
@@ -146,7 +148,7 @@ def register():
     con = get_db()
     cursor = con.cursor()
     try:
-        cursor.execute("INSERT OR IGNORE INTO user (username, email, password, name) VALUES (?, ?, ?, ?)",
+        cursor.execute('INSERT OR IGNORE INTO user (username, email, password, name) VALUES (?, ?, ?, ?)',
                        (usr, email, hash_pwd, usr))
         con.commit()
         usr = cursor.lastrowid
@@ -171,7 +173,7 @@ def logout():
 
     # todo remove auth
     session.permanent = False
-    session.pop("user_id", None)
+    session.pop('user_id', None)
     return redirect(url_for('index'))
 
 
@@ -182,9 +184,9 @@ def doorbells():
         return redirect(url_for('index'))
 
     # cursor = get_db().cursor()
-    # cursor.execute("SELECT ID, NAME FROM doorbell", (user_id,))
+    # cursor.execute('SELECT ID, NAME FROM doorbell', (user_id,))
     # doorbells = cursor.fetchall()*/
-
+    #todo finish
     return render_template('doorbells.html', doorbells=())
 
 
@@ -194,25 +196,23 @@ def all_streams():
     if not user_id:
         return redirect(url_for('index'))
 
-    return redirect(url_for('index'))
-    #user = session["user"]
-    #conn = sqlite3.connect('static/proj.db')
-    #c = conn.cursor()
-    #c.execute(
-    #    "SELECT PICTURE.DATA, PICTURE.DATE, DOORBELL.NAME FROM PICTURE JOIN DOORBELL ON PICTURE.DOORBELL_ID = DOORBELL.ID WHERE DOORBELL.USER_ID LIKE ? order by PICTURE.DATE desc",
-    #    (user,))
-    #bell_ids = c.fetchall()
-    #data = []
-    #names = []
-    #dates = []
-    #for bell in bell_ids:
-    #    data.append(bell[0])
-    #    dates.append(bell[1].split(".")[0])  # split to remove miliseconds
-    #    names.append(bell[2])
-    #c.close()
-    #conn.close()
-    # print(data)
-    #return render_template('imageGal.html', imgs=data, dates=dates, esps=names)
+    cursor = get_db().cursor()
+    try:
+        cursor.execute('SELECT id, name FROM doorbell WHERE owner = ?', (user_id,)),
+        db_rows = cursor.fetchall()
+    finally:
+        cursor.close()
+
+    bells = []
+    for bell in db_rows:
+        bl_id = bell[0]
+        tmp_bell = object
+        tmp_bell.id = bl_id
+        tmp_bell.name = bell[1]
+        tmp_bell.live = True if web.get_client(bl_id) else False
+        bells.append(tmp_bell)
+
+    return render_template('all_streams.html', doorbells=bells)
 
 
 @web.route('/<int:esp_id>/image')
