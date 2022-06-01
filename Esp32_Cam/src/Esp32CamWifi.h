@@ -23,15 +23,19 @@ public:
 
 
     boolean requestSocketConfig();
-    const char * requestUsername();
+
+    const char *requestUsername();
 
 private:
     void setDefaultMode();
+
     void setParamsMode();
+
     void setUsernameMode();
 
 
     void loadCostumeParameters();
+
     void saveCostumeParameters() const;
 
 

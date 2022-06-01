@@ -22,7 +22,9 @@ enum socketState {
 class Esp32CamSocket : WiFiClient {
 public:
     void setHost(const char *, uint16_t);
+
     void setUsername(const char *);
+
     bool connectSocket(bool should_restart_esp = false);
 
 
@@ -30,24 +32,34 @@ public:
 
 
     bool isReady() const;
+
     bool isRelayRequested();
+
     bool isStreamRequested();
+
     bool needUsernamePortal() const;
 
 
     void sendBellPressed();
+
     void sendMotionDetected();
+
     void sendFrame(uint8_t *, size_t);
 
 private:
     size_t receiveHeader(int);
+
     void processPacket();
 
 
     bool sendUuid();
+
     bool sendUsername();
+
     void processConfig(const uint8_t *, size_t);
+
     void processUsername(const uint8_t *, size_t);
+
     bool sendPacket(const Esp32CamPacket &, const String & = String());
 
 

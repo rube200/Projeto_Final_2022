@@ -88,7 +88,7 @@ boolean Esp32CamWifi::requestSocketConfig() {
     return isPortalSaved;
 }
 
-const char * Esp32CamWifi::requestUsername() {
+const char *Esp32CamWifi::requestUsername() {
     isPortalSaved = false;
     setUsernameMode();
 

@@ -4,10 +4,12 @@ void Esp32CamSocket::setHost(const char *host_ip, const uint16_t host_port) {
     host = host_ip;
     port = host_port;
 }
-void Esp32CamSocket::setUsername(const char * usr) {
+
+void Esp32CamSocket::setUsername(const char *usr) {
     username = usr;
     usernamePortal = false;
 }
+
 bool Esp32CamSocket::connectSocket(const bool should_restart_esp) {
     if (connected()) {//connect should check for connected Esp32Cam::loop()
         return true;
@@ -94,6 +96,7 @@ void Esp32CamSocket::processSocket() {
         readPacket.resetPacket();
     } while (true);
 }
+
 size_t Esp32CamSocket::receiveHeader(int av) {
     //If type != Invalid we already set header
     if (readPacket.getPacketType() != Invalid) {
@@ -121,6 +124,7 @@ size_t Esp32CamSocket::receiveHeader(int av) {
     free(header);
     return HEADER_SIZE + readPacket.getExpectedLen();
 }
+
 void Esp32CamSocket::processPacket() {
     const auto type = readPacket.getPacketType();
     if (type == Uuid) {
@@ -140,7 +144,8 @@ void Esp32CamSocket::processPacket() {
                 return;
             }
 
-            Serial.printf("Expected to receive a Config packet but receive {%s} instead, ignoring...\n", getTypeToString(type));
+            Serial.printf("Expected to receive a Config packet but receive {%s} instead, ignoring...\n",
+                          getTypeToString(type));
             return;
 
         case UsernameSent:
@@ -149,7 +154,8 @@ void Esp32CamSocket::processPacket() {
                 return;
             }
 
-            Serial.printf("Expected to receive a Username packet but receive {%s} instead, ignoring...\n", getTypeToString(type));
+            Serial.printf("Expected to receive a Username packet but receive {%s} instead, ignoring...\n",
+                          getTypeToString(type));
             return;
     }
 
@@ -176,6 +182,7 @@ void Esp32CamSocket::processPacket() {
 bool Esp32CamSocket::isReady() const {
     return isSocketReady == Ready;
 }
+
 bool Esp32CamSocket::isRelayRequested() {
     if (!isReady() || !openRelayUntil) {
         return false;
@@ -188,6 +195,7 @@ bool Esp32CamSocket::isRelayRequested() {
 
     return true;
 }
+
 bool Esp32CamSocket::isStreamRequested() {
     if (!isReady()) {
         return false;
@@ -214,6 +222,7 @@ bool Esp32CamSocket::isStreamRequested() {
 
     return true;
 }
+
 bool Esp32CamSocket::needUsernamePortal() const {
     return usernamePortal;
 }
@@ -231,10 +240,12 @@ bool Esp32CamSocket::sendUuid() {
     free(baseMac);
     return state;
 }
+
 bool Esp32CamSocket::sendUsername() {
-    const auto packet = Esp32CamPacket(Username, (const uint8_t *)username, strlen(username));
+    const auto packet = Esp32CamPacket(Username, (const uint8_t *) username, strlen(username));
     return sendPacket(packet, "Username");
 }
+
 void Esp32CamSocket::processConfig(const uint8_t *data, const size_t data_len) {
     if (!data || data_len < CONFIG_RECV_SIZE) {
         Serial.printf("Invalid config received: %i\n", data_len);
@@ -243,17 +254,19 @@ void Esp32CamSocket::processConfig(const uint8_t *data, const size_t data_len) {
 
     const auto sendUsername = (data[0] & 1);
     bellCaptureDuration = std::max(bellCaptureDuration, (uint64_t) getIntFromBuf(data + 1) * 1000);//data + bool(byte)
-    motionCaptureDuration = std::max(motionCaptureDuration, (uint64_t) getIntFromBuf(data + 5) * 1000);//data + bool(byte) + int(4 bytes)
-    relayOpenDuration = std::max(relayOpenDuration, (uint64_t) getIntFromBuf(data + 9) * 1000);//data + bool(byte) + int(4 bytes) + int(4 bytes)
+    motionCaptureDuration = std::max(motionCaptureDuration,
+                                     (uint64_t) getIntFromBuf(data + 5) * 1000);//data + bool(byte) + int(4 bytes)
+    relayOpenDuration = std::max(relayOpenDuration, (uint64_t) getIntFromBuf(data + 9) *
+                                                    1000);//data + bool(byte) + int(4 bytes) + int(4 bytes)
 
     if (sendUsername) {
         isSocketReady = ConfigReceived;
-        usernamePortal =  true;
-    }
-    else {
+        usernamePortal = true;
+    } else {
         isSocketReady = Ready;
     }
 }
+
 void Esp32CamSocket::processUsername(const uint8_t *data, const size_t data_len) {
     if (!data || data_len < USERNAME_RECV_SIZE) {
         Serial.printf("Invalid username received: %i\n", data_len);
@@ -266,8 +279,9 @@ void Esp32CamSocket::processUsername(const uint8_t *data, const size_t data_len)
     }
 
     isSocketReady = ConfigReceived;
-    usernamePortal =  true;
+    usernamePortal = true;
 }
+
 bool Esp32CamSocket::sendPacket(const Esp32CamPacket &packet, const String &name) {
     const auto nm = name.length() ? name.c_str() : getTypeToString(packet.getPacketType());
     const auto len = packet.packetLen();
@@ -299,6 +313,7 @@ void Esp32CamSocket::sendBellPressed() {
         bellSent = true;
     }
 }
+
 void Esp32CamSocket::sendMotionDetected() {
     if (!isReady()) {
         return;
@@ -312,6 +327,7 @@ void Esp32CamSocket::sendMotionDetected() {
         motionSent = true;
     }
 }
+
 void Esp32CamSocket::sendFrame(uint8_t *image, const size_t image_len) {
     if (!isReady()) {
         return;
