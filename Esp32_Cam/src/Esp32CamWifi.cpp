@@ -6,10 +6,7 @@ Esp32CamWifi::Esp32CamWifi() {
 #endif
     setDarkMode(true);
 
-    addParameter(&socket_host_parameter);
-    addParameter(&socket_port_parameter);
-
-    setNormalMode();
+    setDefaultMode();
     setSaveParamsCallback([this] {
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "UnusedValue"
@@ -81,12 +78,27 @@ void Esp32CamWifi::loadCostumeParameters() {
     EEPROM.end();
 }
 
-boolean Esp32CamWifi::requestConfig() {
+boolean Esp32CamWifi::requestSocketConfig() {
     isPortalSaved = false;
+    setParamsMode();
+
     if (WiFiManager::startConfigPortal(ACCESS_POINT_NAME))
         return true;
 
     return isPortalSaved;
+}
+
+const char * Esp32CamWifi::requestUsername() {
+    isPortalSaved = false;
+    setUsernameMode();
+
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "ConstantConditionsOC"
+    if (WiFiManager::startConfigPortal(ACCESS_POINT_NAME) || isPortalSaved)
+        return username_parameter.getValue();
+#pragma clang diagnostic pop
+
+    return nullptr;
 }
 
 void Esp32CamWifi::saveCostumeParameters() const {
@@ -100,12 +112,33 @@ void Esp32CamWifi::saveCostumeParameters() const {
     EEPROM.end();
 }
 
-void Esp32CamWifi::setNormalMode() {
+void Esp32CamWifi::setDefaultMode() {
     const char *wifiMenu[] = {"wifi", "exit"};
+    setMenu(wifiMenu, 2);
+
+    addParameter(&socket_host_parameter);
+    addParameter(&socket_port_parameter);
+}
+
+void Esp32CamWifi::setParamsMode() {
+    const char *wifiMenu[] = {"param", "exit"};
     setMenu(wifiMenu, 2);
 }
 
-void Esp32CamWifi::setSocketMode() {
-    const char *wifiMenu[] = {"param", "exit"};
-    setMenu(wifiMenu, 2);
+void Esp32CamWifi::setUsernameMode() {
+    const auto params_size = getParametersCount();
+    const auto params = getParameters();
+    for (int i = 0; i < params_size; i++) {
+        params[i] = nullptr;
+    }
+
+    addParameter(&username_parameter);
+    setParamsMode();
+    setSaveParamsCallback([this] {
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "UnusedValue"
+        isPortalSaved = true;
+#pragma clang diagnostic pop
+        stopConfigPortal();
+    });
 }

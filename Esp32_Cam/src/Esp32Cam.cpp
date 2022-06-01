@@ -21,11 +21,10 @@ void Esp32Cam::begin() {
 
 void Esp32Cam::startSocket() {
     socket.setHost(wifi.getHostParam(), wifi.getPortParam());
-    wifi.setSocketMode();
 
     socket.connectSocket();//first try will likely to fail
     while (!socket.connectSocket()) {
-        if (!wifi.requestConfig()) {
+        if (!wifi.requestSocketConfig()) {
             Serial.println("Exit requested");
             restartEsp();
             return;
@@ -46,10 +45,23 @@ void Esp32Cam::loop() {
         return;
     }
 
+    if (socket.needUsernamePortal()) {
+        const auto username = wifi.requestUsername();
+        if (!username) {
+            Serial.println("Exit requested");
+            restartEsp();
+            return;
+        }
+
+        socket.setUsername(username);
+        espDelayUs(5000);
+        return;
+    }
+
     const auto start = esp_timer_get_time();
     socket.processSocket();
 
-    if (!socket.isReady) {
+    if (!socket.isReady()) {
         espDelayUs(5000);//5ms
         return;
     }

@@ -1,5 +1,13 @@
 #include "Esp32CamSocket.h"
 
+void Esp32CamSocket::setHost(const char *host_ip, const uint16_t host_port) {
+    host = host_ip;
+    port = host_port;
+}
+void Esp32CamSocket::setUsername(const char * usr) {
+    username = usr;
+    usernamePortal = false;
+}
 bool Esp32CamSocket::connectSocket(const bool should_restart_esp) {
     if (connected()) {//connect should check for connected Esp32Cam::loop()
         return true;
@@ -28,83 +36,22 @@ bool Esp32CamSocket::connectSocket(const bool should_restart_esp) {
     return false;
 }
 
-bool Esp32CamSocket::isRelayRequested() {
-    if (!openRelayUntil) {
-        return false;
-    }
-
-    if (openRelayUntil < esp_timer_get_time()) {
-        openRelayUntil = 0;
-        return false;
-    }
-
-    return true;
-}
-
-bool Esp32CamSocket::isStreamRequested() {
-    if (!isReady) {
-        return false;
-    }
-
-    if (bellSent) {
-        bellSent = false;
-        return true;
-    }
-
-    if (motionSent) {
-        motionSent = false;
-        return true;
-    }
-
-    if (!streamUntil) {
-        return false;
-    }
-
-    if (streamUntil < esp_timer_get_time()) {
-        streamUntil = 0;
-        return false;
-    }
-
-    return true;
-}
-
-void Esp32CamSocket::processPacket() {
-    const auto type = readPacket.getPacketType();
-    if (type == Uuid) {
-        sendUuid();
-        return;
-    }
-
-    if (type == Config) {
-        processConfig(readPacket.getData(), readPacket.getDataLen());
-        return;
-    }
-
-    if (!isReady) {
-        Serial.printf("Received a packet(%s) but esp is not configured yet.\n", getTypeToString(type));
-        return;
-    }
-
-    switch (type) {
-        case StartStream:
-            streamUntil = esp_timer_get_time() + STREAM_TIMEOUT;
-            break;
-
-        case StopStream:
-            streamUntil = 0;
-            break;
-
-        case OpenRelay:
-            openRelayUntil = esp_timer_get_time() + relayOpenDuration;
-            break;
-
-        default:
-            Serial.printf("Unknown packet %s\n", getTypeToString(type));
-            break;
-    }
-}
 
 void Esp32CamSocket::processSocket() {
+    switch (isSocketReady) {
+        case Nothing:
+            if (sendUuid()) {
+                isSocketReady = UuidSent;
+            }
+            return;
+
+        case ConfigReceived:
+            if (!needUsernamePortal() && sendUsername()) {
+                isSocketReady = UsernameSent;
+            }
+            return;
+    }
+
     do {
         const auto av = available();
         if (av <= 0) {
@@ -147,7 +94,6 @@ void Esp32CamSocket::processSocket() {
         readPacket.resetPacket();
     } while (true);
 }
-
 size_t Esp32CamSocket::receiveHeader(int av) {
     //If type != Invalid we already set header
     if (readPacket.getPacketType() != Invalid) {
@@ -175,41 +121,173 @@ size_t Esp32CamSocket::receiveHeader(int av) {
     free(header);
     return HEADER_SIZE + readPacket.getExpectedLen();
 }
-
-void Esp32CamSocket::setHost(const char *host_ip, const uint16_t host_port) {
-    host = host_ip;
-    port = host_port;
-}
-
-#define MAC_SIZE 6
-#define HANDSHAKE_RECV_SIZE 1
-
-void Esp32CamSocket::processConfig(const uint8_t *data, const size_t data_len) {
-    if (!data || data_len < HANDSHAKE_RECV_SIZE) {
-        Serial.printf("Invalid config received: %i\n", data_len);
+void Esp32CamSocket::processPacket() {
+    const auto type = readPacket.getPacketType();
+    if (type == Uuid) {
+        Serial.printf("Received a uuid packet, something is wrong.");
         return;
     }
 
-    bellCaptureDuration = std::max(bellCaptureDuration, (uint64_t) getIntFromBuf(data) * 1000);
-    motionCaptureDuration = std::max(motionCaptureDuration, (uint64_t) getIntFromBuf(data + 4) * 1000);//4 size of int
-    relayOpenDuration = std::max(relayOpenDuration, (uint64_t) getIntFromBuf(data + 8) * 1000);
-    isReady = true;
+    switch (isSocketReady) {
+        case Nothing:
+        case ConfigReceived:
+            Serial.printf("ERROR: This should be unreachable | State(%u): Nothing or ConfigReceived.\n", isSocketReady);
+            return;
+
+        case UuidSent:
+            if (type == Config) {
+                processConfig(readPacket.getData(), readPacket.getDataLen());
+                return;
+            }
+
+            Serial.printf("Expected to receive a Config packet but receive {%s} instead, ignoring...\n", getTypeToString(type));
+            return;
+
+        case UsernameSent:
+            if (type == Username) {
+                processUsername(readPacket.getData(), readPacket.getDataLen());
+                return;
+            }
+
+            Serial.printf("Expected to receive a Username packet but receive {%s} instead, ignoring...\n", getTypeToString(type));
+            return;
+    }
+
+    switch (type) {
+        case StartStream:
+            streamUntil = esp_timer_get_time() + STREAM_TIMEOUT;
+            break;
+
+        case StopStream:
+            streamUntil = 0;
+            break;
+
+        case OpenRelay:
+            openRelayUntil = esp_timer_get_time() + relayOpenDuration;
+            break;
+
+        default:
+            Serial.printf("Unknown packet(%s)\n", getTypeToString(type));
+            break;
+    }
 }
 
-void Esp32CamSocket::sendUuid() {
+
+bool Esp32CamSocket::isReady() const {
+    return isSocketReady == Ready;
+}
+bool Esp32CamSocket::isRelayRequested() {
+    if (!isReady() || !openRelayUntil) {
+        return false;
+    }
+
+    if (openRelayUntil < esp_timer_get_time()) {
+        openRelayUntil = 0;
+        return false;
+    }
+
+    return true;
+}
+bool Esp32CamSocket::isStreamRequested() {
+    if (!isReady()) {
+        return false;
+    }
+
+    if (bellSent) {
+        bellSent = false;
+        return true;
+    }
+
+    if (motionSent) {
+        motionSent = false;
+        return true;
+    }
+
+    if (!streamUntil) {
+        return false;
+    }
+
+    if (streamUntil < esp_timer_get_time()) {
+        streamUntil = 0;
+        return false;
+    }
+
+    return true;
+}
+bool Esp32CamSocket::needUsernamePortal() const {
+    return usernamePortal;
+}
+
+
+bool Esp32CamSocket::sendUuid() {
     uint8_t *baseMac = espMalloc(MAC_SIZE);
     if (!baseMac) {
-        return;
+        return false;
     }
 
     esp_read_mac(baseMac, ESP_MAC_WIFI_STA);
     const auto packet = Esp32CamPacket(Uuid, baseMac, MAC_SIZE);
-    sendPacket(packet, "Uuid");
+    const auto state = sendPacket(packet, "Uuid");
     free(baseMac);
+    return state;
+}
+bool Esp32CamSocket::sendUsername() {
+    const auto packet = Esp32CamPacket(Username, (const uint8_t *)username, strlen(username));
+    return sendPacket(packet, "Username");
+}
+void Esp32CamSocket::processConfig(const uint8_t *data, const size_t data_len) {
+    if (!data || data_len < CONFIG_RECV_SIZE) {
+        Serial.printf("Invalid config received: %i\n", data_len);
+        return;
+    }
+
+    const auto sendUsername = (data[0] & 1);
+    bellCaptureDuration = std::max(bellCaptureDuration, (uint64_t) getIntFromBuf(data + 1) * 1000);//data + bool(byte)
+    motionCaptureDuration = std::max(motionCaptureDuration, (uint64_t) getIntFromBuf(data + 5) * 1000);//data + bool(byte) + int(4 bytes)
+    relayOpenDuration = std::max(relayOpenDuration, (uint64_t) getIntFromBuf(data + 9) * 1000);//data + bool(byte) + int(4 bytes) + int(4 bytes)
+
+    if (sendUsername) {
+        isSocketReady = ConfigReceived;
+        usernamePortal =  true;
+    }
+    else {
+        isSocketReady = Ready;
+    }
+}
+void Esp32CamSocket::processUsername(const uint8_t *data, const size_t data_len) {
+    if (!data || data_len < USERNAME_RECV_SIZE) {
+        Serial.printf("Invalid username received: %i\n", data_len);
+        return;
+    }
+
+    if (data[0] & 1) {
+        isSocketReady = Ready;
+        return;
+    }
+
+    isSocketReady = ConfigReceived;
+    usernamePortal =  true;
+}
+bool Esp32CamSocket::sendPacket(const Esp32CamPacket &packet, const String &name) {
+    const auto nm = name.length() ? name.c_str() : getTypeToString(packet.getPacketType());
+    const auto len = packet.packetLen();
+    if (!len) {
+        Serial.printf("Fail to send %s! Invalid packet.\n", nm);
+        return false;
+    }
+
+    const auto written = write(packet.packet(), len);
+    if (len != written) {
+        Serial.printf("Fail to send %s! Sent: %zu of %zu\n", nm, len, written);
+        return false;
+    }
+
+    return true;
 }
 
+
 void Esp32CamSocket::sendBellPressed() {
-    if (!isReady) {
+    if (!isReady()) {
         return;
     }
 
@@ -221,19 +299,8 @@ void Esp32CamSocket::sendBellPressed() {
         bellSent = true;
     }
 }
-
-void Esp32CamSocket::sendFrame(uint8_t *image, const size_t image_len) {
-    if (!isReady) {
-        return;
-    }
-
-    const auto packet = Esp32CamPacket(Image, image, image_len);
-    free(image);
-    sendPacket(packet, "SendFrame");
-}
-
 void Esp32CamSocket::sendMotionDetected() {
-    if (!isReady) {
+    if (!isReady()) {
         return;
     }
 
@@ -245,18 +312,12 @@ void Esp32CamSocket::sendMotionDetected() {
         motionSent = true;
     }
 }
-
-void Esp32CamSocket::sendPacket(const Esp32CamPacket &packet, const String &name) {
-    const auto nm = name.length() ? name.c_str() : getTypeToString(packet.getPacketType());
-    const auto len = packet.packetLen();
-    if (!len) {
-        Serial.printf("Fail to send %s! Invalid packet.\n", nm);
+void Esp32CamSocket::sendFrame(uint8_t *image, const size_t image_len) {
+    if (!isReady()) {
         return;
     }
 
-    const auto written = write(packet.packet(), len);
-    if (len != written) {
-        Serial.printf("Fail to send %s! Sent: %zu of %zu\n", nm, len, written);
-        return;
-    }
+    const auto packet = Esp32CamPacket(Image, image, image_len);
+    free(image);
+    sendPacket(packet, "SendFrame");
 }

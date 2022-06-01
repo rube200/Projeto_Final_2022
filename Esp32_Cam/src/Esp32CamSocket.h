@@ -6,49 +6,66 @@
 #include "WiFiClient.h"
 
 #define CONNECT_TRY 5
+#define CONFIG_RECV_SIZE 13
+#define USERNAME_RECV_SIZE 1
+#define MAC_SIZE 6
 #define STREAM_TIMEOUT 30500000//30.5s -> Py try to communicate every 10s
+
+enum socketState {
+    Nothing = 0,
+    UuidSent = 1,
+    ConfigReceived = 2,
+    UsernameSent = 3,
+    Ready = 4
+};
 
 class Esp32CamSocket : WiFiClient {
 public:
+    void setHost(const char *, uint16_t);
+    void setUsername(const char *);
     bool connectSocket(bool should_restart_esp = false);
+
 
     void processSocket();
 
-    void setHost(const char *, uint16_t);
 
+    bool isReady() const;
     bool isRelayRequested();
-
     bool isStreamRequested();
+    bool needUsernamePortal() const;
+
 
     void sendBellPressed();
-
+    void sendMotionDetected();
     void sendFrame(uint8_t *, size_t);
 
-    void sendMotionDetected();
-
-    bool isReady = true;
-
 private:
-    void processConfig(const uint8_t *, size_t);
-
+    size_t receiveHeader(int);
     void processPacket();
 
-    size_t receiveHeader(int);
 
-    void sendPacket(const Esp32CamPacket &, const String & = String());
+    bool sendUuid();
+    bool sendUsername();
+    void processConfig(const uint8_t *, size_t);
+    void processUsername(const uint8_t *, size_t);
+    bool sendPacket(const Esp32CamPacket &, const String & = String());
 
-    void sendUuid();
 
     const char *host = nullptr;
     uint16_t port = 0;
+    const char *username = nullptr;
+
+
     Esp32CamPacket readPacket;
+    bool usernamePortal = false;
+    socketState isSocketReady = Nothing;
+
 
     uint64_t streamUntil = 0;
     uint64_t bellCaptureDuration = 0;//0 means single frame
     uint64_t motionCaptureDuration = 0;//0 means single frame
     bool bellSent = false;
     bool motionSent = false;
-
     uint64_t openRelayUntil = 0;
     uint64_t relayOpenDuration = 5000000;//5s
 };

@@ -1,8 +1,8 @@
 #ifndef ESP32_CAM_ESP32UTILS_H
 #define ESP32_CAM_ESP32UTILS_H
 
-#include <Arduino.h>
 #include <cstdint>
+#include <Esp.h>
 
 #define DEBUG 1
 #define DEBUG_CAMERA (DEBUG & 0)
@@ -87,7 +87,7 @@ static inline int getIntFromBuf(const uint8_t buf[4]) {
 static inline void restartEsp() {
     Serial.println("Restarting ESP in 3s...");
     vTaskDelay(3 * configTICK_RATE_HZ);
-    ESP.restart();
+    esp_restart();
     assert(0);
 }
 

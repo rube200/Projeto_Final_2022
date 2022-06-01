@@ -21,20 +21,24 @@ public:
 
     static bool isReady();
 
-    void setNormalMode();
 
-    void setSocketMode();
-
-    boolean requestConfig();
+    boolean requestSocketConfig();
+    const char * requestUsername();
 
 private:
-    void loadCostumeParameters();
+    void setDefaultMode();
+    void setParamsMode();
+    void setUsernameMode();
 
+
+    void loadCostumeParameters();
     void saveCostumeParameters() const;
+
 
     bool isPortalSaved = false;
     WiFiManagerParameter socket_host_parameter = WiFiManagerParameter("Host", "Socket host", REMOTE_HOST, 50);
     WiFiManagerParameter socket_port_parameter = WiFiManagerParameter("Port", "Socket port", REMOTE_PORT, 5);
+    WiFiManagerParameter username_parameter = WiFiManagerParameter("Username", "Username");
 };
 
 #endif //ESP32_CAM_ESP32CAMWIFI_H

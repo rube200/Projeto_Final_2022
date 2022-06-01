@@ -9,12 +9,13 @@ enum packetType {
     Invalid = 0,
     Uuid = 1,
     Config = 2,
-    StartStream = 3,
-    StopStream = 4,
-    Image = 5,
-    BellPressed = 6,
-    MotionDetected = 7,
-    OpenRelay = 8
+    Username = 3,
+    StartStream = 4,
+    StopStream = 5,
+    Image = 6,
+    BellPressed = 7,
+    MotionDetected = 8,
+    OpenRelay = 9
 };
 
 static const char *getTypeToString(packetType type) {
@@ -25,6 +26,8 @@ static const char *getTypeToString(packetType type) {
             return "Uuid";
         case Config:
             return "Config";
+        case Username:
+            return "Username";
         case StartStream:
             return "StartStream";
         case StopStream:
