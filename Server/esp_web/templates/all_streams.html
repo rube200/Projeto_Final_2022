@@ -14,12 +14,11 @@
                             height="240"
                             class="figure-img img-fluid rounded"
                             id="stream-view"
-                            poster="{{ url_for('static', filename='default_profile.png') }}"
+                            poster="{{ doorbell.image }}"
                             preload="none">
                     </video>
                     <figcaption class="figure-caption text-center">{{ doorbell.name }}</figcaption>
-                    <figcaption class="figure-caption text-center">{% if doorbell.live %}Online{% else %}
-                        Offline{% endif %}</figcaption>
+                    <figcaption class="figure-caption text-center">{% if doorbell.state %}Online{% else %}Offline{% endif %}</figcaption>
                 </figure>
             </div>
         {% endfor %}

@@ -177,24 +177,10 @@ def logout():
     return redirect(url_for('index'))
 
 
-@web.route('/doorbells')
-def doorbells():
+def get_doorbells_data():
     user_id = session.get('user_id')  # todo authenticate user
     if not user_id:
-        return redirect(url_for('index'))
-
-    # cursor = get_db().cursor()
-    # cursor.execute('SELECT ID, NAME FROM doorbell', (user_id,))
-    # doorbells = cursor.fetchall()*/
-    #todo finish
-    return render_template('doorbells.html', doorbells=())
-
-
-@web.route('/all_streams')
-def all_streams():
-    user_id = session.get('user_id')  # todo authenticate user
-    if not user_id:
-        return redirect(url_for('index'))
+        return None
 
     cursor = get_db().cursor()
     try:
@@ -209,10 +195,39 @@ def all_streams():
         tmp_bell = object
         tmp_bell.id = bl_id
         tmp_bell.name = bell[1]
-        tmp_bell.live = True if web.get_client(bl_id) else False
+
+        esp = web.get_client(bl_id)
+        if esp:
+            tmp_bell.image = esp.camera if esp.camera else url_for('static', filename='default_profile.png')
+            tmp_bell.state = True
+        else:
+            tmp_bell.image = url_for('static', filename='default_profile.png')
+            tmp_bell.state = False
         bells.append(tmp_bell)
+    return bells
+
+
+@web.route('/doorbells')
+def doorbells():
+    bells = get_doorbells_data()
+    if not bells:
+        return redirect(url_for('index'))
+
+    return render_template('doorbells.html', doorbells=bells)
+
+
+@web.route('/all_streams')
+def all_streams():
+    bells = get_doorbells_data()
+    if not bells:
+        return redirect(url_for('index'))
 
     return render_template('all_streams.html', doorbells=bells)
+
+
+@web.route('/doorbell/<int:esp_id>')
+def doorbell(esp_int: int):
+    pass
 
 
 @web.route('/<int:esp_id>/image')
