@@ -19,7 +19,7 @@ enum socketState {
     Ready = 4
 };
 
-class Esp32CamSocket : WiFiClient {
+class Esp32CamSocket : private WiFiClient {
 public:
     void setHost(const char *, uint16_t);
 

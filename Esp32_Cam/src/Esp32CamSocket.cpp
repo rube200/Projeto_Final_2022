@@ -260,6 +260,7 @@ void Esp32CamSocket::processConfig(const uint8_t *data, const size_t data_len) {
                                                     1000);//data + bool(byte) + int(4 bytes) + int(4 bytes)
 
     if (sendUsername) {
+        Serial.println("Esp32 not registered yet, requesting username.");
         isSocketReady = ConfigReceived;
         usernamePortal = true;
     } else {
@@ -274,10 +275,12 @@ void Esp32CamSocket::processUsername(const uint8_t *data, const size_t data_len)
     }
 
     if (data[0] & 1) {
+        Serial.println("Doorbell registered with success.");
         isSocketReady = Ready;
         return;
     }
 
+    Serial.println("Inserted username is invalid, requesting username again.");
     isSocketReady = ConfigReceived;
     usernamePortal = true;
 }
