@@ -9,7 +9,7 @@ from traceback import format_exc
 from bcrypt import checkpw, gensalt, hashpw
 from flask import abort, current_app, Flask, g, redirect, render_template, request, send_file, url_for, \
     stream_with_context, session, flash
-
+from flask_mail import Mail
 from esp_socket.socket_client import SocketClient
 
 # todo checkar se u user id existe na base de dados
@@ -43,6 +43,7 @@ class WebServer(Flask):
 web = WebServer()
 web.config.from_pyfile('flask.cfg')
 web.config['DATABASE'] = environ.get('DATABASE') or 'esp32cam.sqlite'
+mail = Mail(web)
 
 
 def init_db(wb: WebServer) -> None:
@@ -158,7 +159,7 @@ def register():
             return render_template('register.html')
 
         # username sanitize
-        cursor.execute('SELECT username FROM user WHERE username = ?', [user_id])
+        cursor.execute('SELECT username FROM user WHERE username = ?', [usr])
         usr = cursor.fetchone()[0]
     finally:
         cursor.close()
@@ -234,42 +235,6 @@ def doorbell(esp_id: int):
     pass
 
 
-@web.route('/stream/<int:esp_id>')
-def stream(esp_id: int):
-    user_id = session.get('user_id')  # todo authenticate user
-    if not user_id:
-        return None
-
-    # todo check if esp_id is from user
-    stream_context = stream_with_context(generate_stream(esp_id))
-    return web.response_class(stream_context, mimetype='multipart/x-mixed-replace; boundary=frame')
-
-
-@web.route('/<int:esp_id>/image')
-def image(esp_id: int):
-    client = web.get_client(esp_id)
-    return send_file(BytesIO(client.camera), mimetype='image/jpeg') if client else abort(400)
-
-
-@web.route('/<int:esp_id>/live')
-def live(esp_id: int):
-    client = web.get_client(esp_id)
-    return render_template('live.html', esp_id=esp_id) if client else abort(400)
-
-
-@web.route('/<int:esp_id>/live2')
-def live2(esp_id: int):
-    client = web.get_client(esp_id)
-    return render_template('live.html', esp_id=esp_id, not_request_stream=True) if client else abort(400)
-
-
-@web.route('/<int:esp_id>/open', methods=['POST'])
-def open_relay(esp_id: int):
-    client = web.get_client(esp_id)
-    client.open_relay()
-    return '', 200
-
-
 def generate_stream(esp_id: int, stream_request: bool = True):
     client = web.get_client(esp_id)
     if not client:
@@ -306,6 +271,52 @@ def generate_stream(esp_id: int, stream_request: bool = True):
 
         log.warning('Exiting generate_stream')
         return b'Content-Length: 0'
+
+
+@web.route('/stream/<int:esp_id>')
+def stream(esp_id: int):
+    user_id = session.get('user_id')  # todo authenticate user
+    if not user_id:
+        return None
+
+    # todo check if esp_id is from user
+    stream_context = stream_with_context(generate_stream(esp_id))
+    return web.response_class(stream_context, mimetype='multipart/x-mixed-replace; boundary=frame')
+
+
+
+
+
+
+
+
+
+@web.route('/<int:esp_id>/image')
+def image(esp_id: int):
+    client = web.get_client(esp_id)
+    return send_file(BytesIO(client.camera), mimetype='image/jpeg') if client else abort(400)
+
+
+@web.route('/<int:esp_id>/live')
+def live(esp_id: int):
+    client = web.get_client(esp_id)
+    return render_template('live.html', esp_id=esp_id) if client else abort(400)
+
+
+@web.route('/<int:esp_id>/live2')
+def live2(esp_id: int):
+    client = web.get_client(esp_id)
+    return render_template('live.html', esp_id=esp_id, not_request_stream=True) if client else abort(400)
+
+
+@web.route('/<int:esp_id>/open', methods=['POST'])
+def open_relay(esp_id: int):
+    client = web.get_client(esp_id)
+    client.open_relay()
+    return '', 200
+
+
+
 
 
 @web.route('/<int:esp_id>/stream2')

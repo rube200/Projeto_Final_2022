@@ -173,9 +173,17 @@ class SocketClient(Packet):
     def uuid(self) -> int:
         return self.__uuid
 
+    #todo meter na base de dados
     def peek_bell_pressed(self) -> bool:
         if not self.__bell_pressed:
             return False
 
         self.__bell_pressed = False
+        return True
+
+    def peek_motion_detected(self) -> bool:
+        if not self.__motion_detected:
+            return False
+
+        self.__motion_detected = False
         return True

@@ -18,6 +18,19 @@ create table if not exists doorbell
     name  text not null,
     owner text collate nocase
         references user
-            on update cascade on delete restrict
+            on update cascade on delete restrict,
+    registered_at timestamp default current_timestamp not null
 );
 create index if not exists doorbell_nocase_owner ON doorbell(owner COLLATE NOCASE);
+
+create table if not exists notifications
+(
+    id      integer
+        constraint notifications_pk
+            primary key autoincrement,
+    esp_id  integer not null,
+    time    timestamp default current_timestamp not null,
+    type    integer not null,
+    checked boolean   default false not null,
+    path    text
+);
