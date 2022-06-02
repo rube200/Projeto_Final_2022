@@ -5,7 +5,7 @@
 {% set no_bells=doorbells|length <= 0 %}
 
 {% block e_bell_content %}
-    <div class="d-flex flex-wrap">
+    <div class="d-flex flex-wrap justify-content-around">
         {% for doorbell in doorbells %}
             <div class="m-2">
                 <figure class="figure">
@@ -15,12 +15,18 @@
                             class="figure-img img-fluid rounded"
                             id="stream-view"
                             poster="{{ doorbell.image }}"
-                            preload="none">
+                            preload="none"
+                            src="{{ url_for('stream', esp_id=doorbell.id) }}">
                     </video>
                     <figcaption class="figure-caption text-center">{{ doorbell.name }}</figcaption>
-                    <figcaption class="figure-caption text-center">{% if doorbell.state %}Online{% else %}Offline{% endif %}</figcaption>
+                    <figcaption class="figure-caption text-center">{{ doorbell.state }}</figcaption>
                 </figure>
             </div>
         {% endfor %}
     </div>
+    <script>
+        window.onload = function() {
+
+        }
+    </script>
 {% endblock %}

@@ -1,5 +1,7 @@
 import logging as log
+from collections import namedtuple
 from io import BytesIO
+from os import environ
 from sqlite3 import connect as sql_connect, PARSE_DECLTYPES, Row as sqlRow
 from time import sleep, monotonic
 from traceback import format_exc
@@ -40,6 +42,7 @@ class WebServer(Flask):
 
 web = WebServer()
 web.config.from_pyfile('flask.cfg')
+web.config['DATABASE'] = environ.get('DATABASE') or 'esp32cam.sqlite'
 
 
 def init_db(wb: WebServer) -> None:
@@ -112,7 +115,7 @@ def login():
 
     cursor = get_db().cursor()
     try:
-        cursor.execute('SELECT username, password FROM user WHERE username = ?', (usr,)),
+        cursor.execute('SELECT username, password FROM user WHERE username = ?', [usr]),
         db_row = cursor.fetchone()
     finally:
         cursor.close()
@@ -120,7 +123,6 @@ def login():
         flash('Invalid credentials.', 'danger')
         return render_template('login.html')
 
-    flash('You were successfully logged in.', 'success')
     session.permanent = True if request.form.get('keep_sign') else False
     session['name'] = db_row[0]
     session['user_id'] = db_row[0]  # username sanitized
@@ -151,17 +153,19 @@ def register():
         cursor.execute('INSERT OR IGNORE INTO user (username, email, password, name) VALUES (?, ?, ?, ?)',
                        (usr, email, hash_pwd, usr))
         con.commit()
-        usr = cursor.lastrowid
+        if cursor.rowcount < 1:
+            flash('Username or email already taken.', 'danger')
+            return render_template('register.html')
+
+        # username sanitize
+        cursor.execute('SELECT username FROM user WHERE username = ?', [user_id])
+        usr = cursor.fetchone()[0]
     finally:
         cursor.close()
-    if not usr:
-        flash('Username or email already taken.', 'danger')
-        return render_template('register.html')
 
-    flash('You were successfully registered.', 'success')
     session.permanent = True  # todo set login
     session['name'] = usr
-    session['user_id'] = usr  # username sanitized
+    session['user_id'] = usr
     return redirect(url_for('doorbells'))
 
 
@@ -184,7 +188,7 @@ def get_doorbells_data():
 
     cursor = get_db().cursor()
     try:
-        cursor.execute('SELECT id, name FROM doorbell WHERE owner = ?', (user_id,)),
+        cursor.execute('SELECT id, name FROM doorbell WHERE owner = ?', [user_id]),
         db_rows = cursor.fetchall()
     finally:
         cursor.close()
@@ -192,17 +196,17 @@ def get_doorbells_data():
     bells = []
     for bell in db_rows:
         bl_id = bell[0]
-        tmp_bell = object
+        tmp_bell = namedtuple('Bell', 'id, name, image, state')
         tmp_bell.id = bl_id
         tmp_bell.name = bell[1]
 
         esp = web.get_client(bl_id)
         if esp:
             tmp_bell.image = esp.camera if esp.camera else url_for('static', filename='default_profile.png')
-            tmp_bell.state = True
+            tmp_bell.state = 'Online'
         else:
             tmp_bell.image = url_for('static', filename='default_profile.png')
-            tmp_bell.state = False
+            tmp_bell.state = 'Offline'
         bells.append(tmp_bell)
     return bells
 
@@ -210,7 +214,7 @@ def get_doorbells_data():
 @web.route('/doorbells')
 def doorbells():
     bells = get_doorbells_data()
-    if not bells:
+    if bells is None:
         return redirect(url_for('index'))
 
     return render_template('doorbells.html', doorbells=bells)
@@ -219,15 +223,26 @@ def doorbells():
 @web.route('/all_streams')
 def all_streams():
     bells = get_doorbells_data()
-    if not bells:
+    if bells is None:
         return redirect(url_for('index'))
 
     return render_template('all_streams.html', doorbells=bells)
 
 
 @web.route('/doorbell/<int:esp_id>')
-def doorbell(esp_int: int):
+def doorbell(esp_id: int):
     pass
+
+
+@web.route('/stream/<int:esp_id>')
+def stream(esp_id: int):
+    user_id = session.get('user_id')  # todo authenticate user
+    if not user_id:
+        return None
+
+    # todo check if esp_id is from user
+    stream_context = stream_with_context(generate_stream(esp_id))
+    return web.response_class(stream_context, mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
 @web.route('/<int:esp_id>/image')
@@ -291,20 +306,6 @@ def generate_stream(esp_id: int, stream_request: bool = True):
 
         log.warning('Exiting generate_stream')
         return b'Content-Length: 0'
-
-
-@web.route('/<int:esp_id>/stream')
-def stream(esp_id: int):
-    try:
-        stream_context = stream_with_context(generate_stream(esp_id))
-        return web.response_class(stream_context, mimetype='multipart/x-mixed-replace; boundary=frame')
-
-    except Exception as x:
-        log.exception(f'Exception while streaming2: {x!r}')
-        log.exception(format_exc())
-
-    finally:
-        log.warning('Exiting stream')
 
 
 @web.route('/<int:esp_id>/stream2')

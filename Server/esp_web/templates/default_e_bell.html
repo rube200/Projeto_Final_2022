@@ -48,12 +48,17 @@
                                 {% endfor %}
                             </ul>
                         </li>
-                        <li class="nav-item ms-4 me-2">
+                        <li class="nav-item mx-4">
                             <img alt="Profile picture for {{ session.name }}"
                                  class="img-sm rounded-circle"
                                  src="{{ url_for('static', filename='default_profile.png') }}">
                             <!-- todo profile image-->
                             <span class="navbar-text ms-1">{{ session.name }}</span>
+                        </li>
+                        <li class="nav-item me-2">
+                            <a class="nav-link" href="{{ url_for('logout') }}">
+                                <i class="bi bi-box-arrow-right"></i>
+                            </a>
                         </li>
                     </ul>
                 </div>

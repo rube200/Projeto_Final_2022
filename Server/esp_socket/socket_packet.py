@@ -8,12 +8,13 @@ class PacketType(Enum):
     Invalid = 0
     Uuid = 1
     Config = 2
-    StartStream = 3
-    StopStream = 4
-    Image = 5
-    BellPressed = 6
-    MotionDetected = 7
-    OpenRelay = 8
+    Username = 3
+    StartStream = 4
+    StopStream = 5
+    Image = 6
+    BellPressed = 7
+    MotionDetected = 8
+    OpenRelay = 9
 
 
 class Packet:

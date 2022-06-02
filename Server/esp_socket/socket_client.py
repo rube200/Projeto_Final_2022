@@ -13,25 +13,28 @@ WRITE = READ | EVENT_WRITE
 
 class SocketClient(Packet):
     def __init__(self, address: Tuple[str, int], selector: BaseSelector, tcp_socket: socket,
-                 uuid_cb: Callable[[Any], None]):
+                 uuid_cb: Callable[[Any], None], username_cb: Callable[[Any, str], bool]):
         super(SocketClient, self).__init__()
         self.__address = address
         self.__selector = selector
         self.__tcp_socket = tcp_socket
         self.__uuid_cb = uuid_cb
+        self.__username_cb = username_cb
 
         self.__bell_pressed = False
+        self.__motion_detected = False
         self.__camera = b''
         self.__selector.register(self.__tcp_socket, READ, self)
         self.__uuid = 0
+        self.__wait_username = False
         self.__write_buffer = b''
-
-        self.__send_uuid()
 
     def close(self) -> None:
         self.reset_packet(True)
         self.__address = None
+        self.__bell_pressed = False
         self.__camera = None
+        self.__motion_detected = False
         self.__selector.unregister(self.__tcp_socket)
         self.__selector = None
         self.__tcp_socket.shutdown(SHUT_RDWR)
@@ -39,11 +42,13 @@ class SocketClient(Packet):
         self.__tcp_socket = None
         self.__uuid = 0
         self.__uuid_cb = None
+        self.__username_cb = None
+        self.__wait_username = False
         self.__write_buffer = None
 
     def __recv(self) -> None:
         try:
-            data = self.__tcp_socket.recv(1024)
+            data = self.__tcp_socket.recv(2048)
             if not data:
                 raise ConnectionResetError(104, 'Connection reset by peer.')
 
@@ -64,34 +69,44 @@ class SocketClient(Packet):
 
     def __process_packet(self) -> None:
         pkt_type = self.get_type()
-        data = self.get_data()
         if pkt_type is PacketType.Uuid:
-            self.__process_uuid(data)
+            self.__process_uuid(self.get_data())
             return
 
         if not self.__uuid:
-            log.debug(f'Receive a packet of type {pkt_type!r} {self.__address!r} from but handshake was not completed!')
+            log.debug(f'Receive a packet of type {pkt_type!r} from {self.__address!r} but expected a uuid!')
+            return
+
+        if pkt_type is PacketType.Username:
+            self.__process_username(self.get_data())
+            return
+
+        if self.__wait_username:
+            log.debug(f'Receive a packet of type {pkt_type!r} from {self.__address!r} but expected a username!')
             return
 
         if pkt_type is PacketType.Image:
-            self.__camera = data
+            self.__camera = self.get_data()
             return
 
         if pkt_type is PacketType.BellPressed:
             self.__bell_pressed = True
-            log.debug("BELL")
             return
 
         if pkt_type is PacketType.MotionDetected:
-            log.debug("MOTION")
+            self.__motion_detected = True
             return
 
-        # todo finish
         raise ValueError(f'Unknown {pkt_type!r} from {self.__address!r}')
 
     def __process_uuid(self, data: bytes) -> None:
         self.__uuid = int(data.hex(), base=16)
         self.__uuid_cb(self)
+
+    def __process_username(self, data: bytes) -> None:
+        username = data.decode('utf-8')
+        valid = self.__username_cb(self, username)
+        self.__send_username_confirmation(valid)
 
     def __write(self) -> None:
         if not self.__write_buffer:
@@ -119,12 +134,14 @@ class SocketClient(Packet):
         if mask & EVENT_WRITE:
             self.__write()
 
-    def __send_uuid(self) -> None:
-        self.__send_empty_packet(PacketType.Uuid)
+    def __send_config(self, need_username: bool, bell_duration: int, motion_duration: int, relay_duration: int) -> None:
+        data = pack('>iB?iii', 13, PacketType.Config.value, need_username, bell_duration, motion_duration,
+                    relay_duration)
+        # 13 is 1(bool) 12(3 * 4(int)) size
+        self.__write_data(data)
 
-    def __send_config(self, bell_duration: int, motion_duration: int, relay_duration: int) -> None:
-        data = pack('>iBiii', 12, PacketType.Config.value, bell_duration, motion_duration, relay_duration)
-        # 12 is 3*int size
+    def __send_username_confirmation(self, valid_username: bool):
+        data = pack('>iB?', 1, PacketType.Username.value, valid_username)
         self.__write_data(data)
 
     def send_start_stream(self) -> None:
@@ -140,8 +157,9 @@ class SocketClient(Packet):
         data = pack('>iB', int(0), packet_type.value)
         self.__write_data(data)
 
-    def setup_client(self, bell_duration: int, motion_duration: int, relay_duration: int) -> None:
-        self.__send_config(bell_duration, motion_duration, relay_duration)
+    def setup_client(self, need_username: bool, bell_duration: int, motion_duration: int, relay_duration: int) -> None:
+        self.__wait_username = need_username
+        self.__send_config(need_username, bell_duration, motion_duration, relay_duration)
 
     @property
     def address(self) -> Tuple[str, int]:

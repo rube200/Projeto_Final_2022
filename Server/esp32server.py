@@ -9,11 +9,13 @@ from esp_web.flask_server import web as web_server
 environ['ESP32_DEBUG'] = environ['FLASK_DEBUG'] = '1'
 environ['ESP32_NAME'] = 'Video-Doorbell'
 environ['ESP32_IP'] = '0.0.0.0'
-environ['ESP32_PORT'] = '1352'
+environ['ESP32_PORT'] = '2376'
 
 environ['FLASK_ENV'] = 'development' if environ.get('FLASK_DEBUG') else 'production'
 environ['FLASK_RUN_HOST'] = '0.0.0.0'
 environ['FLASK_RUN_PORT'] = '80'
+
+environ['DATABASE'] = 'esp32cam.sqlite'
 
 logger = False
 socket_thread = None

@@ -7,7 +7,7 @@ from traceback import format_exc
 from typing import NoReturn, Optional, Tuple
 
 from _socket import SocketType, SHUT_RDWR, SO_KEEPALIVE, SOL_SOCKET
-
+from sqlite3 import connect as sql_connect, PARSE_DECLTYPES, Row as sqlRow
 from esp_socket.socket_client import SocketClient
 from esp_socket.socket_selector import ServerSelector, EVENT_EXCEPTIONAL
 
@@ -28,19 +28,22 @@ class SocketServer:
             port = int(environ.get('ESP32_PORT') or 1352)
             server_address = (ip, port)
 
-        self._server_address = server_address
+        self.__db_config = environ.get('DATABASE') or 'esp32cam.sqlite'
         self.__selector = ServerSelector()
+        self.__server_address = server_address
         self.__tcp_socket = socket(AF_INET, SOCK_STREAM)
 
-    def __del__(self):  # todo
-        pass
+    def __get_db(self):
+        sql_con = sql_connect(self.__db_config, detect_types=PARSE_DECLTYPES)
+        sql_con.row_factory = sqlRow
+        return sql_con
 
     def __accept_new_client(self) -> None:
         try:
             connection, client_address = self.__tcp_socket.accept()
             socket_opt(connection)
 
-            SocketClient(client_address, self.__selector, connection, self.__on_uuid_recv)
+            SocketClient(client_address, self.__selector, connection, self.__on_uuid_recv, self.__on_username_recv)
             log.info(f'Accepted a connection from {client_address!r}')
 
         except OSError as ex:
@@ -54,16 +57,56 @@ class SocketServer:
         uuid = client.uuid
         if not uuid:
             log.warning(f'Closing client with invalid uuid: {client.address}')
+            client.close()
             del client
             return
 
         if uuid in self.__esp_clients:
             # noinspection PyUnusedLocal
             cl = self.__esp_clients.pop(uuid)
+            cl.close()
             del cl
 
+        con = self.__get_db()
+        cursor = None
+        try:
+            cursor = con.cursor()
+            cursor.execute('SELECT 1 FROM doorbell WHERE id = ? LIMIT 1', (uuid, ))
+            data = cursor.fetchone()
+            need_username = not data or not data[0]
+        finally:
+            if cursor:
+                cursor.close()
+            con.close()
+
+        if need_username:
+            log.info(f'Esp32 not registered {uuid!r}')
+
         self.__esp_clients[uuid] = client
-        client.setup_client(5000, 5000, 5000)
+        client.setup_client(need_username, 5000, 5000, 5000)
+
+    def __on_username_recv(self, client: SocketClient, username: str) -> bool:
+        con = self.__get_db()
+        cursor = None
+        try:
+            cursor = con.cursor()
+            cursor.execute('SELECT 1 FROM user WHERE username = ? LIMIT 1', (username, ))
+            data = cursor.fetchone()
+            if not data or not data[0]:
+                return False
+
+            cursor.execute('INSERT OR IGNORE INTO doorbell VALUES (?, ?, ?)', (client.uuid, client.uuid, username))
+            con.commit()
+            if cursor.rowcount > 0:
+                return True
+
+            cursor.execute('SELECT 1 FROM doorbell WHERE id = ? LIMIT 1', (client.uuid, ))
+            data = cursor.fetchone()
+            return data and data[0]
+        finally:
+            if cursor:
+                cursor.close()
+            con.close()
 
     def __process_exceptional(self, key) -> None:
         self.__selector.unregister(key)
@@ -79,12 +122,12 @@ class SocketServer:
 
         log.warning(f'Exceptional mask detected for: {key!r}')
 
-    def close(self) -> None:
+    def close(self) -> None:  # todo
         self.__tcp_socket.close()
 
     def prepare(self) -> None:
         try:
-            self.__tcp_socket.bind(self._server_address)
+            self.__tcp_socket.bind(self.__server_address)
             self.__tcp_socket.listen()
             socket_opt(self.__tcp_socket)
             log.info(f'Socket ready! Tcp: {self.__tcp_socket.getsockname()!r}')
