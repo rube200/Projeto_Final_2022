@@ -22,14 +22,20 @@ class SocketClient(Packet):
         self.__username_cb = username_cb
 
         self.__bell_pressed = False
-        self.__motion_detected = False
         self.__camera = b''
-        self.__selector.register(self.__tcp_socket, READ, self)
+        self.__motion_detected = False
+        self.__stream_requests = 0
         self.__uuid = 0
         self.__wait_username = False
         self.__write_buffer = b''
 
+        self.__selector.register(self.__tcp_socket, READ, self)
+
     def close(self) -> None:
+        if self.__stream_requests > 0:
+            self.__send_empty_packet(PacketType.StopStream)
+            self.__stream_requests = 0
+
         self.reset_packet(True)
         self.__address = None
         self.__bell_pressed = False
@@ -144,10 +150,18 @@ class SocketClient(Packet):
         data = pack('>iB?', 1, PacketType.Username.value, valid_username)
         self.__write_data(data)
 
-    def send_start_stream(self) -> None:
+    def send_start_stream(self, is_maintain_stream: bool) -> None:
+        if not is_maintain_stream:
+            self.__stream_requests += 1
+            if self.__stream_requests > 1:
+                return
+
         self.__send_empty_packet(PacketType.StartStream)
 
     def send_stop_stream(self) -> None:
+        self.__stream_requests -= 1
+        if self.__stream_requests > 0:
+            return
         self.__send_empty_packet(PacketType.StopStream)
 
     def open_relay(self) -> None:
@@ -173,7 +187,7 @@ class SocketClient(Packet):
     def uuid(self) -> int:
         return self.__uuid
 
-    #todo meter na base de dados
+    # todo meter na base de dados
     def peek_bell_pressed(self) -> bool:
         if not self.__bell_pressed:
             return False

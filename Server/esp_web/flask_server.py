@@ -235,14 +235,13 @@ def doorbell(esp_id: int):
     pass
 
 
-def generate_stream(esp_id: int, stream_request: bool = True):
+def generate_stream(esp_id: int):
     client = web.get_client(esp_id)
     if not client:
         return b'Content-Length: 0'
 
-    if stream_request:
-        start_at = monotonic() + 10
-        client.send_start_stream()
+    start_at = monotonic() + 10
+    client.send_start_stream(False)
 
     try:
         while True:
@@ -252,9 +251,9 @@ def generate_stream(esp_id: int, stream_request: bool = True):
                 continue
 
             # noinspection PyUnboundLocalVariable
-            if stream_request and start_at <= monotonic():
+            if start_at <= monotonic():
                 start_at = monotonic() + 10
-                client.send_start_stream()
+                client.send_start_stream(True)
 
             if not client.camera:
                 yield b'--frame\r\nContent-Length: 0'
@@ -266,10 +265,7 @@ def generate_stream(esp_id: int, stream_request: bool = True):
         log.exception(f'Exception while generate_stream: {ex!r}')
         log.exception(format_exc())
     finally:
-        if stream_request:
-            client.send_stop_stream()
-
-        log.warning('Exiting generate_stream')
+        client.send_stop_stream()
         return b'Content-Length: 0'
 
 
