@@ -1,4 +1,5 @@
 import logging as log
+from enum import Enum
 from socket import socket, SHUT_RDWR
 from struct import pack
 from typing import Any, Callable, Tuple
@@ -11,15 +12,23 @@ READ = EVENT_READ | EVENT_EXCEPTIONAL
 WRITE = READ | EVENT_WRITE
 
 
+class NotificationType(Enum):
+    Invalid = 0
+    Bell = 1
+    Motion = 2
+
+
 class SocketClient(Packet):
     def __init__(self, address: Tuple[str, int], selector: BaseSelector, tcp_socket: socket,
-                 uuid_cb: Callable[[Any], None], username_cb: Callable[[Any, str], bool]):
+                 uuid_cb: Callable[[Any], None], username_cb: Callable[[Any, str], bool],
+                 notification_cb: Callable[[Any, NotificationType], None]):
         super(SocketClient, self).__init__()
         self.__address = address
         self.__selector = selector
         self.__tcp_socket = tcp_socket
         self.__uuid_cb = uuid_cb
         self.__username_cb = username_cb
+        self.__notification_cb = notification_cb
 
         self.__bell_pressed = False
         self.__camera = b''
@@ -49,6 +58,7 @@ class SocketClient(Packet):
         self.__uuid = 0
         self.__uuid_cb = None
         self.__username_cb = None
+        self.__notification_cb = None
         self.__wait_username = False
         self.__write_buffer = None
 
@@ -97,10 +107,12 @@ class SocketClient(Packet):
 
         if pkt_type is PacketType.BellPressed:
             self.__bell_pressed = True
+            self.__notification_cb(self, NotificationType.Bell)
             return
 
         if pkt_type is PacketType.MotionDetected:
             self.__motion_detected = True
+            self.__notification_cb(self, NotificationType.Motion)
             return
 
         raise ValueError(f'Unknown {pkt_type!r} from {self.__address!r}')

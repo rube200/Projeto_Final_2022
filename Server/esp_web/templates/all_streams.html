@@ -14,6 +14,10 @@
                             height="240"
                             class="figure-img img-fluid rounded"
                             id="stream-view"
+                            {% if doorbell.online == True %}
+                            name="stream-view"
+                            url="{{ url_for('stream', esp_id=doorbell.id) }}"
+                            {% endif %}
                             poster="{{ doorbell.image }}"
                             preload="none"
                             src="{{ url_for('stream', esp_id=doorbell.id) }}">
@@ -25,8 +29,12 @@
         {% endfor %}
     </div>
     <script>
-        window.onload = function() {
-
+        window.onload = function () {
+            const videos = document.getElementsByName("stream-view");
+            videos.forEach(video => {
+                video.src = video.getAttribute('url');
+                video.play();
+            });
         }
     </script>
 {% endblock %}

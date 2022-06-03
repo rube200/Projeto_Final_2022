@@ -10,6 +10,7 @@ from bcrypt import checkpw, gensalt, hashpw
 from flask import abort, current_app, Flask, g, redirect, render_template, request, send_file, url_for, \
     stream_with_context, session, flash
 from flask_mail import Mail
+
 from esp_socket.socket_client import SocketClient
 
 # todo checkar se u user id existe na base de dados
@@ -205,9 +206,11 @@ def get_doorbells_data():
         if esp:
             tmp_bell.image = esp.camera if esp.camera else url_for('static', filename='default_profile.png')
             tmp_bell.state = 'Online'
+            tmp_bell.online = True
         else:
             tmp_bell.image = url_for('static', filename='default_profile.png')
             tmp_bell.state = 'Offline'
+            tmp_bell.online = False
         bells.append(tmp_bell)
     return bells
 

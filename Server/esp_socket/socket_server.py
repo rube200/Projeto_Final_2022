@@ -2,13 +2,14 @@ import logging as log
 import selectors
 from os import environ
 from socket import socket, AF_INET, SOCK_STREAM
+from sqlite3 import connect as sql_connect, PARSE_DECLTYPES, Row as sqlRow
 from threading import Event
 from traceback import format_exc
 from typing import NoReturn, Optional, Tuple
 
 from _socket import SocketType, SHUT_RDWR, SO_KEEPALIVE, SOL_SOCKET
-from sqlite3 import connect as sql_connect, PARSE_DECLTYPES, Row as sqlRow
-from esp_socket.socket_client import SocketClient
+
+from esp_socket.socket_client import SocketClient, NotificationType
 from esp_socket.socket_selector import ServerSelector, EVENT_EXCEPTIONAL
 
 
@@ -43,7 +44,8 @@ class SocketServer:
             connection, client_address = self.__tcp_socket.accept()
             socket_opt(connection)
 
-            SocketClient(client_address, self.__selector, connection, self.__on_uuid_recv, self.__on_username_recv)
+            SocketClient(client_address, self.__selector, connection, self.__on_uuid_recv, self.__on_username_recv,
+                         self.__on_notification_recv)
             log.info(f'Accepted a connection from {client_address!r}')
 
         except OSError as ex:
@@ -90,19 +92,36 @@ class SocketServer:
         cursor = None
         try:
             cursor = con.cursor()
-            cursor.execute('SELECT 1 FROM user WHERE username = ? LIMIT 1', (username, ))
+            cursor.execute('SELECT 1 FROM user WHERE username = ? LIMIT 1', (username,))
             data = cursor.fetchone()
             if not data or not data[0]:
                 return False
 
-            cursor.execute('INSERT OR IGNORE INTO doorbell VALUES (?, ?, ?)', (client.uuid, client.uuid, username))
+            cursor.execute('INSERT OR IGNORE INTO doorbell(id, name, owner) VALUES (?, ?, ?)',
+                           (client.uuid, client.uuid, username))
             con.commit()
             if cursor.rowcount > 0:
                 return True
 
-            cursor.execute('SELECT 1 FROM doorbell WHERE id = ? LIMIT 1', (client.uuid, ))
+            cursor.execute('SELECT 1 FROM doorbell WHERE id = ? LIMIT 1', (client.uuid,))
             data = cursor.fetchone()
             return data and data[0]
+        finally:
+            if cursor:
+                cursor.close()
+            con.close()
+
+    def __on_notification_recv(self, client: SocketClient, notification: NotificationType) -> None:
+        if notification is not NotificationType.Bell and notification is not NotificationType.Motion:
+            log.warning(f'Unknown notification type: {notification!r} for {client.uuid!r}')
+            return
+
+        con = self.__get_db()
+        cursor = None
+        try:
+            cursor = con.cursor()
+            cursor.execute('INSERT INTO notifications(esp_id, type) VALUES (?, ?)', (client.uuid, notification.value))
+            con.commit()
         finally:
             if cursor:
                 cursor.close()
