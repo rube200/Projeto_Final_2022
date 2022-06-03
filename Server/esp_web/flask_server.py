@@ -13,6 +13,8 @@ from flask_mail import Mail
 
 from esp_socket.socket_client import SocketClient
 
+from flask_mail import Mail,Message 
+
 # todo checkar se u user id existe na base de dados
 # todo may usar token
 
@@ -22,6 +24,11 @@ NAV_DICT = [
     {'id': 'pictures', 'title': 'Pictures', 'icon': 'bi-globe', 'url': 'doorbells'},
     {'id': 'statistics', 'title': 'Statistics', 'icon': 'bi-bar-chart-fill', 'url': 'doorbells'},
 ]
+
+
+
+
+
 
 
 class WebServer(Flask):
@@ -45,6 +52,29 @@ web = WebServer()
 web.config.from_pyfile('flask.cfg')
 web.config['DATABASE'] = environ.get('DATABASE') or 'esp32cam.sqlite'
 mail = Mail(web)
+
+
+
+#experimental
+
+    #better perm session (wont end on browser cosing)
+@web.before_request
+def make_session_permanent():
+    session.permanent = True
+
+
+
+    #Mail
+
+
+@web.route('/mail')
+def mailSending():
+    #sender doesn't seem to make a difference, but gets error if not included
+   msg = Message('Sup?', sender='EBellsAlertsystem@gmail.com', recipients=['EBellsAlertsystem@gmail.com'])
+   msg.body = "waddup nigga?"
+   mail.send(msg)
+   return "sent email"
+#end of Experimental
 
 
 def init_db(wb: WebServer) -> None:
