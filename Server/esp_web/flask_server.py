@@ -150,6 +150,7 @@ def get_token(user_id):
 
 def authenticate() -> (None or int):
     token = session.get('token')
+    log.debug(f'token {token}') # todo remove
     if not token:
         return None
 
@@ -218,6 +219,7 @@ def login():
     session['user_id'] = usr = db_row[0]
     session['name'] = db_row[1] or usr
     session['token'] = get_token(usr)
+    log.debug(f'token {session["token"]}') # todo remove
     return redirect(url_for('doorbells'))
 
 
@@ -262,6 +264,7 @@ def register():
     session['user_id'] = usr = db_row[0]
     session['name'] = db_row[1] or usr
     session['token'] = get_token(usr)
+    log.debug(f'token {session["token"]}') # todo remove
     return redirect(url_for('doorbells'))
 
 
@@ -271,6 +274,8 @@ def logout():
         return redirect(url_for('index'))
 
     session.permanent = False
+    session.pop('user_id', None)
+    session.pop('name', None)
     session.pop('token', None)
     return redirect(url_for('index'))
 
