@@ -6,24 +6,13 @@ from sqlite3 import connect as sql_connect, PARSE_DECLTYPES, Row as sqlRow
 from time import sleep, monotonic
 from traceback import format_exc
 
-from bcrypt import checkpw, gensalt, hashpw
-from flask import abort, current_app, Flask, g, redirect,jsonify, render_template, request, send_file, url_for, \
+import bcrypt
+import jwt
+from flask import abort, current_app, Flask, g, redirect, render_template, request, send_file, url_for, \
     stream_with_context, session, flash
-
+from flask_mail import Mail, Message
 
 from esp_socket.socket_client import SocketClient
-
-#token
-import jwt
-import datetime
-from datetime import timedelta#, datetime
-from functools import wraps
-
-#mail
-from flask_mail import Mail,Message 
-
-# todo checkar se u user id existe na base de dados
-# todo may usar token
 
 NAV_DICT = [
     {'id': 'doorbells', 'title': 'Manage Doorbells', 'icon': 'bi-book-fill', 'url': 'doorbells'},
@@ -31,11 +20,6 @@ NAV_DICT = [
     {'id': 'pictures', 'title': 'Pictures', 'icon': 'bi-globe', 'url': 'doorbells'},
     {'id': 'statistics', 'title': 'Statistics', 'icon': 'bi-bar-chart-fill', 'url': 'doorbells'},
 ]
-
-
-
-
-
 
 
 class WebServer(Flask):
@@ -61,56 +45,14 @@ web.config['DATABASE'] = environ.get('DATABASE') or 'esp32cam.sqlite'
 mail = Mail(web)
 
 
-
-#experimental
-
-    #better perm session (wont end on browser cosing)
-@web.before_request
-def make_session_permanent():
-    session.permanent = True
-
-
-
-    #Token
-def build_token(usr):
-    token = jwt.encode({
-        'user': usr,
-        'exp': datetime.datetime.utcnow() + datetime.timedelta(hours= 2)
-    },
-    web.secret_key)#is web.secretkey right?
-    return token#.decode('utf-8')
-    # need to add "?token" + the toekn to url
-
-def check_token(func):
-    @wraps(func)
-    def wrapped(*args, **kwargs):
-        token = request.args.get('token')
-        if not token:
-            return jsonify({'message': 'Missing token'}), 403
-        try:
-            jwt.decode(token, web.secret_key) #is web.secretkey right?
-        except:
-            return jsonify({'message': 'Invalid token'}), 403
-        return func(*args, **kwargs)
-    return wrapped
-
-@web.route('/tokenCheck/<token>')
-@check_token
-def authorised():
-    return 'this is only viewable with a token'
-
-
-    #Mail
-
-
 @web.route('/mail')
-def mailSending():
-    #sender doesn't seem to make a difference, but gets error if not included
-   msg = Message('Sup?', sender='EBellsAlertsystem@gmail.com', recipients=['EBellsAlertsystem@gmail.com'])
-   msg.body = "waddup nigga?"
-   mail.send(msg)
-   return "sent email"
-#end of Experimental
+def mail_sending():
+    # sender doesn't seem to make a difference, but gets error if not included
+    mail.send(Message('Subj', ['target'], 'Body'))
+    return "sent email"
+
+
+# end of Experimental
 
 
 def init_db(wb: WebServer) -> None:
@@ -161,15 +103,47 @@ def invalid_request(e):
     return redirect(url_for('index'))
 
 
+def get_token(user_id):
+    return jwt.encode(
+        {'user_id': user_id},
+        current_app.config['SECRET_KEY']
+    )
+
+
+def authenticate() -> (None or (int, str)):
+    token = session.get('token')
+    if not token:
+        return None
+
+    try:
+        payload = jwt.decode(token, current_app.config['SECRET_KEY'])
+        cursor = get_db().cursor()
+        try:
+            cursor.execute('SELECT username, name FROM user WHERE username = ?', [payload['user_id']]),
+            db_row = cursor.fetchone()
+        finally:
+            cursor.close()
+
+        if not db_row or not db_row[0] or not db_row[1]:
+            return None
+
+        return db_row[0], db_row[1]
+
+    except (jwt.ExpiredSignatureError | jwt.InvalidTokenError):
+        return None
+
+
 @web.route('/')
 def index():
-    return redirect(url_for('doorbells' if 'user' in session else 'login'))
+    if authenticate():
+        return redirect(url_for('doorbells'))
+
+    return redirect(url_for('login'))
 
 
 @web.route('/login', methods=['GET', 'POST'])
 def login():
-    user_id = session.get('user_id')  # todo authenticate user
-    if user_id:
+    if authenticate():
         return redirect(url_for('doorbells'))
 
     if request.method == 'GET':
@@ -187,20 +161,18 @@ def login():
         db_row = cursor.fetchone()
     finally:
         cursor.close()
-    if not db_row or not db_row[0] or not db_row[1] or not checkpw(pwd.encode('utf-8'), db_row[1]):
+    if not db_row or not db_row[0] or not db_row[1] or not bcrypt.checkpw(pwd.encode('utf-8'), db_row[1]):
         flash('Invalid credentials.', 'danger')
         return render_template('login.html')
 
     session.permanent = True if request.form.get('keep_sign') else False
-    session['name'] = db_row[0]
-    session['user_id'] = db_row[0]  # username sanitized
+    session['token'] = get_token(db_row[0])
     return redirect(url_for('doorbells'))
 
 
 @web.route('/register', methods=['GET', 'POST'])
 def register():
-    user_id = session.get('user_id')  # todo authenticate user
-    if user_id:
+    if authenticate():
         return redirect(url_for('doorbells'))
 
     if request.method == 'GET':
@@ -213,7 +185,7 @@ def register():
         flash('Invalid form input.', 'danger')
         return render_template('register.html')
 
-    hash_pwd = hashpw(pwd.encode('utf-8'), gensalt())
+    hash_pwd = bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt())
 
     con = get_db()
     cursor = con.cursor()
@@ -227,33 +199,35 @@ def register():
 
         # username sanitize
         cursor.execute('SELECT username FROM user WHERE username = ?', [usr])
-        usr = cursor.fetchone()[0]
+        db_row = cursor.fetchone()
     finally:
         cursor.close()
 
-    session.permanent = True  # todo set login
-    session['name'] = usr
-    session['user_id'] = usr
+    if not db_row or not db_row[0]:
+        flash('Something went wrong, try again.', 'danger')
+        return render_template('register.html')
+
+    session.permanent = True
+    session['token'] = get_token(usr)
     return redirect(url_for('doorbells'))
 
 
 @web.route('/logout')
 def logout():
-    user_id = session.get('user_id')  # todo authenticate user
-    if not user_id:  # if not auth do not anything
+    if not authenticate():
         return redirect(url_for('index'))
 
-    # todo remove auth
     session.permanent = False
-    session.pop('user_id', None)
+    session.pop('token', None)
     return redirect(url_for('index'))
 
 
 def get_doorbells_data():
-    user_id = session.get('user_id')  # todo authenticate user
-    if not user_id:
+    data = authenticate()
+    if not data:
         return None
 
+    user_id = data[0]
     cursor = get_db().cursor()
     try:
         cursor.execute('SELECT id, name FROM doorbell WHERE owner = ?', [user_id]),
@@ -340,18 +314,11 @@ def generate_stream(esp_id: int):
 
 @web.route('/stream/<int:esp_id>')
 def stream(esp_id: int):
-    user_id = session.get('user_id')  # todo authenticate user
-    if not user_id:
-        return None
+    if not authenticate():
+        return b'Content-Length: 0'
 
-    # todo check if esp_id is from user
     stream_context = stream_with_context(generate_stream(esp_id))
     return web.response_class(stream_context, mimetype='multipart/x-mixed-replace; boundary=frame')
-
-
-
-
-
 
 
 
@@ -362,39 +329,8 @@ def image(esp_id: int):
     return send_file(BytesIO(client.camera), mimetype='image/jpeg') if client else abort(400)
 
 
-@web.route('/<int:esp_id>/live')
-def live(esp_id: int):
-    client = web.get_client(esp_id)
-    return render_template('live.html', esp_id=esp_id) if client else abort(400)
-
-
-@web.route('/<int:esp_id>/live2')
-def live2(esp_id: int):
-    client = web.get_client(esp_id)
-    return render_template('live.html', esp_id=esp_id, not_request_stream=True) if client else abort(400)
-
-
 @web.route('/<int:esp_id>/open', methods=['POST'])
 def open_relay(esp_id: int):
     client = web.get_client(esp_id)
     client.open_relay()
     return '', 200
-
-
-
-
-
-@web.route('/<int:esp_id>/stream2')
-def stream2(esp_id: int):
-    stream_context = stream_with_context(generate_stream(esp_id, False))
-    return web.response_class(stream_context, mimetype='multipart/x-mixed-replace; boundary=frame')
-
-
-@web.route('/selection')
-def selection():
-    return render_template('selection.html', doorbells=web.esp_clients)
-
-
-@web.route('/stats')
-def stats():
-    return render_template('stats.html')
