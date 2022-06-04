@@ -103,9 +103,12 @@ def invalid_request(e):
     return redirect(url_for('index'))
 
 
-def get_token(user_id):
+def get_token(user_id, name):
     return jwt.encode(
-        {'user_id': user_id},
+        {
+            'user_id': user_id,
+            'name': name
+        },
         current_app.config['SECRET_KEY']
     )
 
@@ -157,16 +160,18 @@ def login():
 
     cursor = get_db().cursor()
     try:
-        cursor.execute('SELECT username, password FROM user WHERE username = ?', [usr]),
+        cursor.execute('SELECT username, name, password FROM user WHERE username = ?', [usr]),
         db_row = cursor.fetchone()
     finally:
         cursor.close()
-    if not db_row or not db_row[0] or not db_row[1] or not bcrypt.checkpw(pwd.encode('utf-8'), db_row[1]):
+    if not db_row or not db_row[0] or not db_row[2] or not bcrypt.checkpw(pwd.encode('utf-8'), db_row[2]):
         flash('Invalid credentials.', 'danger')
         return render_template('login.html')
 
     session.permanent = True if request.form.get('keep_sign') else False
-    session['token'] = get_token(db_row[0])
+    session['user_id'] = usr = db_row[0]
+    session['name'] = name = db_row[1] or usr
+    session['token'] = get_token(usr, name)
     return redirect(url_for('doorbells'))
 
 
@@ -198,7 +203,7 @@ def register():
             return render_template('register.html')
 
         # username sanitize
-        cursor.execute('SELECT username FROM user WHERE username = ?', [usr])
+        cursor.execute('SELECT username, name FROM user WHERE username = ?', [usr])
         db_row = cursor.fetchone()
     finally:
         cursor.close()
@@ -208,7 +213,9 @@ def register():
         return render_template('register.html')
 
     session.permanent = True
-    session['token'] = get_token(usr)
+    session['user_id'] = usr = db_row[0]
+    session['name'] = name = db_row[1] or usr
+    session['token'] = get_token(usr, name)
     return redirect(url_for('doorbells'))
 
 
