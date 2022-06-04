@@ -1,9 +1,9 @@
 import logging as log
-from enum import Enum
 from socket import socket, SHUT_RDWR
 from struct import pack
-from typing import Any, Callable, Tuple
+from typing import Tuple
 
+from esp_socket.socket_events import SocketEvents
 from esp_socket.socket_packet import Packet, PacketType
 from esp_socket.socket_selector import BaseSelector, EVENT_EXCEPTIONAL, EVENT_READ, EVENT_WRITE
 
@@ -12,23 +12,14 @@ READ = EVENT_READ | EVENT_EXCEPTIONAL
 WRITE = READ | EVENT_WRITE
 
 
-class NotificationType(Enum):
-    Invalid = 0
-    Bell = 1
-    Motion = 2
-
-
 class SocketClient(Packet):
     def __init__(self, address: Tuple[str, int], selector: BaseSelector, tcp_socket: socket,
-                 uuid_cb: Callable[[Any], None], username_cb: Callable[[Any, str], bool],
-                 notification_cb: Callable[[Any, NotificationType], None]):
+                 events: SocketEvents):
         super(SocketClient, self).__init__()
         self.__address = address
         self.__selector = selector
         self.__tcp_socket = tcp_socket
-        self.__uuid_cb = uuid_cb
-        self.__username_cb = username_cb
-        self.__notification_cb = notification_cb
+        self.__events = events
 
         self.__bell_pressed = False
         self.__camera = b''
@@ -39,6 +30,7 @@ class SocketClient(Packet):
         self.__write_buffer = b''
 
         self.__selector.register(self.__tcp_socket, READ, self)
+        self.__events.on_open_relay_requested += self.__on_open_relay_requested
 
     def close(self) -> None:
         if self.__stream_requests > 0:
@@ -56,9 +48,6 @@ class SocketClient(Packet):
         self.__tcp_socket.close()
         self.__tcp_socket = None
         self.__uuid = 0
-        self.__uuid_cb = None
-        self.__username_cb = None
-        self.__notification_cb = None
         self.__wait_username = False
         self.__write_buffer = None
 
@@ -107,23 +96,28 @@ class SocketClient(Packet):
 
         if pkt_type is PacketType.BellPressed:
             self.__bell_pressed = True
-            self.__notification_cb(self, NotificationType.Bell)
+            self.__events.on_bell_pressed(self)
             return
 
         if pkt_type is PacketType.MotionDetected:
             self.__motion_detected = True
-            self.__notification_cb(self, NotificationType.Motion)
+            self.__events.on_motion_detected(self)
             return
 
         raise ValueError(f'Unknown {pkt_type!r} from {self.__address!r}')
 
     def __process_uuid(self, data: bytes) -> None:
         self.__uuid = int(data.hex(), base=16)
-        self.__uuid_cb(self)
+        data = self.__events.on_esp_uuid_recv(self)
+        if not data:
+            return
+
+        self.__wait_username = data[0]
+        self.__send_config(data)
 
     def __process_username(self, data: bytes) -> None:
         username = data.decode('utf-8')
-        valid = self.__username_cb(self, username)
+        valid = self.__events.on_esp_username_recv(self, username)
         self.__send_username_confirmation(valid)
 
     def __write(self) -> None:
@@ -152,9 +146,8 @@ class SocketClient(Packet):
         if mask & EVENT_WRITE:
             self.__write()
 
-    def __send_config(self, need_username: bool, bell_duration: int, motion_duration: int, relay_duration: int) -> None:
-        data = pack('>iB?iii', 13, PacketType.Config.value, need_username, bell_duration, motion_duration,
-                    relay_duration)
+    def __send_config(self, config: Tuple[bool, int, int, int]) -> None:
+        data = pack('>iB?iii', 13, PacketType.Config.value, config)
         # 13 is 1(bool) 12(3 * 4(int)) size
         self.__write_data(data)
 
@@ -176,16 +169,14 @@ class SocketClient(Packet):
             return
         self.__send_empty_packet(PacketType.StopStream)
 
-    def open_relay(self) -> None:
+    def __on_open_relay_requested(self, uuid: int) -> None:
+        if uuid != self.__uuid:
+            return
         self.__send_empty_packet(PacketType.OpenRelay)
 
     def __send_empty_packet(self, packet_type: PacketType) -> None:
         data = pack('>iB', int(0), packet_type.value)
         self.__write_data(data)
-
-    def setup_client(self, need_username: bool, bell_duration: int, motion_duration: int, relay_duration: int) -> None:
-        self.__wait_username = need_username
-        self.__send_config(need_username, bell_duration, motion_duration, relay_duration)
 
     @property
     def address(self) -> Tuple[str, int]:
@@ -199,7 +190,6 @@ class SocketClient(Packet):
     def uuid(self) -> int:
         return self.__uuid
 
-    # todo meter na base de dados
     def peek_bell_pressed(self) -> bool:
         if not self.__bell_pressed:
             return False

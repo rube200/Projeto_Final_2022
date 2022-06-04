@@ -13,6 +13,7 @@ from flask import abort, current_app, Flask, g, redirect, render_template, reque
 from flask_mail import Mail, Message
 
 from esp_socket.socket_client import SocketClient
+from esp_socket.socket_events import SocketEvents
 
 NAV_DICT = [
     {'id': 'doorbells', 'title': 'Manage Doorbells', 'icon': 'bi-book-fill', 'url': 'doorbells'},
@@ -25,34 +26,69 @@ NAV_DICT = [
 class WebServer(Flask):
     def __init__(self, _esp_clients: dict = None):
         super(WebServer, self).__init__(import_name=__name__)
-        self._esp_clients = _esp_clients or {}
+        self.__esp_clients = _esp_clients or {}
+        self.__events = None
+
+        self.config.from_pyfile('flask.cfg')
+        self.config['DATABASE'] = self.__db_config = environ.get('DATABASE') or 'esp32cam.sqlite'
+        self.__mail = Mail(self)
 
     @property
     def esp_clients(self) -> dict:
-        return dict(self._esp_clients)
+        return dict(self.__esp_clients)
 
     @esp_clients.setter
-    def esp_clients(self, value: dict):
-        self._esp_clients = value
+    def esp_clients(self, value: dict) -> None:
+        self.__esp_clients = value
 
     def get_client(self, esp_id: int) -> SocketClient:
-        return self._esp_clients.get(esp_id)
+        return self.__esp_clients.get(esp_id)
+
+    def setup_events(self, events: SocketEvents) -> None:
+        self.__events = events
+        self.__events.on_bell_pressed += self.__on_bell_pressed
+        self.__events.on_motion_detected += self.__on_motion_detected
+
+    def open_relay(self, esp_id):
+        self.__events.on_open_relay_requested(esp_id)
+
+    def __get_mail_by_esp(self, esp_id: int) -> str or None:
+        try:
+            sql_con = sql_connect(self.__db_config, detect_types=PARSE_DECLTYPES)
+            sql_con.row_factory = sqlRow
+            cursor = sql_con.cursor()
+            try:
+                cursor.execute(
+                    'SELECT u.email FROM user u INNER JOIN doorbell d on u.username = d.owner WHERE d.id = ?', [esp_id])
+                row = cursor.fetchone()
+                if not row:
+                    return None
+
+                return row[0]
+
+            finally:
+                cursor.close()
+                sql_con.close()
+        except Exception as ex:
+            log.error(f'Exception while getting email for esp_id {esp_id}: {ex!r}')
+            return None
+
+    def __on_bell_pressed(self, client: SocketClient):
+        email = self.__get_mail_by_esp(client.uuid)
+        if not email:
+            return
+
+        self.__mail.send(Message('Doorbell pressed', [email], 'GOT CHECK IT NOW. MOTHERFUCKER'))
+
+    def __on_motion_detected(self, client: SocketClient):
+        email = self.__get_mail_by_esp(client.uuid)
+        if not email:
+            return
+
+        self.__mail.send(Message('Motion detected', [email], 'GOT CHECK IT NOW. MOTHERFUCKER'))
 
 
 web = WebServer()
-web.config.from_pyfile('flask.cfg')
-web.config['DATABASE'] = environ.get('DATABASE') or 'esp32cam.sqlite'
-mail = Mail(web)
-
-
-@web.route('/mail')
-def mail_sending():
-    # sender doesn't seem to make a difference, but gets error if not included
-    mail.send(Message('Subj', ['target'], 'Body'))
-    return "sent email"
-
-
-# end of Experimental
 
 
 def init_db(wb: WebServer) -> None:
@@ -103,17 +139,16 @@ def invalid_request(e):
     return redirect(url_for('index'))
 
 
-def get_token(user_id, name):
+def get_token(user_id):
     return jwt.encode(
         {
             'user_id': user_id,
-            'name': name
         },
         current_app.config['SECRET_KEY']
     )
 
 
-def authenticate() -> (None or (int, str)):
+def authenticate() -> (None or int):
     token = session.get('token')
     if not token:
         return None
@@ -122,18 +157,29 @@ def authenticate() -> (None or (int, str)):
         payload = jwt.decode(token, current_app.config['SECRET_KEY'])
         cursor = get_db().cursor()
         try:
-            cursor.execute('SELECT username, name FROM user WHERE username = ?', [payload['user_id']]),
+            cursor.execute('SELECT username FROM user WHERE username = ?', [payload['user_id']]),
             db_row = cursor.fetchone()
         finally:
             cursor.close()
 
-        if not db_row or not db_row[0] or not db_row[1]:
+        if not db_row or not db_row[0]:
             return None
 
-        return db_row[0], db_row[1]
+        usr = session['user_id'] = db_row[0]
+        return usr
 
     except (jwt.ExpiredSignatureError | jwt.InvalidTokenError):
         return None
+
+
+def validate_esp(esp_id: int):
+    cursor = get_db().cursor()
+    try:
+        cursor.execute('SELECT 1 FROM doorbell WHERE id = ? and owner = ?', [esp_id, session.get('user_id')]),
+        db_rows = cursor.fetchone()
+        return db_rows and db_rows[0]
+    finally:
+        cursor.close()
 
 
 @web.route('/')
@@ -170,8 +216,8 @@ def login():
 
     session.permanent = True if request.form.get('keep_sign') else False
     session['user_id'] = usr = db_row[0]
-    session['name'] = name = db_row[1] or usr
-    session['token'] = get_token(usr, name)
+    session['name'] = db_row[1] or usr
+    session['token'] = get_token(usr)
     return redirect(url_for('doorbells'))
 
 
@@ -214,8 +260,8 @@ def register():
 
     session.permanent = True
     session['user_id'] = usr = db_row[0]
-    session['name'] = name = db_row[1] or usr
-    session['token'] = get_token(usr, name)
+    session['name'] = db_row[1] or usr
+    session['token'] = get_token(usr)
     return redirect(url_for('doorbells'))
 
 
@@ -230,11 +276,10 @@ def logout():
 
 
 def get_doorbells_data():
-    data = authenticate()
-    if not data:
+    user_id = authenticate()
+    if not user_id:
         return None
 
-    user_id = data[0]
     cursor = get_db().cursor()
     try:
         cursor.execute('SELECT id, name FROM doorbell WHERE owner = ?', [user_id]),
@@ -282,6 +327,7 @@ def all_streams():
 
 @web.route('/doorbell/<int:esp_id>')
 def doorbell(esp_id: int):
+    # todo add this page
     pass
 
 
@@ -321,23 +367,23 @@ def generate_stream(esp_id: int):
 
 @web.route('/stream/<int:esp_id>')
 def stream(esp_id: int):
-    if not authenticate():
+    if not authenticate() or not validate_esp(esp_id):
         return b'Content-Length: 0'
 
     stream_context = stream_with_context(generate_stream(esp_id))
     return web.response_class(stream_context, mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
+@web.route('/<int:esp_id>/open', methods=['POST'])
+def open_relay(esp_id: int):
+    if not authenticate() or not validate_esp(esp_id):
+        return abort(401)
+
+    web.open_relay(esp_id)
+    return '', 200
 
 
 @web.route('/<int:esp_id>/image')
 def image(esp_id: int):
     client = web.get_client(esp_id)
     return send_file(BytesIO(client.camera), mimetype='image/jpeg') if client else abort(400)
-
-
-@web.route('/<int:esp_id>/open', methods=['POST'])
-def open_relay(esp_id: int):
-    client = web.get_client(esp_id)
-    client.open_relay()
-    return '', 200

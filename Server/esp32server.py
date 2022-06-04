@@ -3,6 +3,7 @@ from os import environ
 from threading import Thread
 from traceback import format_exc
 
+from esp_socket.socket_events import SocketEvents
 from esp_socket.socket_server import sv as socket_server
 from esp_web.flask_server import web as web_server
 
@@ -41,10 +42,14 @@ def run_web_server():
     web_server.run(host=environ.get('FLASK_RUN_HOST'), port=environ.get('FLASK_RUN_PORT'))
 
 
-def set_buffer():
+def setup_shared():
     buffer = {}
     socket_server.esp_clients = buffer
     web_server.esp_clients = buffer
+
+    events = SocketEvents()
+    socket_server.setup_events(events)
+    web_server.setup_events(events)
 
 
 def stop_socket_server():
@@ -59,7 +64,7 @@ def stop_socket_server():
 
 def main():
     try:
-        set_buffer()
+        setup_shared()
         if 'WERKZEUG_RUN_MAIN' in environ:
             log.info('Running Servers...')
             run_socket_server()

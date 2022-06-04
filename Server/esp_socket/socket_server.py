@@ -9,7 +9,8 @@ from typing import NoReturn, Optional, Tuple
 
 from _socket import SocketType, SHUT_RDWR, SO_KEEPALIVE, SOL_SOCKET
 
-from esp_socket.socket_client import SocketClient, NotificationType
+from esp_socket.socket_client import SocketClient
+from esp_socket.socket_events import SocketEvents
 from esp_socket.socket_selector import ServerSelector, EVENT_EXCEPTIONAL
 
 
@@ -21,6 +22,7 @@ def socket_opt(sock: SocketType):
 class SocketServer:
     def __init__(self, esp_clients: dict = None, server_address: Tuple[str, int] = None):
         self.__esp_clients = esp_clients or {}
+        self.__events = None
         self.__is_shut_down = Event()
         self.__shutdown_request = False
 
@@ -34,6 +36,13 @@ class SocketServer:
         self.__server_address = server_address
         self.__tcp_socket = socket(AF_INET, SOCK_STREAM)
 
+    def setup_events(self, events: SocketEvents) -> None:
+        self.__events = events
+        self.__events.on_esp_uuid_recv += self.__on_uuid_recv
+        self.__events.on_esp_username_recv += self.__on_username_recv
+        self.__events.on_bell_pressed += self.__on_bell_pressed
+        self.__events.on_motion_detected += self.__on_motion_detected
+
     def __get_db(self):
         sql_con = sql_connect(self.__db_config, detect_types=PARSE_DECLTYPES)
         sql_con.row_factory = sqlRow
@@ -44,8 +53,7 @@ class SocketServer:
             connection, client_address = self.__tcp_socket.accept()
             socket_opt(connection)
 
-            SocketClient(client_address, self.__selector, connection, self.__on_uuid_recv, self.__on_username_recv,
-                         self.__on_notification_recv)
+            SocketClient(client_address, self.__selector, connection, self.__events)
             log.info(f'Accepted a connection from {client_address!r}')
 
         except OSError as ex:
@@ -55,13 +63,13 @@ class SocketServer:
             log.error(f'Exception while accepting client: {ex!r}')
             log.error(format_exc())
 
-    def __on_uuid_recv(self, client: SocketClient) -> None:
+    def __on_uuid_recv(self, client: SocketClient) -> Tuple[bool, int, int, int] or None:
         uuid = client.uuid
         if not uuid:
             log.warning(f'Closing client with invalid uuid: {client.address}')
             client.close()
             del client
-            return
+            return None
 
         if uuid in self.__esp_clients:
             # noinspection PyUnusedLocal
@@ -85,14 +93,14 @@ class SocketServer:
             log.info(f'Esp32 not registered {uuid!r}')
 
         self.__esp_clients[uuid] = client
-        client.setup_client(need_username, 5000, 5000, 5000)
+        return need_username, 5000, 5000, 5000
 
     def __on_username_recv(self, client: SocketClient, username: str) -> bool:
         con = self.__get_db()
         cursor = None
         try:
             cursor = con.cursor()
-            cursor.execute('SELECT 1 FROM user WHERE username = ? LIMIT 1', (username,))
+            cursor.execute('SELECT 1 FROM user WHERE username = ? LIMIT 1', [username])
             data = cursor.fetchone()
             if not data or not data[0]:
                 return False
@@ -103,7 +111,7 @@ class SocketServer:
             if cursor.rowcount > 0:
                 return True
 
-            cursor.execute('SELECT 1 FROM doorbell WHERE id = ? LIMIT 1', (client.uuid,))
+            cursor.execute('SELECT 1 FROM doorbell WHERE id = ? LIMIT 1', [client.uuid])
             data = cursor.fetchone()
             return data and data[0]
         finally:
@@ -111,21 +119,23 @@ class SocketServer:
                 cursor.close()
             con.close()
 
-    def __on_notification_recv(self, client: SocketClient, notification: NotificationType) -> None:
-        if notification is not NotificationType.Bell and notification is not NotificationType.Motion:
-            log.warning(f'Unknown notification type: {notification!r} for {client.uuid!r}')
-            return
-
+    def __add_notification_to_db(self, uuid: int, notification: int) -> None:
         con = self.__get_db()
         cursor = None
         try:
             cursor = con.cursor()
-            cursor.execute('INSERT INTO notifications(esp_id, type) VALUES (?, ?)', (client.uuid, notification.value))
+            cursor.execute('INSERT INTO notifications(esp_id, type) VALUES (?, ?)', (uuid, notification))
             con.commit()
         finally:
             if cursor:
                 cursor.close()
             con.close()
+
+    def __on_bell_pressed(self, client: SocketClient) -> None:
+        self.__add_notification_to_db(client.uuid, 1)
+
+    def __on_motion_detected(self, client: SocketClient) -> None:
+        self.__add_notification_to_db(client.uuid, 2)
 
     def __process_exceptional(self, key) -> None:
         self.__selector.unregister(key)
@@ -141,7 +151,7 @@ class SocketServer:
 
         log.warning(f'Exceptional mask detected for: {key!r}')
 
-    def close(self) -> None:  # todo
+    def close(self) -> None:  # todo finish
         self.__tcp_socket.close()
 
     def prepare(self) -> None:
