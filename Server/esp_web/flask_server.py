@@ -7,12 +7,19 @@ from time import sleep, monotonic
 from traceback import format_exc
 
 from bcrypt import checkpw, gensalt, hashpw
-from flask import abort, current_app, Flask, g, redirect, render_template, request, send_file, url_for, \
+from flask import abort, current_app, Flask, g, redirect,jsonify, render_template, request, send_file, url_for, \
     stream_with_context, session, flash
-from flask_mail import Mail
+
 
 from esp_socket.socket_client import SocketClient
 
+#token
+import jwt
+import datetime
+from datetime import timedelta#, datetime
+from functools import wraps
+
+#mail
 from flask_mail import Mail,Message 
 
 # todo checkar se u user id existe na base de dados
@@ -62,6 +69,35 @@ mail = Mail(web)
 def make_session_permanent():
     session.permanent = True
 
+
+
+    #Token
+def build_token(usr):
+    token = jwt.encode({
+        'user': usr,
+        'exp': datetime.datetime.utcnow() + datetime.timedelta(hours= 2)
+    },
+    web.secret_key)#is web.secretkey right?
+    return token#.decode('utf-8')
+    # need to add "?token" + the toekn to url
+
+def check_token(func):
+    @wraps(func)
+    def wrapped(*args, **kwargs):
+        token = request.args.get('token')
+        if not token:
+            return jsonify({'message': 'Missing token'}), 403
+        try:
+            jwt.decode(token, web.secret_key) #is web.secretkey right?
+        except:
+            return jsonify({'message': 'Invalid token'}), 403
+        return func(*args, **kwargs)
+    return wrapped
+
+@web.route('/tokenCheck/<token>')
+@check_token
+def authorised():
+    return 'this is only viewable with a token'
 
 
     #Mail
