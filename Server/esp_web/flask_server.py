@@ -1,5 +1,6 @@
 import logging as log
 from collections import namedtuple
+from datetime import timedelta
 from io import BytesIO
 from os import environ
 from sqlite3 import connect as sql_connect, PARSE_DECLTYPES, Row as sqlRow
@@ -31,6 +32,10 @@ class WebServer(Flask):
 
         self.config.from_pyfile('flask.cfg')
         self.config['DATABASE'] = self.__db_config = environ.get('DATABASE') or 'esp32cam.sqlite'
+        if self.config.get('RANDOM_SECRET_KEY'):
+            import secrets
+            self.config['JWT_SECRET_KEY'] = secrets.token_hex(32)
+            self.config['SECRET_KEY'] = secrets.token_hex(32)
         self.__mail = Mail(self)
 
     @property
@@ -144,7 +149,7 @@ def get_token(user_id):
         {
             'user_id': user_id,
         },
-        current_app.config['SECRET_KEY'],
+        current_app.config['JWT_SECRET_KEY'],
         'HS256'
     )
 
@@ -156,7 +161,7 @@ def authenticate() -> (None or int):
         return None
 
     try:
-        payload = jwt.decode(token, current_app.config['SECRET_KEY'], 'HS256')
+        payload = jwt.decode(token, current_app.config['JWT_SECRET_KEY'], 'HS256')
         usr = payload['user_id']
         if usr != user_id:
             return None
@@ -195,6 +200,15 @@ def index():
     return redirect(url_for('login'))
 
 
+def redirect_to_doorbells(usr, name):
+    session.permanent = True if request.form.get('keep_sign') else False
+    session['user_id'] = usr
+    session['name'] = name or usr
+    response = redirect(url_for('doorbells'))
+    response.set_cookie('token', get_token(usr), timedelta(30), secure=True, httponly=True)
+    return response
+
+
 @web.route('/login', methods=['GET', 'POST'])
 def login():
     if authenticate():
@@ -219,12 +233,7 @@ def login():
         flash('Invalid credentials.', 'danger')
         return render_template('login.html')
 
-    session.permanent = True if request.form.get('keep_sign') else False
-    session['user_id'] = usr = db_row[0]
-    session['name'] = db_row[1] or usr
-    response = redirect(url_for('doorbells'))
-    response.set_cookie('token', get_token(usr))
-    return response
+    return redirect_to_doorbells(db_row[0], db_row[1])
 
 
 @web.route('/register', methods=['GET', 'POST'])
@@ -264,12 +273,7 @@ def register():
         flash('Something went wrong, try again.', 'danger')
         return render_template('register.html')
 
-    session.permanent = True
-    session['user_id'] = usr = db_row[0]
-    session['name'] = db_row[1] or usr
-    response = redirect(url_for('doorbells'))
-    response.set_cookie('token', get_token(usr))
-    return response
+    return redirect_to_doorbells(db_row[0], db_row[1])
 
 
 @web.route('/logout')
@@ -281,7 +285,7 @@ def logout():
     session.pop('user_id', None)
     session.pop('name', None)
     response = redirect(url_for('index'))
-    response.set_cookie('token', '')
+    response.delete_cookie('token')
     return response
 
 
