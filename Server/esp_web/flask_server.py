@@ -1,6 +1,5 @@
 import logging as log
 from collections import namedtuple
-from datetime import timedelta
 from io import BytesIO
 from os import environ
 from sqlite3 import connect as sql_connect, PARSE_DECLTYPES, Row as sqlRow
@@ -145,20 +144,18 @@ def invalid_request(e):
 
 
 def get_token(user_id):
-
-     return jwt.encode(
-            {
-                'user_id': user_id,
-            },
-            current_app.config['JWT_SECRET_KEY'],
-            'HS256'
+    return jwt.encode(
+        {
+            'user_id': user_id,
+        },
+        current_app.config['JWT_SECRET_KEY'],
+        'HS256'
     )
 
 
-
 def authenticate() -> (None or int):
+    token = session.get('token')
     user_id = session.get('user_id')
-    token = request.cookies.get('token')
     if not token or not user_id:
         return None
 
@@ -204,11 +201,10 @@ def index():
 
 def redirect_to_doorbells(usr, name):
     session.permanent = True if request.form.get('keep_sign') else False
+    session['token'] = get_token(usr)
     session['user_id'] = usr
     session['name'] = name or usr
-    response = redirect(url_for('doorbells'))
-    response.set_cookie('token', get_token(usr), timedelta(30), secure=False, httponly=True)
-    return response
+    return redirect(url_for('doorbells'))
 
 
 @web.route('/login', methods=['GET', 'POST'])
@@ -286,9 +282,8 @@ def logout():
     session.permanent = False
     session.pop('user_id', None)
     session.pop('name', None)
-    response = redirect(url_for('index'))
-    response.delete_cookie('token')
-    return response
+    session.pop('token', None)
+    return redirect(url_for('index'))
 
 
 def get_doorbells_data():
