@@ -144,18 +144,18 @@ def get_token(user_id):
         {
             'user_id': user_id,
         },
-        current_app.config['SECRET_KEY']
+        current_app.config['SECRET_KEY'],
+        'HS256'
     )
 
 
 def authenticate() -> (None or int):
-    token = session.get('token')
-    log.debug(f'token {token}') # todo remove
+    token = request.cookies.get('token')
     if not token:
         return None
 
     try:
-        payload = jwt.decode(token, current_app.config['SECRET_KEY'])
+        payload = jwt.decode(token, current_app.config['SECRET_KEY'], 'HS256')
         cursor = get_db().cursor()
         try:
             cursor.execute('SELECT username FROM user WHERE username = ?', [payload['user_id']]),
@@ -218,9 +218,9 @@ def login():
     session.permanent = True if request.form.get('keep_sign') else False
     session['user_id'] = usr = db_row[0]
     session['name'] = db_row[1] or usr
-    session['token'] = get_token(usr)
-    log.debug(f'token {session["token"]}') # todo remove
-    return redirect(url_for('doorbells'))
+    response = redirect(url_for('doorbells'))
+    response.set_cookie('token', get_token(usr))
+    return response
 
 
 @web.route('/register', methods=['GET', 'POST'])
@@ -263,9 +263,9 @@ def register():
     session.permanent = True
     session['user_id'] = usr = db_row[0]
     session['name'] = db_row[1] or usr
-    session['token'] = get_token(usr)
-    log.debug(f'token {session["token"]}') # todo remove
-    return redirect(url_for('doorbells'))
+    response = redirect(url_for('doorbells'))
+    response.set_cookie('token', get_token(usr))
+    return response
 
 
 @web.route('/logout')
@@ -276,8 +276,9 @@ def logout():
     session.permanent = False
     session.pop('user_id', None)
     session.pop('name', None)
-    session.pop('token', None)
-    return redirect(url_for('index'))
+    response = redirect(url_for('index'))
+    response.set_cookie('token', '')
+    return response
 
 
 def get_doorbells_data():
