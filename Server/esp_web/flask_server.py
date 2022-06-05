@@ -150,15 +150,20 @@ def get_token(user_id):
 
 
 def authenticate() -> (None or int):
+    user_id = session.get('user_id')
     token = request.cookies.get('token')
-    if not token:
+    if not token or not user_id:
         return None
 
     try:
         payload = jwt.decode(token, current_app.config['SECRET_KEY'], 'HS256')
+        usr = payload['user_id']
+        if usr != user_id:
+            return None
+
         cursor = get_db().cursor()
         try:
-            cursor.execute('SELECT username FROM user WHERE username = ?', [payload['user_id']]),
+            cursor.execute('SELECT username FROM user WHERE username = ?', [usr]),
             db_row = cursor.fetchone()
         finally:
             cursor.close()
@@ -166,7 +171,6 @@ def authenticate() -> (None or int):
         if not db_row or not db_row[0]:
             return None
 
-        usr = session['user_id'] = db_row[0]
         return usr
 
     except (jwt.ExpiredSignatureError | jwt.InvalidTokenError):
