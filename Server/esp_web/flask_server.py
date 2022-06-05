@@ -145,13 +145,15 @@ def invalid_request(e):
 
 
 def get_token(user_id):
-    return jwt.encode(
-        {
-            'user_id': user_id,
-        },
-        current_app.config['JWT_SECRET_KEY'],
-        'HS256'
+
+     return jwt.encode(
+            {
+                'user_id': user_id,
+            },
+            current_app.config['JWT_SECRET_KEY'],
+            'HS256'
     )
+
 
 
 def authenticate() -> (None or int):
@@ -205,7 +207,7 @@ def redirect_to_doorbells(usr, name):
     session['user_id'] = usr
     session['name'] = name or usr
     response = redirect(url_for('doorbells'))
-    response.set_cookie('token', get_token(usr), timedelta(30), secure=True, httponly=True)
+    response.set_cookie('token', get_token(usr), timedelta(30), secure=False, httponly=True)
     return response
 
 
