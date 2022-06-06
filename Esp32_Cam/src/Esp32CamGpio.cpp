@@ -58,36 +58,40 @@ void Esp32CamGpio::changeRelay(const bool newState) {
 }
 
 uint32_t bellDebounceTime = 0;
-
 bool Esp32CamGpio::peekBellState() {
     const auto currentTime = esp_timer_get_time();
-    if (gpio_get_level(BELL_PIN) && bellDebounceTime < currentTime) {
-        bellDebounceTime = currentTime + DEBOUNCE_DELAY;
+    if (gpio_get_level(BELL_PIN)) {
+        if (bellDebounceTime < currentTime) {
+            bellDebounceTime = currentTime + DEBOUNCE_DELAY;
 #if DEBUG
-        Serial.println("Bell pressed");
+            Serial.println("Bell pressed");
 #endif
-        return true;
+            return true;
+        }
+
+        bellDebounceTime = currentTime + DEBOUNCE_DELAY;
     }
 
     return false;
 }
 
-bool pirLastState = true;//default sensor state if missing
+uint32_t pirDebounceTime = 0;
 bool Esp32CamGpio::peekPirState() {
     if (gpio_get_level(PIR_PIN)) {
-        if (pirLastState) {
+        if (!pirDebounceTime) {
             return false;
         }
 
-        pirLastState = true;
+        const auto currentTime = esp_timer_get_time();
+        if (bellDebounceTime < currentTime) {
+            bellDebounceTime = currentTime + DEBOUNCE_DELAY;
 #if DEBUG
-        Serial.println("Movement detected");
+            Serial.println("Movement detected");
 #endif
-        return true;
-    }
+            return true;
+        }
 
-    if (pirLastState) {
-        pirLastState = false;
+        bellDebounceTime = currentTime + DEBOUNCE_DELAY;
     }
 
     return false;
