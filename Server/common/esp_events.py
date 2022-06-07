@@ -1,9 +1,9 @@
 from events import Events
 
 
-class SocketEvents(Events):
+class EspEvents(Events):
     def __init__(self):
-        super(SocketEvents, self).__init__((
+        super(EspEvents, self).__init__((
             'on_esp_uuid_recv',  # Client -> (username, bell_duration, motion_duration)
             'on_esp_username_recv',  # Client, username -> bool
             'on_notification',  # Client, NotificationType, Path -> None
