@@ -4,17 +4,16 @@ from traceback import format_exc
 
 from flup.server.fcgi import WSGIServer
 
-from esp32server import config_logger, run_socket_server, set_buffer, stop_socket_server
-from esp_web.flask_server import web
+from esp32server import config_logger, Esp32Server
 
 
 def main():
     try:
         config_logger('server.fcgi.log')
-        set_buffer()
-        run_socket_server()
-        WSGIServer(web).run()
-        stop_socket_server()
+        esp32server = Esp32Server()
+        esp32server.run_servers()
+        WSGIServer(esp32server.web).run()
+        del esp32server
     except Exception as ex:
         log.exception(f'Exception while executing wsgi server: {ex!r}')
         log.exception(format_exc())

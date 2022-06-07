@@ -3,20 +3,16 @@ from os import environ
 from threading import Thread
 from traceback import format_exc
 
-from esp_socket.socket_events import SocketEvents
-from esp_socket.socket_server import sv as socket_server
-from esp_web.flask_server import web as web_server
-
-environ['ESP32_DEBUG'] = environ['FLASK_DEBUG'] = '1'
-environ['ESP32_NAME'] = 'Video-Doorbell'
-environ['ESP32_IP'] = '0.0.0.0'
-environ['ESP32_PORT'] = '2376'
-
-environ['FLASK_ENV'] = 'development' if environ.get('FLASK_DEBUG') else 'production'
-environ['FLASK_RUN_HOST'] = '0.0.0.0'
-environ['FLASK_RUN_PORT'] = '80'
+from common.esp_clients import EspClients
+from socket_common.socket_events import SocketEvents
+from socket_server.server_socket import ServerSocket
+from web.web_server import WebServer
 
 environ['DATABASE'] = 'esp32cam.sqlite'
+
+environ['ESP32_DEBUG'] = '1'
+environ['ESP32_IP'] = '0.0.0.0'
+environ['ESP32_PORT'] = '2376'
 
 logger = False
 socket_thread = None
@@ -32,46 +28,48 @@ def config_logger(filename: str = 'esp32server.py.log'):
     log.getLogger().addHandler(log.StreamHandler())
 
 
-def run_socket_server():
-    global socket_thread
-    socket_thread = Thread(daemon=True, target=socket_server.run_forever)
-    socket_thread.start()
+class Esp32Server:
+    def __init__(self):
+        self.__clients = EspClients()
+        self.__events = SocketEvents()
+        self.__socket_server = ServerSocket(self.__clients, self.__events) if 'WERKZEUG_RUN_MAIN' in environ else None
+        self.__socket_thread = None
+        self.__web_server = WebServer(self.__clients, self.__events)
 
+    def __del__(self):
+        log.info('Stopping Servers...')
+        if self.__socket_server:
+            self.__socket_server.shutdown()
+            del self.__socket_server
 
-def run_web_server():
-    web_server.run(host=environ.get('FLASK_RUN_HOST'), port=environ.get('FLASK_RUN_PORT'))
+        if self.__socket_thread:
+            self.__socket_thread.join()
+            del self.__socket_thread
 
+        del self.__clients
+        del self.__events
 
-def setup_shared():
-    buffer = {}
-    socket_server.esp_clients = buffer
-    web_server.esp_clients = buffer
+    def run_servers(self, fcgi: bool = True):
+        if self.__socket_server:
+            log.info('Running Servers...')
+            self.__socket_thread = Thread(daemon=True, target=self.__socket_server.run_forever)
+            self.__socket_thread.start()
 
-    events = SocketEvents()
-    socket_server.setup_events(events)
-    web_server.setup_events(events)
+        if not fcgi:
+            self.__web_server.run()
 
-
-def stop_socket_server():
-    global socket_thread
-
-    socket_server.shutdown()
-    socket_server.close()
-    if socket_thread:
-        # noinspection PyUnresolvedReferences
-        socket_thread.join()
+    @property
+    def web(self) -> WebServer:
+        return self.__web_server
 
 
 def main():
     try:
-        setup_shared()
-        if 'WERKZEUG_RUN_MAIN' in environ:
-            log.info('Running Servers...')
-            run_socket_server()
-        run_web_server()
-
+        esp32server = Esp32Server()
+        esp32server.run_servers(False)
+        del esp32server
     except Exception as ex:
-        log.error(f'Exception while initializing SocketServer: {ex!r}')
+        log.error(f'Exception while initializing Esp32Server: {ex!r}')
         log.error(format_exc())
 
 

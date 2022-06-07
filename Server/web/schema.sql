@@ -8,15 +8,15 @@ create table if not exists user
     name     text not null,
     join_at  timestamp default current_timestamp not null
 );
-create index if not exists user_nocase_owner ON user(username COLLATE NOCASE, email COLLATE NOCASE);
+create index if not exists user_nocase_username_email ON user (username COLLATE NOCASE, email COLLATE NOCASE);
 
 create table if not exists doorbell
 (
-    id    integer
+    id            integer
         constraint doorbell_pk
             primary key,
-    name  text not null,
-    owner text collate nocase
+    name          text not null,
+    owner         text
         references user
             on update cascade on delete restrict,
     registered_at timestamp default current_timestamp not null

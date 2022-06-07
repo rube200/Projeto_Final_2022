@@ -1,156 +1,18 @@
 import logging as log
 from collections import namedtuple
 from io import BytesIO
-from os import environ
-from sqlite3 import connect as sql_connect, PARSE_DECLTYPES, Row as sqlRow
 from time import sleep, monotonic
 from traceback import format_exc
 
 import bcrypt
 import jwt
-from flask import abort, current_app, Flask, g, redirect, render_template, request, send_file, url_for, \
+from flask import abort, current_app, Flask, redirect, render_template, request, send_file, url_for, \
     stream_with_context, session, flash
-from flask_mail import Mail, Message
-
-from esp_socket.socket_client import SocketClient
-from esp_socket.socket_events import SocketEvents
-
-NAV_DICT = [
-    {'id': 'doorbells', 'title': 'Manage Doorbells', 'icon': 'bi-book-fill', 'url': 'doorbells'},
-    {'id': 'all_streams', 'title': 'All Streams', 'icon': 'bi-cast', 'url': 'all_streams'},
-    {'id': 'pictures', 'title': 'Pictures', 'icon': 'bi-globe', 'url': 'doorbells'},
-    {'id': 'statistics', 'title': 'Statistics', 'icon': 'bi-bar-chart-fill', 'url': 'doorbells'},
-]
 
 
 class WebServer(Flask):
-    def __init__(self, _esp_clients: dict = None):
-        super(WebServer, self).__init__(import_name=__name__)
-        self.__esp_clients = _esp_clients or {}
-        self.__events = None
-
-        self.config.from_pyfile('flask.cfg')
-        self.config['DATABASE'] = self.__db_config = environ.get('DATABASE') or 'esp32cam.sqlite'
-        if self.config.get('RANDOM_SECRET_KEY'):
-            import secrets
-            self.config['JWT_SECRET_KEY'] = secrets.token_hex(32)
-            self.config['SECRET_KEY'] = secrets.token_hex(32)
-        self.__mail = Mail(self)
-
-    @property
-    def esp_clients(self) -> dict:
-        return dict(self.__esp_clients)
-
-    @esp_clients.setter
-    def esp_clients(self, value: dict) -> None:
-        self.__esp_clients = value
-
-    def get_client(self, esp_id: int) -> SocketClient:
-        return self.__esp_clients.get(esp_id)
-
-    def setup_events(self, events: SocketEvents) -> None:
-        self.__events = events
-        self.__events.on_bell_pressed += self.__on_bell_pressed
-        self.__events.on_motion_detected += self.__on_motion_detected
-
     def open_relay(self, esp_id):
         self.__events.on_open_relay_requested(esp_id)
-
-    def __get_mail_by_esp(self, esp_id: int) -> str or None:
-        try:
-            sql_con = sql_connect(self.__db_config, detect_types=PARSE_DECLTYPES)
-            sql_con.row_factory = sqlRow
-            cursor = sql_con.cursor()
-            try:
-                cursor.execute(
-                    'SELECT u.email FROM user u INNER JOIN doorbell d on u.username = d.owner WHERE d.id = ?', [esp_id])
-                row = cursor.fetchone()
-                if not row:
-                    return None
-
-                return row[0]
-
-            finally:
-                cursor.close()
-                sql_con.close()
-        except Exception as ex:
-            log.error(f'Exception while getting email for esp_id {esp_id}: {ex!r}')
-            return None
-
-    def __on_bell_pressed(self, client: SocketClient):
-        email = self.__get_mail_by_esp(client.uuid)
-        if not email:
-            return
-
-        self.__mail.send(Message('Doorbell pressed', [email], 'GOT CHECK IT NOW. MOTHERFUCKER'))
-
-    def __on_motion_detected(self, client: SocketClient):
-        email = self.__get_mail_by_esp(client.uuid)
-        if not email:
-            return
-
-        self.__mail.send(Message('Motion detected', [email], 'GOT CHECK IT NOW. MOTHERFUCKER'))
-
-
-web = WebServer()
-
-
-def init_db(wb: WebServer) -> None:
-    with wb.app_context():
-        db = get_db()
-
-        with current_app.open_resource(current_app.config['SCHEMA_FILE']) as f:
-            db.cursor().executescript(f.read().decode('utf-8'))
-
-        db.commit()
-        close_db(None)
-
-
-def get_db():
-    if 'db' in g:
-        return g.db
-
-    g.db = sql_connect(current_app.config['DATABASE'], detect_types=PARSE_DECLTYPES)
-    g.db.row_factory = sqlRow
-    return g.db
-
-
-# noinspection PyUnusedLocal
-@web.teardown_appcontext
-def close_db(e=None):
-    db = g.pop('db', None)
-    if db:
-        db.close()
-
-
-init_db(web)
-
-
-@web.context_processor
-def inject_nav():
-    return dict(nav=NAV_DICT)
-
-
-# noinspection PyUnusedLocal
-@web.errorhandler(404)
-def page_not_found(e):
-    return redirect(url_for('index'))
-
-
-# noinspection PyUnusedLocal
-@web.errorhandler(400)
-def invalid_request(e):
-    return redirect(url_for('index'))
-
-
-def get_token(user_id):
-    return jwt.encode(
-        {
-            'user_id': user_id,
-        },
-        current_app.config['JWT_SECRET_KEY'],
-        'HS256'
-    )
 
 
 def authenticate() -> (None or int):
@@ -213,13 +75,13 @@ def login():
         return redirect(url_for('doorbells'))
 
     if request.method == 'GET':
-        return render_template('login.html')
+        return render_template('templates/login.html')
 
     usr = request.form.get('username')
     pwd = request.form.get('password')
     if not usr or not pwd:
         flash('Invalid form input.', 'danger')
-        return render_template('login.html')
+        return render_template('templates/login.html')
 
     cursor = get_db().cursor()
     try:
@@ -229,7 +91,7 @@ def login():
         cursor.close()
     if not db_row or not db_row[0] or not db_row[2] or not bcrypt.checkpw(pwd.encode('utf-8'), db_row[2]):
         flash('Invalid credentials.', 'danger')
-        return render_template('login.html')
+        return render_template('templates/login.html')
 
     return redirect_to_doorbells(db_row[0], db_row[1])
 
@@ -240,14 +102,14 @@ def register():
         return redirect(url_for('doorbells'))
 
     if request.method == 'GET':
-        return render_template('register.html')
+        return render_template('templates/register.html')
 
     usr = request.form.get('username')
     email = request.form.get('email')
     pwd = request.form.get('password')
     if not usr or not email or not pwd:
         flash('Invalid form input.', 'danger')
-        return render_template('register.html')
+        return render_template('templates/register.html')
 
     hash_pwd = bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt())
 
@@ -259,7 +121,7 @@ def register():
         con.commit()
         if cursor.rowcount < 1:
             flash('Username or email already taken.', 'danger')
-            return render_template('register.html')
+            return render_template('templates/register.html')
 
         # username sanitize
         cursor.execute('SELECT username, name FROM user WHERE username = ?', [usr])
@@ -269,7 +131,7 @@ def register():
 
     if not db_row or not db_row[0]:
         flash('Something went wrong, try again.', 'danger')
-        return render_template('register.html')
+        return render_template('templates/register.html')
 
     return redirect_to_doorbells(db_row[0], db_row[1])
 
@@ -324,7 +186,7 @@ def doorbells():
     if bells is None:
         return redirect(url_for('index'))
 
-    return render_template('doorbells.html', doorbells=bells)
+    return render_template('templates/doorbells.html', doorbells=bells)
 
 
 @web.route('/all_streams')
@@ -333,7 +195,7 @@ def all_streams():
     if bells is None:
         return redirect(url_for('index'))
 
-    return render_template('all_streams.html', doorbells=bells)
+    return render_template('templates/all_streams.html', doorbells=bells)
 
 
 @web.route('/doorbell/<int:esp_id>')
