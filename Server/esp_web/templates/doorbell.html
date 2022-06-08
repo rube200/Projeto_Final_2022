@@ -1,0 +1,81 @@
+{% extends 'default_e_bell.html' %}
+
+{% set nav_title='Doorbell' %}
+
+
+{% block e_bell_content %}
+<div class="main">
+    <div class="master" style = "display: flex">
+        <div class="container-form">  
+            <div class="header">
+                <h2>Stream</h2>
+            </div>
+            <div class="stream-box">
+                <video src="static/ronaldo.mp4" controls></video>
+            </div>
+            <form class="form1">
+                <div class="horizontal1" style="margin-bottom: 10px;">
+                    <button class="btnCyan">Take Picture</button>
+                    <button class="btnViolet">Save Recording</button>
+                </div>
+            </form>
+
+        </div>
+        <div class="container-form">
+            <div class="header">
+                <h2>Details</h2>
+            </div>
+            <form id="form" class="form2">
+                <div class="form-control">
+                    <label for="username">Doorbell Name</label>
+                    <input type="text" placeholder="florinpop17" id="username" />
+                </div>
+                <div class="form-control">
+                    <label for="username">Emails to Alert</label>
+                    <textarea name="message" rows="3" cols="30">
+    The cat was playing in the garden.
+    feqf
+    Fwefe
+    Fwrr
+                    </textarea> 
+                </div>
+                <div class="form-control">
+                    <label for="username">Password Confirmation</label>
+                    <input type="password" placeholder="Password" id="password"/>
+                </div>
+                <div class="horizontal2">
+                    <button class="btnGreen">Submit</button>
+                    <button class="btnRed">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+
+
+    <div class="row">
+        <div class="col-sm-6 col-md-4 col-lg-3 image-container">
+        <figure>
+            <div class="pic image"><img src='static/default_profile.png' class="img-thumbnail"></div>
+            <figcaption>
+            doorbell1</br>
+            yesteryear
+            </figcaption>
+        </figure>
+        </div>
+        <div class="col-sm-6 col-md-4 col-lg-3 image-container">
+        <figure>
+            <div class="pic image"><video src='static/ronaldo.mp4' class="img-thumbnail"></div>
+            <figcaption>
+            doorbell2</br>
+            yesteryear+1
+            </figcaption>
+        </figure>
+    </div>
+
+
+
+    </div>
+</div>
+
+{% endblock %}

@@ -427,3 +427,7 @@ def images():
             cursor.close()
 
     return redirect(url_for('login'))
+
+@web.route('/bell')
+def doorbellTest():
+    return render_template('doorbell.html')
