@@ -10,7 +10,7 @@
                 <h2>Stream</h2>
             </div>
             <div class="stream-box">
-                <video src="static/ronaldo.mp4" controls></video>
+                <video src= "{{ url_for('static', filename='ronaldo.mp4') }}" controls></video>
             </div>
             <form class="form1">
                 <div class="horizontal1" style="margin-bottom: 10px;">
@@ -27,24 +27,23 @@
             <form id="form" class="form2">
                 <div class="form-control">
                     <label for="username">Doorbell Name</label>
-                    <input type="text" placeholder="florinpop17" id="username" />
+                    <input type="text" placeholder="{{ name }}" id="username" />
                 </div>
-                <div class="form-control">
+                <div class="form-control" id="targeNode">
                     <label for="username">Emails to Alert</label>
-                    <textarea name="message" rows="3" cols="30">
-    The cat was playing in the garden.
-    feqf
-    Fwefe
-    Fwrr
-                    </textarea> 
+                    <textarea name="message" rows="3" cols="30" id="textarea">
+                        {% for email in emails %}
+{{email}}
+                        {% endfor %}
+                </textarea> 
                 </div>
                 <div class="form-control">
                     <label for="username">Password Confirmation</label>
                     <input type="password" placeholder="Password" id="password"/>
                 </div>
                 <div class="horizontal2">
-                    <button class="btnGreen">Submit</button>
-                    <button class="btnRed">Cancel</button>
+                    <button type="button" class="btnGreen" onclick="getText();">Submit</button> <!-- type button to not submit -->
+                    <button type="button" class="btnRed">Cancel</button>
                 </div>
             </form>
         </div>
@@ -54,27 +53,99 @@
 
     <div class="row">
         <div class="col-sm-6 col-md-4 col-lg-3 image-container">
-        <figure>
-            <div class="pic image"><img src='static/default_profile.png' class="img-thumbnail"></div>
-            <figcaption>
-            doorbell1</br>
-            yesteryear
-            </figcaption>
-        </figure>
-        </div>
-        <div class="col-sm-6 col-md-4 col-lg-3 image-container">
-        <figure>
-            <div class="pic image"><video src='static/ronaldo.mp4' class="img-thumbnail"></div>
-            <figcaption>
-            doorbell2</br>
-            yesteryear+1
-            </figcaption>
-        </figure>
-    </div>
+          {% for path in paths %}
+            <div class="col-sm-6 col-md-4 col-lg-3 image-container">
+          
+              <figure>
+                
+                  {% if ".mp4" in types[loop.index0] %}
+                    <div class="pic image"><video src='{{ path }}' class="img-thumbnail"></div>
+                  {% elif types[loop.index0] == "vid" %}
+                    <div class="pic image"><img src='{{ path }}' class="img-thumbnail"></div>                
+                  {% endif %}  
+                  <figcaption>
+                    {{ doorbells[loop.index0]}}</br>
+                    {{ dates[loop.index0]}}
+                  </figcaption>
+              </figure>
+      
+      
+            </div>
+          {% endfor %}
+          </div>
 
 
 
     </div>
 </div>
+<div class="popup-pic" id = "big1">
+    <span id="span1">&times;</span>
+    <img src='{{ paths[0] }}' alt="" controls>
+  </div>
+  <div class="popup-pic" id = "big2">
+      <span id="span2">&times;</span>
+      <video src='{{ paths[0] }}' alt="" controls>
+  </div>
+
+    <script>
+    //IMGs
+    document.querySelectorAll('.image-container img').forEach(image =>{
+        image.onclick = () =>{
+        document.getElementById('big1').style.display = 'block';
+        document.querySelector('.popup-pic img').src = image.getAttribute('src');
+        console.log('src to: '+ image.getAttribute('src'));
+        }             
+        });
+    
+
+    document.querySelectorAll('.image-container video').forEach(vid =>{
+        vid.onclick = () =>{
+        document.getElementById('big2').style.display = 'block';
+        document.querySelector('.popup-pic video').src = vid.getAttribute('src');
+        }      
+      });
+
+    document.getElementById('span1').onclick = () =>{
+        document.getElementById('big1').style.display = 'none';
+    };
+    document.getElementById('span2').onclick = () =>{
+        document.getElementById('big2').style.display = 'none';
+    };
+
+
+    //Alert
+    function getText(){
+        var text = document.getElementById("textarea").value;
+        var words = text.split(/\r?\n/);       
+        for (i in words) {
+            if(!validateEmail(words[i]))
+                creatAlert(words[i])
+                return;
+        }
+    }
+
+
+    function validateEmail (email){
+        console.log(email)
+        return email.match(/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/);
+        };
+
+    function creatAlert(email){
+        var node = document.getElementById("textarea"),
+        ele = document.createElement("div");
+        ele.classList.add("alert")
+        ele.style.backgroundColor = "#F44336"
+        ele.style.color = "#FFFFFF"
+        ele.innerHTML = "<span class='closebtn'>&times;</span>\nInvalid Email: " + email
+        node.parentNode.parentNode.insertBefore(ele, document.getElementById("targeNode").nextSibling);
+        document.querySelector(".closebtn").addEventListener("click", gone)
+    } 
+
+    function gone(){
+        div = document.querySelector(".alert")
+        div.parentNode.removeChild(div)  
+    }
+
+</script>
 
 {% endblock %}

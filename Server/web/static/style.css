@@ -283,6 +283,35 @@ header {
 }
 
 .main {
-    overflow: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
     height: 500px;
 }
+
+
+ /* The alert message box */
+ .alert {
+    padding: 5px;
+    flex: 1;
+  }
+  
+  /* The close button */
+  .closebtn {
+    margin-left: 15px;
+    color: rgb(12, 12, 12);
+    font-weight: bold;
+    float: right;
+    font-size: 22px;
+    line-height: 20px;
+    cursor: pointer;
+    transition: 0.3s;
+  }
+  
+  /* When moving the mouse over the close button */
+  .closebtn:hover {
+    color: rgba(203, 216, 17, 0.89);
+  } 
+
+  .form-control .alert{
+
+  }

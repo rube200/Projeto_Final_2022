@@ -228,7 +228,45 @@ class WebServer(DatabaseAccessor, Flask):
     # todo recheck this one
     # noinspection PyMethodMayBeStatic,PyUnusedLocal
     def __endpoint_doorbell(self, uuid: int):
-        return render_template('doorbell.html')
+        con = self._get_connection()
+        cursor = con.cursor()
+        #get doorbell data
+        try:
+            cursor.execute(
+                'SELECT name, ,emails, owner ' 
+                'FROM doorbell '
+                'WHERE id LIKE ? ',
+                [uuid])
+            row = cursor.fetchone()
+            name = row[0]
+            emails = []
+            list = row[1].split(",")
+            for email in list:
+                emails.append(email)
+            owner = cursor[2]
+        #get pics
+            cursor.execute(
+                'SELECT d.id, d.name, n.time, n.path '
+                'FROM doorbell d '
+                'INNER JOIN notifications n '
+                'ON d.id = n.esp_id '
+                'WHERE d.owner LIKE ? '
+                'AND n.type <> 0 '
+                'AND d.id like ?'
+                'ORDER BY N.time DESC',
+                [owner, uuid])
+            rows = cursor.fetchall()
+            paths = []
+            names = []
+            dates = []
+            for row in rows:
+                paths.append(row[1])
+                dates.append(row[2].split(".")[0])  # split to remove milliseconds
+                names.append(row[3])
+        finally:
+            cursor.close()
+            con.close()
+        return render_template('doorbell.html', name = name, emails=emails, paths=paths, dates=dates, doorbells=names) 
 
 
     def __endpoint_streams(self):

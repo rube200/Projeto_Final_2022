@@ -6,23 +6,6 @@
 {% block e_bell_content %}
 <div class="row">
   <div class="col-sm-6 col-md-4 col-lg-3 image-container">
-    <figure>
-      <div class="pic image"><img src='static/default_profile.png' class="img-thumbnail"></div>
-      <figcaption>
-        doorbell1</br>
-        yesteryear
-      </figcaption>
-    </figure>
-  </div>
-  <div class="col-sm-6 col-md-4 col-lg-3 image-container">
-    <figure>
-      <div class="pic image"><video src='static/ronaldo.mp4' class="img-thumbnail"></div>
-      <figcaption>
-        doorbell2</br>
-        yesteryear+1
-      </figcaption>
-    </figure>
-  </div>
     {% for path in paths %}
       <div class="col-sm-6 col-md-4 col-lg-3 image-container">
     
@@ -53,7 +36,6 @@
         <video src='{{ paths[0] }}' alt="" controls>
     </div>
 
-      <script src="static/vendors/js/vendor.bundle.base.js"></script>
       <script>
           
           document.querySelectorAll('.image-container img').forEach(image =>{
