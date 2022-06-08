@@ -70,8 +70,10 @@ class WebServer(DatabaseAccessor, Flask):
         self.add_url_rule('/register', 'register', self.__endpoint_register, methods=['GET', 'POST'])
         self.add_url_rule('/logout', 'logout', endpoint_logout)
         self.add_url_rule('/doorbells', 'doorbells', self.__endpoint_doorbells)
+        self.add_url_rule('/doorbell/<int:uuid>', 'doorbell', self.__endpoint_doorbell)
         self.add_url_rule('/all_streams', 'all_streams', self.__endpoint_all_streams)
         self.add_url_rule('/stream/<int:uuid>', 'stream', self.__endpoint_esp_stream)
+        self.add_url_rule('/notifications', 'notifications', self.__endpoint_notifications)
         self.add_url_rule('/open_doorbell/<int:uuid>', 'open_doorbell', self.__endpoint_open_doorbell)
         self.register_error_handler(400, lambda e: redirect(url_for('index')))
         self.register_error_handler(404, lambda e: redirect(url_for('index')))
@@ -220,6 +222,11 @@ class WebServer(DatabaseAccessor, Flask):
 
         return render_template('doorbells.html', doorbells=bells)
 
+    # todo recheck this one
+    # noinspection PyMethodMayBeStatic,PyUnusedLocal
+    def __endpoint_doorbell(self, uuid: int):
+        return render_template('doorbell.html')
+
     def __endpoint_all_streams(self):
         bells = self.__get_doorbells()
         if bells is None:
@@ -234,6 +241,41 @@ class WebServer(DatabaseAccessor, Flask):
 
         stream_context = stream_with_context(self.__generate_stream(uuid))
         return self.response_class(stream_context, mimetype='multipart/x-mixed-replace; boundary=frame')
+
+    # todo recheck this one
+    def __endpoint_notifications(self):
+        username = self.__authenticate()
+        if not username:
+            return redirect(url_for('index'))
+
+        con = self._get_connection()
+        cursor = con.cursor()
+        try:
+            cursor.execute(
+                'SELECT d.id, d.name, n.time, n.path '
+                'FROM doorbell d '
+                'INNER JOIN notifications n '
+                'ON d.id = n.esp_id '
+                'WHERE d.owner LIKE ? '
+                'AND n.type <> 0 '
+                'ORDER BY N.time DESC',
+                [username])
+            rows = cursor.fetchall()
+            # types = []
+            paths = []
+            names = []
+            dates = []
+            for row in rows:
+                # types.append(bell[0])
+                paths.append(row[1])
+                dates.append(row[2].split(".")[0])  # split to remove milliseconds
+                names.append(row[3])
+
+            # return render_template('imageGal.html', types = types, paths = paths, dates = dates, doorbells = names)
+            return render_template('notifications.html', paths=paths, dates=dates, doorbells=names)
+        finally:
+            cursor.close()
+            con.close()
 
     def __endpoint_open_doorbell(self, uuid: int):
         user_id = self.__authenticate()

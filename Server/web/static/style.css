@@ -23,17 +23,17 @@ header {
     left: 75% !important
 }
 
-.image-container{
+.image-container {
     display: flex;
     flex-wrap: wrap;
-    gap:15px;
+    gap: 15px;
     justify-content: center;
     padding: 10px;
 }
 
-.image-container .image{
-    border:10px solid rgb(218, 215, 215);
-    box-shadow: 0 5px 15px rgba(0,0,0,.1);
+.image-container .image {
+    border: 10px solid rgb(218, 215, 215);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, .1);
     overflow: hidden;
     cursor: pointer;
 }
@@ -46,91 +46,95 @@ header {
     transform: scale(1.1)
 }
 
-.popup-pic{
-    position:fixed;
-    top:0;left:0;
-    background: rgba(0,0,0,.9);
+.popup-pic {
+    position: fixed;
+    top: 0;
+    left: 0;
+    background: rgba(0, 0, 0, .9);
     height: 100%;
     width: 100%;
     z-index: 9001;
     display: none;
 }
 
-.popup-pic span{
+.popup-pic span {
     position: absolute;
-    top:-15px; right:10px;
+    top: -15px;
+    right: 10px;
     font-size: 60px;
     font-weight: bolder;
     cursor: pointer;
     z-index: 100;
 }
 
-.popup-pic img{
+.popup-pic img {
     position: absolute;
-    top:50%; left:50%;
+    top: 50%;
+    left: 50%;
     transform: translate(-50%, -50%);
-    border:5px solid #fff;
+    border: 5px solid #fff;
     border-radius: 5px;
     width: 750px;
     object-fit: cover;
 }
 
-.popup-pic video{
+.popup-pic video {
     position: absolute;
-    top:50%; left:50%;
+    top: 50%;
+    left: 50%;
     transform: translate(-50%, -50%);
-    border:5px solid #fff;
+    border: 5px solid #fff;
     border-radius: 5px;
     width: 750px;
     object-fit: cover;
 }
 
-@media (max-width:768px){
-    .popup.pic img{
+@media (max-width: 768px) {
+    .popup.pic img {
         width: 95%
     }
 }
 
-.card-colour:hover{
+.card-colour:hover {
     transform: scale(1.1);
     background-color: rgb(140, 235, 230);
 }
 
-.card-colour:active{
+.card-colour:active {
     transform: scale(1);
 }
 
-.center-green{
+.center-green {
     align-items: center;
     color: rgb(89, 230, 107);
 }
 
-.titleContainer{
+.titleContainer {
     padding-top: 2%;
     padding-bottom: 2%;
 }
 
-.text-center{
+.text-center {
     padding-top: 2%;
     padding-bottom: 2%;
     text-align: center;
 }
 
-.center{
+.center {
     text-align: center;
 }
 
-.card-img{
+.card-img {
     width: 50px;
     height: 50px;
 }
 
-.card{
+.card {
     width: 300px;
     height: 180px;
 }
 
-.Box{
+.Box {
     max-width: 650px;
     position: relative;
     display: block;
@@ -146,19 +150,22 @@ header {
     background-color: #70707067;
     padding: 20px 40px;
 }
+
 .header h2 {
     width: 10%;
     margin: 0;
 }
-.master{
+
+.master {
     column-gap: 4%;
     align-items: baseline;
     margin-left: 5%;
     margin-right: auto;
     margin-top: 3%;
 }
+
 .container-form {
-    
+
     background-color: #fff;
     border-radius: 5px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
@@ -189,6 +196,7 @@ header {
     width: 600px;
     max-width: 100%;
 }
+
 .form-control textarea {
     border: 2px solid #f0f0f0;
     border-radius: 4px;
@@ -199,6 +207,7 @@ header {
     width: 600px;
     max-width: 100%;
 }
+
 .form-control input:focus {
     outline: 0;
     border-color: #777;
@@ -213,7 +222,7 @@ header {
 }
 
 
-.horizontal1{
+.horizontal1 {
     display: flex;
     column-gap: 10px;
     margin-left: 23%;
@@ -221,7 +230,7 @@ header {
 }
 
 
-.horizontal2{
+.horizontal2 {
     display: flex;
     column-gap: 10px;
     margin-left: 28%;
@@ -252,27 +261,28 @@ header {
     width: 27%;
 }
 
-.btnCyan{
+.btnCyan {
     background-color: #41ccd6;
     border: 2px solid #41ccd6;
 }
 
-.btnViolet{
+.btnViolet {
     background-color: #de4eeb;
     border: 2px solid #de4eeb;
 }
 
 
-.btnGreen{
+.btnGreen {
     background-color: #47ad44;
     border: 2px solid #47ad44;
 }
-.btnRed{
+
+.btnRed {
     background-color: #b33636;
     border: 2px solid #b33636;
 }
 
-.main{
+.main {
     overflow: auto;
     height: 500px;
 }
