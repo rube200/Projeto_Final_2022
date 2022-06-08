@@ -22,3 +22,257 @@ header {
 .start-75 {
     left: 75% !important
 }
+
+.image-container{
+    display: flex;
+    flex-wrap: wrap;
+    gap:15px;
+    justify-content: center;
+    padding: 10px;
+}
+
+.image-container .image{
+    border:10px solid rgb(218, 215, 215);
+    box-shadow: 0 5px 15px rgba(0,0,0,.1);
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.pic:hover img {
+    transform: scale(1.1)
+}
+
+.pic:hover video {
+    transform: scale(1.1)
+}
+
+.popup-pic{
+    position:fixed;
+    top:0;left:0;
+    background: rgba(0,0,0,.9);
+    height: 100%;
+    width: 100%;
+    z-index: 9001;
+    display: none;
+}
+
+.popup-pic span{
+    position: absolute;
+    top:-15px; right:10px;
+    font-size: 60px;
+    font-weight: bolder;
+    cursor: pointer;
+    z-index: 100;
+}
+
+.popup-pic img{
+    position: absolute;
+    top:50%; left:50%;
+    transform: translate(-50%, -50%);
+    border:5px solid #fff;
+    border-radius: 5px;
+    width: 750px;
+    object-fit: cover;
+}
+
+.popup-pic video{
+    position: absolute;
+    top:50%; left:50%;
+    transform: translate(-50%, -50%);
+    border:5px solid #fff;
+    border-radius: 5px;
+    width: 750px;
+    object-fit: cover;
+}
+
+@media (max-width:768px){
+    .popup.pic img{
+        width: 95%
+    }
+}
+
+.card-colour:hover{
+    transform: scale(1.1);
+    background-color: rgb(140, 235, 230);
+}
+
+.card-colour:active{
+    transform: scale(1);
+}
+
+.center-green{
+    align-items: center;
+    color: rgb(89, 230, 107);
+}
+
+.titleContainer{
+    padding-top: 2%;
+    padding-bottom: 2%;
+}
+
+.text-center{
+    padding-top: 2%;
+    padding-bottom: 2%;
+    text-align: center;
+}
+
+.center{
+    text-align: center;
+}
+
+.card-img{
+    width: 50px;
+    height: 50px;
+}
+
+.card{
+    width: 300px;
+    height: 180px;
+}
+
+.Box{
+    max-width: 650px;
+    position: relative;
+    display: block;
+    background-color: #fff;
+}
+
+/* end of older custom css file*/
+
+/*FORMS*/
+
+.header {
+    border-bottom: 1px solid #f0f0f0;
+    background-color: #70707067;
+    padding: 20px 40px;
+}
+.header h2 {
+    width: 10%;
+    margin: 0;
+}
+.master{
+    column-gap: 4%;
+    align-items: baseline;
+    margin-left: 5%;
+    margin-right: auto;
+    margin-top: 3%;
+}
+.container-form {
+    
+    background-color: #fff;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+    width: 460px;
+    max-width: 100%;
+}
+
+
+.form-control {
+    margin-bottom: 10px;
+    padding-bottom: 20px;
+    position: relative;
+}
+
+.form-control label {
+    display: inline-block;
+    margin-bottom: 5px;
+}
+
+.form-control input {
+    border: 2px solid #f0f0f0;
+    border-radius: 4px;
+
+    font-family: inherit;
+    font-size: 14px;
+    padding: 10px;
+    width: 600px;
+    max-width: 100%;
+}
+.form-control textarea {
+    border: 2px solid #f0f0f0;
+    border-radius: 4px;
+
+    font-family: inherit;
+    font-size: 14px;
+    padding: 10px;
+    width: 600px;
+    max-width: 100%;
+}
+.form-control input:focus {
+    outline: 0;
+    border-color: #777;
+}
+
+.form-control.success input {
+    border-color: #2ecc71;
+}
+
+.form-control.error input {
+    border-color: #e74c3c;
+}
+
+
+.horizontal1{
+    display: flex;
+    column-gap: 10px;
+    margin-left: 23%;
+    margin-top: -19px;
+}
+
+
+.horizontal2{
+    display: flex;
+    column-gap: 10px;
+    margin-left: 28%;
+    margin-bottom: 9px;
+}
+
+
+.form1 button {
+    display: block;
+    font-family: inherit;
+    font-size: 16px;
+    padding: 10px;
+    margin-top: 3px;
+    border-radius: 4px;
+    color: #fff;
+    text-align: center;
+    margin-top: 23px;
+}
+
+.form2 button {
+    display: block;
+    font-family: inherit;
+    font-size: 16px;
+    padding: 10px;
+    margin-top: 3px;
+    border-radius: 4px;
+    color: #fff;
+    width: 27%;
+}
+
+.btnCyan{
+    background-color: #41ccd6;
+    border: 2px solid #41ccd6;
+}
+
+.btnViolet{
+    background-color: #de4eeb;
+    border: 2px solid #de4eeb;
+}
+
+
+.btnGreen{
+    background-color: #47ad44;
+    border: 2px solid #47ad44;
+}
+.btnRed{
+    background-color: #b33636;
+    border: 2px solid #b33636;
+}
+
+.main{
+    overflow: auto;
+    height: 500px;
+}
