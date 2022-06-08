@@ -36,7 +36,8 @@ class DatabaseAccessor:
             if not data or not data[0]:
                 return False
 
-            cursor.execute('INSERT OR IGNORE INTO doorbell(id, name, owner) VALUES (?, ?, ?)', [uuid, uuid, username.upper()])
+            cursor.execute('INSERT OR IGNORE INTO doorbell(id, name, owner) VALUES (?, ?, ?)',
+                           [uuid, uuid, username.upper()])
             con.commit()
             if cursor.rowcount > 0:
                 return True

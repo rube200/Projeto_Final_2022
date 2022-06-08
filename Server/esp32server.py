@@ -10,9 +10,13 @@ from web.web_server import WebServer
 
 environ['DATABASE'] = 'esp32cam.sqlite'
 
-environ['ESP32_DEBUG'] = '1'
+environ['ESP32_DEBUG'] = environ['FLASK_DEBUG'] = '1'
 environ['ESP32_IP'] = '0.0.0.0'
 environ['ESP32_PORT'] = '2376'
+
+environ['FLASK_ENV'] = 'development' if environ.get('FLASK_DEBUG') else 'production'
+environ['FLASK_HOST'] = '0.0.0.0'
+environ['FLASK_PORT'] = '80'
 
 logger = False
 socket_thread = None
@@ -56,7 +60,7 @@ class Esp32Server:
             self.__socket_thread.start()
 
         if not fcgi:
-            self.__web_server.run()
+            self.__web_server.run(host=environ.get('FLASK_HOST'), port=environ.get('FLASK_PORT'))
 
     @property
     def web(self) -> WebServer:
