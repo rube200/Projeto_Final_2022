@@ -16,7 +16,7 @@
                             id="stream-view"
                             {% if doorbell.online == True %}
                             name="stream-view"
-                            url="{{ url_for('esp_stream', esp_id=doorbell.id) }}"
+                            url="{{ url_for('stream', uuid=doorbell.id) }}"
                             {% endif %}
                             poster="{{ doorbell.image }}"
                             preload="none">

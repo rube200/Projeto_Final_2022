@@ -6,7 +6,7 @@ from time import monotonic, sleep
 import bcrypt
 import jwt
 from flask import Flask, redirect, url_for, current_app, abort, session, render_template, request, flash, \
-    stream_with_context
+    stream_with_context, jsonify
 from flask_mail import Mail, Message
 
 from common.database_accessor import DatabaseAccessor
@@ -17,7 +17,7 @@ from common.notification_type import NotificationType
 
 NAV_DICT = [
     {'id': 'doorbells', 'title': 'Manage Doorbells', 'icon': 'bi-book-fill', 'url': 'doorbells'},
-    {'id': 'all_streams', 'title': 'All Streams', 'icon': 'bi-cast', 'url': 'all_streams'},
+    {'id': 'streams', 'title': 'All Streams', 'icon': 'bi-cast', 'url': 'streams'},
     {'id': 'notifications', 'title': 'Notifications', 'icon': 'bi-bell-fill', 'url': 'notifications'},
     {'id': 'statistics', 'title': 'Statistics', 'icon': 'bi-bar-chart-fill', 'url': 'doorbells'},
 ]
@@ -70,14 +70,15 @@ class WebServer(DatabaseAccessor, Flask):
         self.add_url_rule('/register', 'register', self.__endpoint_register, methods=['GET', 'POST'])
         self.add_url_rule('/logout', 'logout', endpoint_logout)
         self.add_url_rule('/doorbells', 'doorbells', self.__endpoint_doorbells)
-        self.add_url_rule('/doorbell/<int:uuid>', 'doorbell', self.__endpoint_doorbell)
-        self.add_url_rule('/all_streams', 'all_streams', self.__endpoint_all_streams)
-        self.add_url_rule('/stream/<int:uuid>', 'stream', self.__endpoint_esp_stream)
+        self.add_url_rule('/doorbells/<int:uuid>', 'doorbell', self.__endpoint_doorbell)
+        self.add_url_rule('/streams', 'streams', self.__endpoint_streams)
+        self.add_url_rule('/streams/<int:uuid>', 'stream', self.__endpoint_stream)
         self.add_url_rule('/notifications', 'notifications', self.__endpoint_notifications)
+        self.add_url_rule('/notifications-api', 'notifications-api', self.__endpoint_notifications_api)
         self.add_url_rule('/open_doorbell/<int:uuid>', 'open_doorbell', self.__endpoint_open_doorbell)
         self.register_error_handler(400, lambda e: redirect(url_for('index')))
         self.register_error_handler(404, lambda e: redirect(url_for('index')))
-        self.template_context_processors[None].append(lambda: dict(nav=NAV_DICT))
+        self.template_context_processors[None].append(lambda: dict(debug=self.debug, nav=NAV_DICT))
 
     def __authenticate(self):
         token = session.get('token')
@@ -215,32 +216,35 @@ class WebServer(DatabaseAccessor, Flask):
 
         return redirect_after_auth(data[0], data[1])
 
+
+
+
     def __endpoint_doorbells(self):
         bells = self.__get_doorbells()
         if bells is None:
             return redirect(url_for('index'))
 
         return render_template('doorbells.html', doorbells=bells)
-
     # todo recheck this one
     # noinspection PyMethodMayBeStatic,PyUnusedLocal
     def __endpoint_doorbell(self, uuid: int):
         return render_template('doorbell.html')
 
-    def __endpoint_all_streams(self):
+
+    def __endpoint_streams(self):
         bells = self.__get_doorbells()
         if bells is None:
             return redirect(url_for('index'))
 
-        return render_template('all_streams.html', doorbells=bells)
-
-    def __endpoint_esp_stream(self, uuid: int):
+        return render_template('streams.html', doorbells=bells)
+    def __endpoint_stream(self, uuid: int):
         user_id = self.__authenticate()
         if not user_id or not self._check_owner(user_id, uuid):
             return b'Content-Length: 0'
 
         stream_context = stream_with_context(self.__generate_stream(uuid))
         return self.response_class(stream_context, mimetype='multipart/x-mixed-replace; boundary=frame')
+
 
     # todo recheck this one
     def __endpoint_notifications(self):
@@ -276,6 +280,14 @@ class WebServer(DatabaseAccessor, Flask):
         finally:
             cursor.close()
             con.close()
+    def __endpoint_notifications_api(self):
+        username = self.__authenticate()
+        if not username:
+            return jsonify({'error': 'Not authenticated'}, 401)
+
+        notifications = self._get_notifications(username)
+        return jsonify(notifications)
+
 
     def __endpoint_open_doorbell(self, uuid: int):
         user_id = self.__authenticate()

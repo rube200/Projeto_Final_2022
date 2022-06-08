@@ -134,12 +134,28 @@ class DatabaseAccessor:
             cursor.close()
             con.close()
 
-    def _get_doorbells_by_owner(self, username):
+    def _get_doorbells_by_owner(self, username: str):
         con = self._get_connection()
         cursor = con.cursor()
         try:
             cursor.execute('SELECT id, name FROM doorbell WHERE owner = ?', [username.upper()]),
-            data = cursor.fetchall()
+            return cursor.fetchall()
+        finally:
+            cursor.close()
+            con.close()
+
+    def _get_notifications(self, username: str):
+        con = self._get_connection()
+        cursor = con.cursor()
+        try:
+            cursor.execute('SELECT n.id, d.name, n.time, n.type '
+                           'FROM notifications n '
+                           'INNER JOIN doorbell d '
+                           'ON n.esp_id = d.id '
+                           'WHERE NOT n.checked '
+                           'AND d.owner = ?',
+                           [username.upper()]),
+            return cursor.fetchall()
         finally:
             cursor.close()
             con.close()
