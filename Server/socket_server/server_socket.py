@@ -9,8 +9,8 @@ from typing import Tuple
 from common.database_accessor import DatabaseAccessor
 from common.esp_client import EspClient
 from common.esp_clients import EspClients
+from common.esp_events import EspEvents
 from common.notification_type import NotificationType
-from socket_common.socket_events import SocketEvents
 
 
 def get_address() -> tuple[str, int]:
@@ -25,7 +25,7 @@ def socket_opt(sock: socket):
 
 
 class ServerSocket(DatabaseAccessor):
-    def __init__(self, clients: EspClients, events: SocketEvents):
+    def __init__(self, clients: EspClients, events: EspEvents):
         super(ServerSocket, self).__init__(environ.get('DATABASE') or 'esp32cam.sqlite')
         self.__clients = clients
         self.__events = events
@@ -68,7 +68,7 @@ class ServerSocket(DatabaseAccessor):
             return None
 
         del self.__clients[uuid]
-        owner = self.__get_owner(uuid)
+        owner = self._get_owner(uuid)
         if not owner:
             log.info(f'Esp32 not registered {uuid!r}')
 
@@ -76,10 +76,10 @@ class ServerSocket(DatabaseAccessor):
         return not owner, 5000, 5000, 5000
 
     def __on_esp_username_recv(self, client: EspClient, username: str) -> bool:
-        return self.__register_doorbell(username, client.uuid)
+        return self._register_doorbell(username, client.uuid)
 
     def __on_notification(self, client: EspClient, notification_type: NotificationType, path: str) -> None:
-        self.__add_notification(client.uuid, notification_type, path)
+        self._add_notification(client.uuid, notification_type, path)
 
     def __process_tcp(self, key, events: int) -> None:
         if not key.data:

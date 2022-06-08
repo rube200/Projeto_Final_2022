@@ -3,15 +3,14 @@ from socket import socket
 from time import monotonic
 from typing import Tuple
 
-from socket_common.socket_events import SocketEvents
-
+from common.esp_events import EspEvents
 from common.notification_type import NotificationType
 from socket_client.client_record import ClientRecord
 from socket_client.client_socket import ClientSocket
 
 
 class EspClient(ClientSocket, ClientRecord):
-    def __init__(self, address: Tuple[str, int], selector: BaseSelector, tcp_socket: socket, events: SocketEvents):
+    def __init__(self, address: Tuple[str, int], selector: BaseSelector, tcp_socket: socket, events: EspEvents):
         ClientSocket.__init__(self, address, selector, tcp_socket)
         ClientRecord.__init__(self, lambda: self.__camera)
 
@@ -81,7 +80,7 @@ class EspClient(ClientSocket, ClientRecord):
             return
 
         self.__stream_requests += 1
-        if self.__stream_requests is 1:
+        if self.__stream_requests == 1:
             self.__send_start_stream()
 
     def on_stop_stream_requested(self, uuid: int) -> None:
@@ -89,6 +88,6 @@ class EspClient(ClientSocket, ClientRecord):
             return
 
         self.__stream_requests -= 1
-        if self.__stream_requests is 0:
+        if self.__stream_requests == 0:
             self.__send_stop_stream()
             return

@@ -4,7 +4,7 @@ from threading import Thread
 from traceback import format_exc
 
 from common.esp_clients import EspClients
-from socket_common.socket_events import SocketEvents
+from common.esp_events import EspEvents
 from socket_server.server_socket import ServerSocket
 from web.web_server import WebServer
 
@@ -31,7 +31,7 @@ def config_logger(filename: str = 'esp32server.py.log'):
 class Esp32Server:
     def __init__(self):
         self.__clients = EspClients()
-        self.__events = SocketEvents()
+        self.__events = EspEvents()
         self.__socket_server = ServerSocket(self.__clients, self.__events) if 'WERKZEUG_RUN_MAIN' in environ else None
         self.__socket_thread = None
         self.__web_server = WebServer(self.__clients, self.__events)

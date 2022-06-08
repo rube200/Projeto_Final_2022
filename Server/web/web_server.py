@@ -54,10 +54,10 @@ class WebServer(DatabaseAccessor, Flask):
         self.__setup_web()
 
     def __setup_db(self):
-        con = self.__get_connection()
+        con = self._get_connection()
         cursor = con.cursor()
 
-        with current_app.open_resource(current_app.config['SCHEMA_FILE']) as f:
+        with self.open_resource(self.config['SCHEMA_FILE']) as f:
             cursor.executescript(f.read().decode('utf-8'))
         con.commit()
 
@@ -90,7 +90,7 @@ class WebServer(DatabaseAccessor, Flask):
         except (jwt.ExpiredSignatureError | jwt.InvalidTokenError):
             return None
 
-        data = self.__get_user_by_username(username)
+        data = self._get_user_by_username(username)
         session['user_id'] = username = data[0]
         session['user_name'] = data[1]
         return username
@@ -100,7 +100,7 @@ class WebServer(DatabaseAccessor, Flask):
         if not username:
             return None
 
-        data = self.__get_doorbells_by_owner(username)
+        data = self._get_doorbells_by_owner(username)
         if not data:
             return []
 
@@ -154,7 +154,7 @@ class WebServer(DatabaseAccessor, Flask):
 
     def __on_notification(self, client: EspClient, notification_type: NotificationType, _):
         try:
-            email = self.__get_owner_email(client.uuid)
+            email = self._get_owner_email(client.uuid)
             if not email:
                 return
 
@@ -184,7 +184,7 @@ class WebServer(DatabaseAccessor, Flask):
             flash('Username and/or password are required.', 'danger')
             return render_template('login.html')
 
-        data = self.__try_login_user(username, password)
+        data = self._try_login_user(username, password)
         if not data:
             flash('Invalid username or password.', 'danger')
             return render_template('login.html')
@@ -206,7 +206,7 @@ class WebServer(DatabaseAccessor, Flask):
             return render_template('register.html')
 
         password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-        data = self.__try_register_user(username, email, password)
+        data = self._try_register_user(username, email, password)
         if not data:
             flash('Username or email already taken.', 'danger')
             return render_template('register.html')
@@ -229,7 +229,7 @@ class WebServer(DatabaseAccessor, Flask):
 
     def __endpoint_esp_stream(self, uuid: int):
         user_id = self.__authenticate()
-        if not user_id or not self.__check_owner(user_id, uuid):
+        if not user_id or not self._check_owner(user_id, uuid):
             return b'Content-Length: 0'
 
         stream_context = stream_with_context(self.__generate_stream(uuid))
@@ -237,7 +237,7 @@ class WebServer(DatabaseAccessor, Flask):
 
     def __endpoint_open_doorbell(self, uuid: int):
         user_id = self.__authenticate()
-        if not user_id or not self.__check_owner(user_id, uuid):
+        if not user_id or not self._check_owner(user_id, uuid):
             return abort(401)
 
         if self.__events.on_open_doorbell_requested(uuid):
