@@ -3,10 +3,11 @@ from socket import socket
 from time import monotonic
 from typing import Tuple
 
+from socket_common.socket_events import SocketEvents
+
 from common.notification_type import NotificationType
 from socket_client.client_record import ClientRecord
 from socket_client.client_socket import ClientSocket
-from socket_common.socket_events import SocketEvents
 
 
 class EspClient(ClientSocket, ClientRecord):
@@ -16,7 +17,7 @@ class EspClient(ClientSocket, ClientRecord):
 
         self.__events = events
         self.__events.on_camera_requested += self.__on_camera_requested
-        self.__events.on_open_relay_requested += self.__on_open_relay_requested
+        self.__events.on_open_doorbell_requested += self.__on_open_doorbell_requested
         self.__events.on_start_stream_requested += self.on_start_stream_requested
         self.__events.on_stop_stream_requested += self.on_stop_stream_requested
 
@@ -29,7 +30,7 @@ class EspClient(ClientSocket, ClientRecord):
         ClientRecord.__del__(self)
         self.__events.on_stop_stream_requested -= self.on_stop_stream_requested
         self.__events.on_start_stream_requested -= self.on_start_stream_requested
-        self.__events.on_open_relay_requested -= self.__on_open_relay_requested
+        self.__events.on_open_doorbell_requested -= self.__on_open_doorbell_requested
         self.__events.on_camera_requested -= self.__on_camera_requested
         self.__events = None
         del self.__config_bell_duration
@@ -67,7 +68,7 @@ class EspClient(ClientSocket, ClientRecord):
             return self.camera
         return None
 
-    def __on_open_relay_requested(self, uuid: int) -> None:
+    def __on_open_doorbell_requested(self, uuid: int) -> None:
         if uuid is self.__uuid:
             self.__send_open_relay()
 
@@ -77,6 +78,7 @@ class EspClient(ClientSocket, ClientRecord):
 
         if is_maintain_stream:
             self.__send_start_stream()
+            return
 
         self.__stream_requests += 1
         if self.__stream_requests is 1:

@@ -16,12 +16,12 @@
                             id="stream-view"
                             {% if doorbell.online == True %}
                             name="stream-view"
-                            url="{{ url_for('stream', esp_id=doorbell.id) }}"
+                            url="{{ url_for('esp_stream', esp_id=doorbell.id) }}"
                             {% endif %}
                             poster="{{ doorbell.image }}"
-                            preload="none"
-                            src="{{ url_for('stream', esp_id=doorbell.id) }}">
+                            preload="none">
                     </video>
+                    <!-- todo -->
                     <figcaption class="figure-caption text-center">{{ doorbell.name }}</figcaption>
                     <figcaption class="figure-caption text-center">{{ doorbell.state }}</figcaption>
                 </figure>
