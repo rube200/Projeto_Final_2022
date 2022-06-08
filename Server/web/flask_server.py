@@ -260,3 +260,44 @@ def open_relay(esp_id: int):
 def image(esp_id: int):
     client = web.get_client(esp_id)
     return send_file(BytesIO(client.camera), mimetype='image/jpeg') if client else abort(400)
+
+<< << << < HEAD: Server / web / flask_server.py
+== == == =
+
+@web.route('/images')
+def images():
+    if authenticate():
+        # add dtQuery for notificationss here
+
+        cursor = get_db().cursor()
+        try:
+            # cursor.execute("SELECT notifications.TYPE, notifications.PATH, notifications.DATE, DOORBELL.NAME FROM notifications JOIN DOORBELL ON notifications.DOORBELL_ID = DOORBELL.ID join user on user.name WHERE DOORBELL.owner  LIKE ? order by notifications.DATE desc", (user,))
+            cursor.execute(
+                "SELECT notifications.PATH, notifications.time, doorbell.name FROM notifications JOIN doorbell ON notifications.esp_id = doorbell.id WHERE doorbell.owner LIKE ? and notifications.type not like 0 order by notifications.time desc",
+                [session.get('user_id'), ])
+            db_rows = cursor.fetchall()
+            # types = []
+            paths = []
+            names = []
+            dates = []
+            for bell in db_rows:
+                # types.append(bell[0])
+                paths.append(bell[1])
+                dates.append(bell[2].split(".")[0])  # split to remove miliseconds
+                names.append(bell[3])
+
+            # return render_template('imageGal.html', types = types, paths = paths, dates = dates, doorbells = names)
+            return render_template('imageGal.html', paths=paths, dates=dates, doorbells=names)
+
+        finally:
+            cursor.close()
+
+    return redirect(url_for('login'))
+
+
+@web.route('/bell')
+def doorbellTest():
+    return render_template('doorbell.html')
+
+>> >> >> > 26325
+aec04b0975a605a18fd3b43442b50f4de7b: Server / esp_web / flask_server.py
