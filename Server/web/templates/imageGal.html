@@ -1,0 +1,88 @@
+{% extends 'default_e_bell.html' %}
+
+{% set nav_title='Doorbells registered to this user' %}
+{% set no_bells=doorbells|length <= 0 %}
+
+{% block e_bell_content %}
+<div class="row">
+  <div class="col-sm-6 col-md-4 col-lg-3 image-container">
+    <figure>
+      <div class="pic image"><img src='static/default_profile.png' class="img-thumbnail"></div>
+      <figcaption>
+        doorbell1</br>
+        yesteryear
+      </figcaption>
+    </figure>
+  </div>
+  <div class="col-sm-6 col-md-4 col-lg-3 image-container">
+    <figure>
+      <div class="pic image"><video src='static/ronaldo.mp4' class="img-thumbnail"></div>
+      <figcaption>
+        doorbell2</br>
+        yesteryear+1
+      </figcaption>
+    </figure>
+  </div>
+    {% for path in paths %}
+      <div class="col-sm-6 col-md-4 col-lg-3 image-container">
+    
+        <figure>
+          
+            {% if ".mp4" in types[loop.index0] %}
+              <div class="pic image"><video src='{{ path }}' class="img-thumbnail"></div>
+            {% elif types[loop.index0] == "vid" %}
+              <div class="pic image"><img src='{{ path }}' class="img-thumbnail"></div>                
+            {% endif %}  
+            <figcaption>
+              {{ doorbells[loop.index0]}}</br>
+              {{ dates[loop.index0]}}
+            </figcaption>
+        </figure>
+
+
+      </div>
+    {% endfor %}
+    </div>
+
+    <div class="popup-pic" id = "big1">
+      <span id="span1">&times;</span>
+      <img src='{{ paths[0] }}' alt="" controls>
+    </div>
+    <div class="popup-pic" id = "big2">
+        <span id="span2">&times;</span>
+        <video src='{{ paths[0] }}' alt="" controls>
+    </div>
+
+      <script src="static/vendors/js/vendor.bundle.base.js"></script>
+      <script>
+          
+          document.querySelectorAll('.image-container img').forEach(image =>{
+            image.onclick = () =>{
+              document.getElementById('big1').style.display = 'block';
+              document.querySelector('.popup-pic img').src = image.getAttribute('src');
+              console.log('src to: '+ image.getAttribute('src'));
+            }             
+          });
+      
+
+          document.querySelectorAll('.image-container video').forEach(vid =>{
+            vid.onclick = () =>{
+            document.getElementById('big2').style.display = 'block';
+            document.querySelector('.popup-pic video').src = vid.getAttribute('src');
+            }      
+        });
+
+          document.getElementById('span1').onclick = () =>{
+            document.getElementById('big1').style.display = 'none';
+          };
+          document.getElementById('span2').onclick = () =>{
+            document.getElementById('big2').style.display = 'none';
+          };
+
+ 
+
+      
+      
+      </script>
+
+{% endblock %}
