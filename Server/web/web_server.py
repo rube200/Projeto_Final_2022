@@ -471,7 +471,7 @@ class WebServer(DatabaseAccessor, Flask):
             paths.append(url_for('static', filename='default_profile.png'))
             dates.append('12.2.20')  # split to remove milliseconds
             names.append('doorbell1')
-            checked.append(False)
+            checked.append(True)
             types.append(0)         
             paths.append(url_for('static', filename='default_profile.png'))
             dates.append('12.2.21')  # split to remove milliseconds
