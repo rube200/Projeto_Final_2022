@@ -317,3 +317,16 @@ header {
     cursor: pointer;
     margin: 5px;
 }
+.vertical-center {
+    margin-top: 5px;
+    position: absolute;
+    left: 50%;
+    -ms-transform: translateX( -50%);
+    transform: translateX(-50%);
+  }
+
+  .boxy {
+    height: 150px;
+    position: relative;
+  }
+
