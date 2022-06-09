@@ -129,7 +129,7 @@
 
    
     function getText(){
-        if (document.getElementById("textarea").value == name.defaultValue && document.getElementById("username").value) //this checks for changes to form, needs testing
+        if (document.getElementById("textarea").value == name.defaultValue && document.getElementById("username").value && document.getElementById("password").value) //this checks for changes to form, needs testing
             return
         var text = document.getElementById("textarea").value;
         var words = text.split(/\r?\n/);       
