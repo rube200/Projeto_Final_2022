@@ -47,7 +47,10 @@ public:
 
     void sendFrame(uint8_t *, size_t);
 
+
 private:
+    void resetValues();
+
     size_t receiveHeader(int);
 
     void processPacket();

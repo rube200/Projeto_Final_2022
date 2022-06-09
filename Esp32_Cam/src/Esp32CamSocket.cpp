@@ -1,5 +1,17 @@
 #include "Esp32CamSocket.h"
 
+void Esp32CamSocket::resetValues() {
+    readPacket.resetPacket();
+    usernamePortal = false;
+    isSocketReady = Nothing;
+    streamUntil = 0;
+    bellCaptureDuration = 0;
+    motionCaptureDuration = 0;
+    bellSent = false;
+    motionSent = false;
+    openRelayUntil = 0;
+}
+
 void Esp32CamSocket::setHost(const char *host_ip, const uint16_t host_port) {
     host = host_ip;
     port = host_port;
@@ -20,6 +32,7 @@ bool Esp32CamSocket::connectSocket(const bool should_restart_esp) {
         return false;
     }
 
+    resetValues();
     Serial.printf("Connecting to host %s:%hu...\n", host, port);
     for (auto i = 0; i < CONNECT_TRY; i++) {
         if (connect(host, port)) {
