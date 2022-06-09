@@ -3,6 +3,8 @@ from typing import Tuple
 
 import bcrypt
 
+from common.notification_type import NotificationType
+
 
 class DatabaseAccessor:
     def __init__(self, database):
@@ -49,24 +51,24 @@ class DatabaseAccessor:
             cursor.close()
             con.close()
 
-    def _add_notification(self, uuid, notification_type, path) -> None:
+    def _add_notification(self, uuid: int, notification_type: NotificationType, path: str) -> None:
         con = self._get_connection()
         cursor = con.cursor()
         try:
-            cursor.execute('INSERT INTO notifications(esp_id, type, path) VALUES (?, ?, ?)',
-                           [uuid, notification_type, path])
+            cursor.execute('INSERT INTO notifications(uuid, type, path) VALUES (?, ?, ?)',
+                           [uuid, notification_type.value, path])
             con.commit()
         finally:
             cursor.close()
             con.close()
 
-    def _get_owner_email(self, esp_id: int) -> str or None:
+    def _get_owner_email(self, uuid: int) -> str or None:
         con = self._get_connection()
         cursor = con.cursor()
         try:
             cursor.execute(
                 'SELECT u.email FROM user u INNER JOIN doorbell d on u.username = d.owner WHERE d.id = ? LIMIT 1',
-                [esp_id])
+                [uuid])
             data = cursor.fetchone()
             return data[0] if data else None
         finally:
@@ -151,7 +153,7 @@ class DatabaseAccessor:
             cursor.execute('SELECT n.id, d.name, n.time, n.type '
                            'FROM notifications n '
                            'INNER JOIN doorbell d '
-                           'ON n.esp_id = d.id '
+                           'ON n.uuid = d.id '
                            'WHERE NOT n.checked '
                            'AND d.owner = ?',
                            [username.upper()]),

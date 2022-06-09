@@ -28,7 +28,7 @@ create table if not exists notifications
     id      integer
         constraint notifications_pk
             primary key autoincrement,
-    esp_id  integer not null,
+    uuid    integer not null,
     time    timestamp default current_timestamp not null,
     type    integer not null,
     checked boolean   default false not null,
