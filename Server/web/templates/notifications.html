@@ -11,9 +11,9 @@
     
         <figure>
           
-            {% if ".mp4" in types[loop.index0] %}
+            {% if ".mp4" in path %}
               <div class="pic image"><video src='{{ path }}' class="img-thumbnail"></div>
-            {% elif types[loop.index0] == "vid" %}
+            {% else %}
               <div class="pic image"><img src='{{ path }}' class="img-thumbnail"></div>                
             {% endif %}  
             <figcaption>
@@ -29,7 +29,7 @@
 
     <div class="popup-pic" id = "big1">
       <span id="span1">&times;</span>
-      <img src='{{ paths[0] }}' alt="" controls>
+      <img src='{{ paths[0] }}' alt="">
     </div>
     <div class="popup-pic" id = "big2">
         <span id="span2">&times;</span>
@@ -42,7 +42,6 @@
             image.onclick = () =>{
               document.getElementById('big1').style.display = 'block';
               document.querySelector('.popup-pic img').src = image.getAttribute('src');
-              console.log('src to: '+ image.getAttribute('src'));
             }             
           });
       
