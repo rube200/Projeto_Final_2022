@@ -40,8 +40,13 @@ bool Esp32CamSocket::connectSocket(const bool should_restart_esp) {
 
 
 void Esp32CamSocket::processSocket() {
+    if (available() < 0) {
+        Serial.println("TODO Available bellow 0");
+        return;
+    }
+
     switch (isSocketReady) {
-        case Nothing:
+        case UuidNeeded:
             if (sendUuid()) {
                 isSocketReady = UuidSent;
             }
@@ -56,7 +61,7 @@ void Esp32CamSocket::processSocket() {
 
     do {
         const auto av = available();
-        if (av <= 0) {
+        if (av == 0) {
             return;
         }
 
@@ -128,12 +133,23 @@ size_t Esp32CamSocket::receiveHeader(int av) {
 void Esp32CamSocket::processPacket() {
     const auto type = readPacket.getPacketType();
     if (type == Uuid) {
-        Serial.printf("Received a uuid packet, something is wrong.");
+        if (isSocketReady > UuidSent) {
+            Serial.printf("Received a uuid packet, something is wrong.");
+            return;
+        }
+
+        if (sendUuid()) {
+            isSocketReady = UuidSent;
+        }
+        else {
+            isSocketReady = UuidNeeded;
+        }
         return;
     }
 
     switch (isSocketReady) {
         case Nothing:
+        case UuidNeeded:
         case ConfigReceived:
             Serial.printf("ERROR: This should be unreachable | State(%u): Nothing or ConfigReceived.\n", isSocketReady);
             return;

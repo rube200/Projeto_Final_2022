@@ -16,11 +16,7 @@ public:
     WifiManagerParam(const char *id, const char *label, const char *defaultValue, int length) : WiFiManagerParameter(id, label, defaultValue, length) {}
 
     void clearParams() {
-        Serial.println(getValue());
-        Serial.println(getValueLength());
         init(nullptr,  getLabel(), getValue(), getValueLength(), "", getLabelPlacement());
-        Serial.println(getValue());
-        Serial.println(getValueLength());
     }
 
     void setLabel(const char *label) {

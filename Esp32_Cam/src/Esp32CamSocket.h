@@ -13,10 +13,11 @@
 
 enum socketState {
     Nothing = 0,
-    UuidSent = 1,
-    ConfigReceived = 2,
-    UsernameSent = 3,
-    Ready = 4
+    UuidNeeded = 1,
+    UuidSent = 2,
+    ConfigReceived = 3,
+    UsernameSent = 4,
+    Ready = 5
 };
 
 class Esp32CamSocket : private WiFiClient {

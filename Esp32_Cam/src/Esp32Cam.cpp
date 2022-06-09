@@ -22,7 +22,6 @@ void Esp32Cam::begin() {
 void Esp32Cam::startSocket() {
     socket.setHost(wifi.getHostParam(), wifi.getPortParam());
 
-    socket.connectSocket();//first try will likely to fail
     while (!socket.connectSocket()) {
         if (!wifi.requestSocketConfig()) {
             Serial.println("Exit requested");
