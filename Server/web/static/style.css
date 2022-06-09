@@ -114,11 +114,11 @@ header {
     --bs-btn-disabled-border-color: #de4eeb !important;
 }
 
-.card-hover:hover {
+.card-hover:active, .card-hover:hover {
     transform: scale(1.1);
 }
 
-.card-hover:hover {
+.card-hover-cyan:hover {
     background-color: rgb(140, 235, 230);
 }
 
@@ -134,9 +134,7 @@ header {
     background-color: rgb(112, 112, 112);
 }
 
-.card-hover:active {
-    transform: scale(1);
-}
+
 
 
 .image-container {
