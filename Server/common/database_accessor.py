@@ -1,5 +1,5 @@
 from sqlite3 import connect as sql_connect, PARSE_DECLTYPES, Row as sqlRow
-from typing import Tuple
+from typing import List, Tuple
 
 import bcrypt
 
@@ -179,7 +179,7 @@ class DatabaseAccessor:
             con.close()
 
     def _doorbell_update(self, username: str, password: str, uuid: int, doorbell_name: str,
-                         alert_emails: list[str]) -> bool:
+                         alert_emails: List[str]) -> bool:
         if not self._try_login_user(username, password):
             return False
 

@@ -13,7 +13,7 @@ from common.esp_events import EspEvents
 from common.notification_type import NotificationType
 
 
-def get_address() -> tuple[str, int]:
+def get_address() -> Tuple[str, int]:
     ip = environ.get('ESP32_IP') or '0.0.0.0'
     port = int(environ.get('ESP32_PORT') or 2376)
     return ip, port

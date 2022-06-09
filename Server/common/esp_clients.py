@@ -1,3 +1,5 @@
+from typing import Dict
+
 from common.esp_client import EspClient
 
 
@@ -16,7 +18,7 @@ class EspClients:
         self.__esp_clients[key] = value
 
     @property
-    def esp_clients(self) -> dict:
+    def esp_clients(self) -> Dict[int, EspClient]:
         return dict(self.__esp_clients)
 
     def get_client(self, uuid: int) -> EspClient:
