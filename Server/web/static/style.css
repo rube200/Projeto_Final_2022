@@ -118,20 +118,20 @@ header {
     transform: scale(1.1);
 }
 
-.card-hover-cyan:hover {
+.card-hover:hover {
     background-color: rgb(140, 235, 230);
 }
 
-.card-hover-purple:hover {
+.card-hover-purple {
     background-color: rgba(174, 0, 255, 0.575);
 }
 
-.card-hover-red:hover {
+.card-hover-red {
     background-color: rgba(255, 0, 43, 0.603);
 }
 
-.card-hover-grey:hover {
-    background-color: rgb(75, 75, 75);
+.card-hover-grey {
+    background-color: rgb(112, 112, 112);
 }
 
 .card-hover:active {
