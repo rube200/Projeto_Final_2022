@@ -3,8 +3,8 @@
 {% set nav_title='Doorbell' %}
 
 {% block e_bell_content %}
-    <div class="align-items-baseline d-flex doorbell flex-wrap justify-content-evenly p-5 h-auto">
-        <div class="card doorbell-detail-container">
+    <div class="align-items-baseline d-flex doorbell flex-wrap justify-content-evenly h-auto">
+        <div class="card doorbell-detail-container mt-5 mx-2">
             <div class="doorbell-detail-title card-body">
                 <h2 class="card-title text-center">Stream</h2>
             </div>
@@ -26,12 +26,12 @@
             </div>
             -->
         </div>
-        <div class="card doorbell-detail-container">
+        <div class="card doorbell-detail-container my-5 mx-2">
             <div class="doorbell-detail-title card-body">
                 <h2 class="card-title text-center">Details</h2>
             </div>
             <div class="card-body">
-                <form action="{{ url_for('doorbell', uuid=doorbell.id) }}" method="POST">
+                <form action="{{ url_for('doorbell', uuid=doorbell.id) }}" onsubmit="preventDefault()" method="POST">
                     <div class="form-group">
                         <label for="doorbell-name">Doorbell Name</label>
                         <input class="form-control" id="doorbell-name" name="doorbell-name"
@@ -39,9 +39,9 @@
                     </div>
                     <div class="form-group">
                         <label for="alert-emails">Emails to alert</label>
-                        <textarea class="form-control" id="alert-emails"
-                                  name="alert-emails">{% for email in doorbell.emails %}
-                            {{ email }}{% endfor %}</textarea>
+                        <textarea class="form-control"
+                                  id="alert-emails"
+                                  name="alert-emails">{{ doorbell.emails }}</textarea>
                     </div>
                     <div class="form-group">
                         <label for="password">Password Confirmation</label>
@@ -54,6 +54,9 @@
                     </div>
                 </form>
             </div>
+        </div>
+        <div class="">
+
         </div>
         <!--
         <div class="row">
@@ -157,7 +160,19 @@
 
 {% block scripts %}
     <script>
+        const emails = [
+            {% for email in doorbell.emails %}
+            '{{ email }}',
+            {% endfor %}
+        ];
+
+        console.debug(emails)
         window.addEventListener('load', function () {
+            const emailsElement = document.getElementById('alert-emails');
+            if (emailsElement) {
+                emailsElement.value = emails.join('\r\n');
+            }
+
             const stream = document.getElementById('stream-view');
             if (stream) {
                 stream.data = stream.getAttribute('url');
