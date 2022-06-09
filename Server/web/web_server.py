@@ -10,7 +10,7 @@ import jwt
 from email_validator import EmailNotValidError, validate_email
 from flask import Flask, redirect, url_for, current_app, abort, session, render_template, request, flash, \
     stream_with_context, jsonify
-from flask_mail import Mail
+from flask_mail import Mail, Message
 
 from common.database_accessor import DatabaseAccessor
 from common.esp_client import EspClient
@@ -174,10 +174,10 @@ class WebServer(DatabaseAccessor, Flask):
             if not emails:
                 return
             # todo email set
-            # with self.app_context():
-            #    self.__mail.send(
-            #        Message('Doorbell pressed' if notification_type is NotificationType.Bell else 'Motion detected',
-            #                [emails], 'GOT CHECK IT NOW. MOTHERFUCKER'))#email
+            with self.app_context():
+                self.__mail.send(
+                    Message('Doorbell pressed' if notification_type is NotificationType.Bell else 'Motion detected',
+                            [emails], 'GOT CHECK IT NOW. MOTHERFUCKER'))
         except Exception as ex:
             log.error(f'Exception while getting email for uuid {client.uuid}: {ex!r}')
 
