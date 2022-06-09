@@ -62,15 +62,15 @@ class DatabaseAccessor:
             cursor.close()
             con.close()
 
-    def _get_owner_email(self, uuid: int) -> str or None:
+    def _get_alert_emails(self, uuid: int) -> str or None:
         con = self._get_connection()
         cursor = con.cursor()
         try:
             cursor.execute(
-                'SELECT u.email FROM user u INNER JOIN doorbell d on u.username = d.owner WHERE d.id = ? LIMIT 1',
+                'SELECT e.email FROM doorbell_notifications e WHERE e.uuid = ?',
                 [uuid])
-            data = cursor.fetchone()
-            return data['email'] if data else None
+            data = cursor.fetchall()
+            return [d['email'] for d in data] if data else []
         finally:
             cursor.close()
             con.close()
@@ -174,6 +174,31 @@ class DatabaseAccessor:
             data = cursor.fetchall()
             emails = [d['email'] for d in data] if data else []
             return name, emails
+        finally:
+            cursor.close()
+            con.close()
+
+    def _doorbell_update(self, username: str, password: str, uuid: int, doorbell_name: str,
+                         alert_emails: list[str]) -> bool:
+        if not self._try_login_user(username, password):
+            return False
+
+        con = self._get_connection()
+        cursor = con.cursor()
+        try:
+            cursor.execute('UPDATE doorbell SET name = ? WHERE id = ?', [doorbell_name, uuid])
+            con.commit()
+
+            cursor.execute('DELETE FROM doorbell_notifications WHERE uuid = ?', [uuid])
+            con.commit()
+
+            if not len(alert_emails):
+                return True
+
+            cursor.executemany('INSERT OR IGNORE INTO doorbell_notifications VALUES (?, ?)',
+                               zip([uuid] * len(alert_emails), alert_emails))
+            con.commit()
+            return True
         finally:
             cursor.close()
             con.close()

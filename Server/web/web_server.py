@@ -1,4 +1,5 @@
 import logging as log
+import re
 from base64 import b64encode
 from collections import namedtuple
 from os import environ, path
@@ -6,6 +7,7 @@ from time import monotonic, sleep
 
 import bcrypt
 import jwt
+from email_validator import EmailNotValidError, validate_email
 from flask import Flask, redirect, url_for, current_app, abort, session, render_template, request, flash, \
     stream_with_context, jsonify
 from flask_mail import Mail
@@ -75,7 +77,7 @@ class WebServer(DatabaseAccessor, Flask):
         self.add_url_rule('/register', 'register', self.__endpoint_register, methods=['GET', 'POST'])
         self.add_url_rule('/logout', 'logout', endpoint_logout)
         self.add_url_rule('/doorbells', 'doorbells', self.__endpoint_doorbells)
-        self.add_url_rule('/doorbells/<int:uuid>', 'doorbell', self.__endpoint_doorbell)
+        self.add_url_rule('/doorbells/<int:uuid>', 'doorbell', self.__endpoint_doorbell, methods=['GET', 'POST'])
         self.add_url_rule('/streams', 'streams', self.__endpoint_streams)
         self.add_url_rule('/streams/<int:uuid>', 'stream', self.__endpoint_stream)
         self.add_url_rule('/notifications', 'notifications', self.__endpoint_notifications)
@@ -167,14 +169,14 @@ class WebServer(DatabaseAccessor, Flask):
 
     def __on_notification(self, client: EspClient, notification_type: NotificationType, _):
         try:
-            email = self._get_owner_email(client.uuid)
-            if not email:
+            emails = self._get_alert_emails(client.uuid)
+            if not emails:
                 return
             # todo email set
             # with self.app_context():
             #    self.__mail.send(
             #        Message('Doorbell pressed' if notification_type is NotificationType.Bell else 'Motion detected',
-            #                [email], 'GOT CHECK IT NOW. MOTHERFUCKER'))#email
+            #                [emails], 'GOT CHECK IT NOW. MOTHERFUCKER'))#email
         except Exception as ex:
             log.error(f'Exception while getting email for uuid {client.uuid}: {ex!r}')
 
@@ -236,6 +238,9 @@ class WebServer(DatabaseAccessor, Flask):
     # todo recheck this one
     # noinspection PyMethodMayBeStatic,PyUnusedLocal
     def __endpoint_doorbell(self, uuid: int):
+        if request.method == 'POST':
+            return self.__doorbell_update(uuid)
+
         username = self.__authenticate()
         if not username:
             return redirect(url_for('index'))
@@ -384,3 +389,27 @@ class WebServer(DatabaseAccessor, Flask):
             return 'OK', 200
 
         return 'ERROR', 400
+
+    def __doorbell_update(self, uuid: int):
+        username = self.__authenticate()
+        if not username or not self._check_owner(username, uuid):
+            return abort(401)
+
+        password = request.form.get('password')
+        doorbell_name = request.form.get('doorbell-name')
+        emails = request.form.get('alert-emails')
+        re_emails = re.split('[,;\r\n ]', emails)
+        alert_emails = []
+        for email in re_emails:
+            if not email:
+                continue
+
+            try:
+                validate_email(email)
+            except EmailNotValidError:
+                continue
+
+            alert_emails.append(email.strip())
+        self._doorbell_update(username, password, uuid, doorbell_name, alert_emails)
+        # todo check return from update
+        return 'OK', 200

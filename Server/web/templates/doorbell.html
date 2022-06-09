@@ -31,16 +31,16 @@
                 <h2 class="card-title text-center">Details</h2>
             </div>
             <div class="card-body">
-                <form action="" method="POST">
+                <form action="{{ url_for('doorbell', uuid=doorbell.id) }}" method="POST">
                     <div class="form-group">
-                        <label for="Doorbell-name">Doorbell Name</label>
-                        <input class="form-control" id="Doorbell-name" name="Doorbell-name"
+                        <label for="doorbell-name">Doorbell Name</label>
+                        <input class="form-control" id="doorbell-name" name="doorbell-name"
                                placeholder="{{ doorbell.name }}" value="{{ doorbell.name }}" type="text"/>
                     </div>
                     <div class="form-group">
-                        <label for="Emails-alert">Emails to alert</label>
-                        <textarea class="form-control" id="Emails-alert"
-                                  name="Emails-alert">{% for email in doorbell.emails %}
+                        <label for="alert-emails">Emails to alert</label>
+                        <textarea class="form-control" id="alert-emails"
+                                  name="alert-emails">{% for email in doorbell.emails %}
                             {{ email }}{% endfor %}</textarea>
                     </div>
                     <div class="form-group">
