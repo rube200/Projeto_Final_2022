@@ -463,6 +463,51 @@ class WebServer(DatabaseAccessor, Flask):
             names.append('doorbell3')
             checked.append(False)
             types.append(1)
+            paths.append(url_for('static', filename='default_profile.png'))
+            dates.append('12.2.23')  # split to remove milliseconds
+            names.append('doorbell3')
+            checked.append(False)
+            types.append(1)
+            paths.append(url_for('static', filename='default_profile.png'))
+            dates.append('12.2.20')  # split to remove milliseconds
+            names.append('doorbell1')
+            checked.append(False)
+            types.append(0)         
+            paths.append(url_for('static', filename='default_profile.png'))
+            dates.append('12.2.21')  # split to remove milliseconds
+            names.append('doorbell2')
+            checked.append(True)
+            types.append(2)         
+            paths.append(url_for('static', filename='default_profile.png'))
+            dates.append('12.2.23')  # split to remove milliseconds
+            names.append('doorbell3')
+            checked.append(True)
+            types.append(1)
+            paths.append(url_for('static', filename='default_profile.png'))
+            dates.append('12.2.23')  # split to remove milliseconds
+            names.append('doorbell3')
+            checked.append(True)
+            types.append(1)
+            paths.append(url_for('static', filename='default_profile.png'))
+            dates.append('12.2.20')  # split to remove milliseconds
+            names.append('doorbell1')
+            checked.append(True)
+            types.append(0)         
+            paths.append(url_for('static', filename='default_profile.png'))
+            dates.append('12.2.21')  # split to remove milliseconds
+            names.append('doorbell2')
+            checked.append(True)
+            types.append(2)         
+            paths.append(url_for('static', filename='default_profile.png'))
+            dates.append('12.2.23')  # split to remove milliseconds
+            names.append('doorbell3')
+            checked.append(True)
+            types.append(1)
+            paths.append(url_for('static', filename='default_profile.png'))
+            dates.append('12.2.23')  # split to remove milliseconds
+            names.append('doorbell3')
+            checked.append(True)
+            types.append(1)
             # return render_template('imageGal.html', types = types, paths = paths, dates = dates, doorbells = names)
             return render_template('alerts.html', paths=paths, dates=dates, doorbells=names, checks = checked, types = types)
         finally:
