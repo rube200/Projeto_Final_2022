@@ -61,7 +61,7 @@
                             <span class="menu-title me-2">{{ nv.title }}</span>
                             <i class="bi {{ nv.icon }}">
                                 {% if nv.id|lower == 'notifications' %}
-                                <span class="badge bg-danger position-absolute rounded-circle start-75 text-center translate-middle top-0" id="notifications-count">0</span>
+                                <span class="badge bg-danger position-absolute rounded-circle start-75 text-center translate-middle top-50" id="notifications-count">0</span>
                                 {% endif %}
                             </i>
                         </a>
@@ -81,7 +81,6 @@
 {% block scripts %}
     <script>
         const notificationsCount = document.getElementById('notifications-count');
-
         function getNotificationsCount() {
             fetch('{{ url_for('notifications-api') }}')
                 .then(response => response.json())

@@ -14,8 +14,8 @@
             </div>
             <form class="form1">
                 <div class="horizontal1" style="margin-bottom: 10px;">
-                    <button class="btnCyan">Take Picture</button>
-                    <button class="btnViolet">Save Recording</button>
+                    <button type="button" class="btnCyan" onclick="takePic()">Take Picture</button>
+                    <button type="button" class="btnViolet" onclick="takeVid()">Save Recording</button>
                 </div>
             </form>
 
@@ -43,7 +43,7 @@
                 </div>
                 <div class="horizontal2">
                     <button type="button" class="btnGreen" onclick="getText();">Submit</button> <!-- type button to not submit -->
-                    <button type="button" class="btnRed">Cancel</button>
+                    <button type="button" class="btnRed" onclick="rebuild()">Cancel</button>
                 </div>
             </form>
         </div>
@@ -80,7 +80,7 @@
 </div>
 <div class="popup-pic" id = "big1">
     <span id="span1">&times;</span>
-    <img src='{{ paths[0] }}' alt="" controls>
+    <img src='{{ paths[0] }}' alt="">
   </div>
   <div class="popup-pic" id = "big2">
       <span id="span2">&times;</span>
@@ -93,7 +93,6 @@
         image.onclick = () =>{
         document.getElementById('big1').style.display = 'block';
         document.querySelector('.popup-pic img').src = image.getAttribute('src');
-        console.log('src to: '+ image.getAttribute('src'));
         }             
         });
     
@@ -113,8 +112,25 @@
     };
 
 
-    //Alert
+    //Btns
+    function takePic(){
+        //request server take a pic, wait and refresh?
+    }
+    function takePic(){
+        //request server save a video, wait and refresh?
+    }
+
+    function rebuild(){
+        //reload page
+        window.location.reload(); //needs testing
+        return false; //needs to return false?
+    }
+
+
+   
     function getText(){
+        if ((document.getElementById("textarea").value == name.defaultValue && document.getElementById("username").value) || document.getElementById("password").value) //this checks for changes to form, needs testing
+            return
         var text = document.getElementById("textarea").value;
         var words = text.split(/\r?\n/);       
         for (i in words) {
@@ -123,9 +139,9 @@
                 return;
         }
     }
+    //Alert
 
-
-    function validateEmail (email){
+    function validateEmail (email){ //this function is not working, always returns false
         console.log(email)
         return email.match(/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/);
         };
@@ -146,6 +162,8 @@
         div.parentNode.removeChild(div)  
     }
 
+
+    //missing a post with the new data that sends password to comfirm identity
 </script>
 
 {% endblock %}
