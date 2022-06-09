@@ -69,10 +69,12 @@ class ClientSocket(ClientData):
             return
 
         if pkt_type is PacketType.BellPressed:
+            log.debug(f'Bell pressed for {self._uuid!r}')
             self._process_bell_pressed()
             return
 
         if pkt_type is PacketType.MotionDetected:
+            log.debug(f'Movement Detected for {self._uuid!r}')
             self._process_motion_detected()
             return
 

@@ -1,13 +1,14 @@
 import logging as log
+from base64 import b64encode
 from collections import namedtuple
-from os import environ
+from os import environ, path
 from time import monotonic, sleep
 
 import bcrypt
 import jwt
 from flask import Flask, redirect, url_for, current_app, abort, session, render_template, request, flash, \
     stream_with_context, jsonify
-from flask_mail import Mail, Message
+from flask_mail import Mail
 
 from common.database_accessor import DatabaseAccessor
 from common.esp_client import EspClient
@@ -113,13 +114,18 @@ class WebServer(DatabaseAccessor, Flask):
 
         bells = []
         for bell_data in data:
-            tmp_bell = namedtuple('Bell', 'id, name, image, state')
-            tmp_bell.id = bell_data[0]
-            tmp_bell.name = bell_data[1]
+            tmp_bell = namedtuple('Bell', 'id, name, image, state, online')
+            tmp_bell.id = bell_data['id']
+            tmp_bell.name = bell_data['name']
 
             esp = self.__clients.get_client(tmp_bell.id)
             if esp:
-                tmp_bell.image = esp.camera if esp.camera else url_for('static', filename='default_profile.png')
+                camera = esp.camera
+                if camera:
+                    img = b64encode(camera).decode('utf-8')
+                    tmp_bell.image = f'data:image/jpeg;base64,{img}'
+                else:
+                    tmp_bell.image = url_for('static', filename='default_profile.png')
                 tmp_bell.state = 'Online'
                 tmp_bell.online = True
             else:
@@ -148,7 +154,7 @@ class WebServer(DatabaseAccessor, Flask):
                     start_at = monotonic() + 10
                     self.__events.on_start_stream_requested(uuid, True)
 
-                camera = self.__events.on_camera_requested(uuid)
+                camera = esp.camera
                 if not camera:
                     yield b'--frame\r\nContent-Length: 0'
                     continue
@@ -230,23 +236,36 @@ class WebServer(DatabaseAccessor, Flask):
     # todo recheck this one
     # noinspection PyMethodMayBeStatic,PyUnusedLocal
     def __endpoint_doorbell(self, uuid: int):
+        username = self.__authenticate()
+        if not username:
+            return redirect(url_for('index'))
+
+        if not self._check_owner(username, uuid):
+            return redirect(url_for('doorbells'))
+
+        data = self._get_doorbell_by_uuid(uuid)
+        doorbell = namedtuple('Bell', 'id, name, emails, image, online')
+        doorbell.id = uuid
+        doorbell.name = data[0]
+        doorbell.emails = data[1]
+
+        esp = self.__clients.get_client(uuid)
+        if esp:
+            camera = esp.camera
+            if camera:
+                img = b64encode(camera).decode('utf-8')
+                doorbell.image = f'data:image/jpeg;base64,{img}'
+            else:
+                doorbell.image = url_for('static', filename='default_profile.png')
+            doorbell.online = True
+        else:
+            doorbell.image = url_for('static', filename='default_profile.png')
+            doorbell.online = False
+
         con = self._get_connection()
         cursor = con.cursor()
         # get doorbell data
         try:
-            cursor.execute(
-                'SELECT name, ,emails, owner '
-                'FROM doorbell '
-                'WHERE id LIKE ? ',
-                [uuid])
-            row = cursor.fetchone()
-            name = row[0]
-            emails = []
-            list = row[1].split(",")
-            for email in list:
-                emails.append(email)
-            owner = cursor[2]
-            # get pics
             cursor.execute(
                 'SELECT d.id, d.name, n.time, n.path '
                 'FROM doorbell d '
@@ -256,19 +275,19 @@ class WebServer(DatabaseAccessor, Flask):
                 'AND n.type <> 0 '
                 'AND d.id like ?'
                 'ORDER BY N.time DESC',
-                [owner, uuid])
+                [username, uuid])
             rows = cursor.fetchall()
             paths = []
             names = []
             dates = []
             for row in rows:
                 paths.append(row[1])
-                dates.append(row[2].split(".")[0])  # split to remove milliseconds
+                dates.append(row[2])  # split to remove milliseconds
                 names.append(row[3])
         finally:
             cursor.close()
             con.close()
-        return render_template('doorbell.html', name=name, emails=emails, paths=paths, dates=dates, doorbells=names)
+        return render_template('doorbell.html', doorbell=doorbell)
 
     def __endpoint_streams(self):
         bells = self.__get_doorbells()
@@ -278,12 +297,41 @@ class WebServer(DatabaseAccessor, Flask):
         return render_template('streams.html', doorbells=bells)
 
     def __endpoint_stream(self, uuid: int):
-        user_id = self.__authenticate()
-        if not user_id or not self._check_owner(user_id, uuid):
+        username = self.__authenticate()
+        if not username or not self._check_owner(username, uuid):
             return b'Content-Length: 0'
 
         stream_context = stream_with_context(self.__generate_stream(uuid))
         return self.response_class(stream_context, mimetype='multipart/x-mixed-replace; boundary=frame')
+
+    def __get_notifications(self, exclude_checked: bool = True):
+        username = self.__authenticate()
+        if not username:
+            return None
+
+        data = self._get_notifications_by_username(username, exclude_checked)
+        if not data:
+            return []
+
+        notifications = []
+        for notification_data in data:
+            filepath = notification_data['path']
+            if not path.exists(filepath):
+                continue
+
+            tmp_notification = {
+                'id': notification_data['id'],
+                'name': notification_data['name'],
+                'time': notification_data['time'],
+                'type': notification_data['type'],
+                'path': filepath
+            }
+
+            if not exclude_checked:
+                tmp_notification['checked'] = notification_data['checked']
+
+            notifications.append(tmp_notification)
+        return notifications
 
     # todo recheck this one
     def __endpoint_notifications(self):
@@ -321,16 +369,15 @@ class WebServer(DatabaseAccessor, Flask):
             con.close()
 
     def __endpoint_notifications_api(self):
-        username = self.__authenticate()
-        if not username:
+        notifications = self.__get_notifications()
+        if notifications is None:
             return jsonify({'error': 'Not authenticated'}, 401)
 
-        notifications = self._get_notifications(username)
         return jsonify(notifications)
 
     def __endpoint_open_doorbell(self, uuid: int):
-        user_id = self.__authenticate()
-        if not user_id or not self._check_owner(user_id, uuid):
+        username = self.__authenticate()
+        if not username or not self._check_owner(username, uuid):
             return abort(401)
 
         if self.__events.on_open_doorbell_requested(uuid):

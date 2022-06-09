@@ -32,7 +32,7 @@ create table if not exists notifications
     time    timestamp default current_timestamp not null,
     type    integer not null,
     checked boolean   default false not null,
-    path    text
+    path text not null
 );
 
 create table if not exists doorbell_notifications

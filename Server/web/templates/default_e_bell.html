@@ -22,8 +22,10 @@
                         <li class="nav-item dropdown">
                             <button aria-expanded="false" aria-haspopup="true"
                                     class="bi bi-bell-fill btn btn-dark btn-link nav-link shadow-none"
-                                    data-bs-display="static">
-                                <span class="badge bg-danger position-absolute rounded-circle start-75 text-center translate-middle top-0" id="notifications-count">0</span>
+                                    data-bs-display="static"
+                                    onclick="location.href=&quot;{{ url_for('notifications') }}&quot;">
+                                <span class="badge bg-danger position-absolute rounded-circle start-100 text-center translate-middle top-0"
+                                      name="notifications-count">0</span>
                             </button>
                         </li>
                         <li class="nav-item mx-4">
@@ -45,7 +47,7 @@
 {% endblock %}
 
 {% block content %}
-    <div class="container d-flex flex-nowrap mx-0 px-0 min-vh-100 min-vw-100">
+    <div class="container d-flex flex-nowrap mx-0 px-0 h-100 min-vw-100">
         <div class="bg-dark d-flex flex-column py-3">
             <ul class="nav nav-pills flex-column list-group list-group-flush text-center text-nowrap">
                 <li class="nav-item">
@@ -59,11 +61,12 @@
                         <a class="{% if nv.id|lower == name|lower %} active disabled {% endif %} nav-link text-white"
                            href="{{ url_for(nv.url) }}">
                             <span class="menu-title me-2">{{ nv.title }}</span>
-                            <i class="bi {{ nv.icon }}">
+                            <span class="bi {{ nv.icon }}">
                                 {% if nv.id|lower == 'notifications' %}
-                                <span class="badge bg-danger position-absolute rounded-circle start-75 text-center translate-middle top-50" id="notifications-count">0</span>
+                                    <span class="badge bg-danger position-absolute rounded-circle start-85 text-center translate-middle top-50"
+                                          name="notifications-count">0</span>
                                 {% endif %}
-                            </i>
+                            </span>
                         </a>
                     </li>
                 {% endfor %}
@@ -78,10 +81,9 @@
     </div>
 {% endblock %}
 
-{% block scripts %}
+{% block template_scripts %}
     <script>
-        const notificationsCount = document.getElementById('notifications-count');
-        function getNotificationsCount() {
+        function getNotificationsCount(elements) {
             fetch('{{ url_for('notifications-api') }}')
                 .then(response => response.json())
                 .then(data => {
@@ -91,14 +93,15 @@
                         return;
                     }
 
-                    notificationsCount.innerText = data.length;
+                    elements.forEach(element => element.innerText = data.length);
                 })
                 .catch(error => console.error(`Error calling notifications-api: ${error}`));
         }
 
-        window.onload = function () {
-            setInterval(getNotificationsCount, 5000);
-            getNotificationsCount();
-        }
+        window.addEventListener('load', function () {
+            const notificationsCount = document.getElementsByName('notifications-count');
+            setInterval(() => getNotificationsCount(notificationsCount), 5000);
+            getNotificationsCount(notificationsCount);
+        });
     </script>
 {% endblock %}

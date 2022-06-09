@@ -4,15 +4,16 @@
 {% set no_bells=doorbells|length <= 0 %}
 
 {% block e_bell_content %}
-    <div class="d-flex flex-wrap justify-content-around">
+    <div class="d-flex flex-wrap justify-content-evenly">
         {% for doorbell in doorbells %}
-            <div class="m-2" onclick="location.href=&quot;{{ url_for('doorbell', uuid=doorbell.id) }}&quot;">
+            <div class="card card-hover card-hover-cyan m-5"
+                 onclick="location.href=&quot;{{ url_for('doorbell', uuid=doorbell.id) }}&quot;">
                 <img alt="Last image from stream for {{ doorbell.name }}"
-                     class="card-img-top"
+                     class="figure-img img-fluid"
                      src="{{ doorbell.image }}"
                      width="320"
                      height="240"/>
-                <div class="card-body card-colour">
+                <div class="card-body">
                     <h2 class="card-title">{{ doorbell.name }}</h2>
                     <p class="card-text">Current State:</p>
                     <h3 class="card-subtitle text-muted">{{ doorbell.state }}</h3>

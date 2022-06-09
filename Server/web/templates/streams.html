@@ -5,35 +5,34 @@
 {% set no_bells=doorbells|length <= 0 %}
 
 {% block e_bell_content %}
-    <div class="d-flex flex-wrap justify-content-around">
+    <div class="d-flex flex-wrap justify-content-evenly">
         {% for doorbell in doorbells %}
-            <div class="m-2">
+            <div class="m-5">
                 <figure class="figure">
-                    <video
+                    <object
                             width="320"
                             height="240"
                             class="figure-img img-fluid rounded"
-                            id="stream-view"
+                            data="{{ doorbell.image }}"
                             {% if doorbell.online == True %}
                             name="stream-view"
                             url="{{ url_for('stream', uuid=doorbell.id) }}"
                             {% endif %}
-                            poster="{{ doorbell.image }}"
-                            preload="none">
-                    </video>
+                            type='image/jpeg'>
+                    </object>
                     <figcaption class="figure-caption text-center">{{ doorbell.name }}</figcaption>
                     <figcaption class="figure-caption text-center">{{ doorbell.state }}</figcaption>
                 </figure>
             </div>
         {% endfor %}
     </div>
+{% endblock %}
+
+{% block scripts %}
     <script>
-        window.onload = function () {
-            const videos = document.getElementsByName("stream-view");
-            videos.forEach(video => {
-                video.src = video.getAttribute('url');
-                video.play();
-            });
-        }
+        window.addEventListener('load', function () {
+            const streams = document.getElementsByName('stream-view');
+            streams.forEach(stream => stream.data = stream.getAttribute('url'));
+        });
     </script>
 {% endblock %}

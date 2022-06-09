@@ -12,7 +12,7 @@
             {% if 0 == types[loop.index0] %}
                 <!--system alert-->
                 <div class="card m-2" class = "card">
-                    <div class="card-body card-colour-grey">
+                    <div class="card-body card-hover card-hover-grey">
                       <h2 class="card-title">System Announcement</h2>
                       <img style="width: 50px; float: right;" src="{{ url_for('static', filename='announcement.png') }}">
                       <h3 class="card-subtitle text-muted">{{ date[loop.index0]}}</h3>                    
@@ -21,7 +21,7 @@
             {% elif 1 == types[loop.index0] %}
                 <!--bell rang-->
                 <div class="card m-2" class = "card">
-                    <div class="card-body card-colour-purple">
+                    <div class="card-body card-hover card-hover-purple">
                       <h2 class="card-title">{{ doorbell }}</h2>
                       <h4>Bell Rang</h4>
                       <img style="width: 50px; float: right;" src='{{ paths[loop.index0] }}'>
@@ -31,7 +31,7 @@
             {% else %}    
                 <!--movimento detetado-->
                 <div class="card m-2" class = "card">
-                    <div class="card-body card-colour-red">
+                    <div class="card-body card-hover card-hover-red">
                       <h2 class="card-title">{{ doorbell }}</h2>
                       <h4>Movement Detected</h4>
                       <img style="width: 50px; float: right;" src='{{ paths[loop.index0] }}'>

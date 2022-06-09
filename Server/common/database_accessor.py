@@ -161,3 +161,19 @@ class DatabaseAccessor:
         finally:
             cursor.close()
             con.close()
+
+    def _get_doorbell_by_uuid(self, uuid: int):
+        con = self._get_connection()
+        cursor = con.cursor()
+        try:
+            cursor.execute('SELECT name FROM doorbell WHERE id = ?', [uuid]),
+            data = cursor.fetchone()
+            name = data['name'] if data else uuid
+
+            cursor.execute('SELECT email FROM doorbell_notifications WHERE uuid = ?', [uuid]),
+            data = cursor.fetchall()
+            emails = [d['email'] for d in data] if data else []
+            return name, emails
+        finally:
+            cursor.close()
+            con.close()

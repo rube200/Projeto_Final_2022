@@ -3,139 +3,127 @@
 {% set nav_title='Doorbell' %}
 
 {% block e_bell_content %}
-<div class="main">
-    <div class="master" style = "display: flex">
-        <div class="container-form">  
-            <div class="header">
-                <h2>Stream</h2>
+    <div class="align-items-baseline d-flex doorbell flex-wrap justify-content-evenly p-5 h-auto">
+        <div class="card doorbell-detail-container">
+            <div class="doorbell-detail-title card-body">
+                <h2 class="card-title text-center">Stream</h2>
             </div>
-            <div class="stream-box">
-                <video src= "{{ url_for('static', filename='ronaldo.mp4') }}" controls></video>
+            <object
+                    width="320"
+                    height="240"
+                    class="doorbell-detail-stream img-fluid"
+                    data="{{ doorbell.image }}"
+                    {% if doorbell.online == True %}
+                    id="stream-view"
+                    url="{{ url_for('stream', uuid=doorbell.id) }}"
+                    {% endif %}
+                    type='image/jpeg'>
+            </object>
+            <!--
+            <div class="card-body d-flex flex-nowrap justify-content-evenly m-1 text-center w-auto">
+                <button class="border-0 btn btn-cyan p-2 text-white w-35" onclick="takePic()" type="button" >Take Picture</button>
+                <button class="border-0 btn btn-violet p-2 text-white w-35" onclick="takeVid()" type="button" >Save Recording</button>
             </div>
-            <form class="form1">
-                <div class="horizontal1" style="margin-bottom: 10px;">
-                    <button type="button" class="btnCyan" onclick="takePic()">Take Picture</button>
-                    <button type="button" class="btnViolet" onclick="takeVid()">Save Recording</button>
-                </div>
-            </form>
-
+            -->
         </div>
-        <div class="container-form">
-            <div class="header">
-                <h2>Details</h2>
+        <div class="card doorbell-detail-container">
+            <div class="doorbell-detail-title card-body">
+                <h2 class="card-title text-center">Details</h2>
             </div>
-            <form id="form" class="form2">
-                <div class="form-control">
-                    <label for="username">Doorbell Name</label>
-                    <input type="text" placeholder="{{ name }}" id="username" />
-                </div>
-                <div class="form-control" id="targeNode">
-                    <label for="username">Emails to Alert</label>
-                    <textarea name="message" rows="3" cols="30" id="textarea">
-                        {% for email in emails %}
-{{email}}
-                        {% endfor %}
-                </textarea> 
-                </div>
-                <div class="form-control">
-                    <label for="username">Password Confirmation</label>
-                    <input type="password" placeholder="Password" id="password"/>
-                </div>
-                <div class="horizontal2">
-                    <button type="button" class="btnGreen" onclick="getText();">Submit</button> <!-- type button to not submit -->
-                    <button type="button" class="btnRed" onclick="rebuild()">Cancel</button>
-                </div>
-            </form>
+            <div class="card-body">
+                <form action="" method="POST">
+                    <div class="form-group">
+                        <label for="Doorbell-name">Doorbell Name</label>
+                        <input class="form-control" id="Doorbell-name" name="Doorbell-name"
+                               placeholder="{{ doorbell.name }}" value="{{ doorbell.name }}" type="text"/>
+                    </div>
+                    <div class="form-group">
+                        <label for="Emails-alert">Emails to alert</label>
+                        <textarea class="form-control" id="Emails-alert"
+                                  name="Emails-alert">{% for email in doorbell.emails %}
+                            {{ email }}{% endfor %}</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password Confirmation</label>
+                        <input class="form-control" id="password" placeholder="Password" name="password"
+                               type="password">
+                    </div>
+                    <div class="d-flex flex-nowrap justify-content-evenly m-2 mt-4 text-center">
+                        <button class="border-0 btn btn-green p-2 text-white w-25" type="submit">Submit</button>
+                        <button class="border-0 btn btn-red p-2 text-white w-25" type="reset">Cancel</button>
+                    </div>
+                </form>
+            </div>
         </div>
-    </div>
-    
-
-
-    <div class="row">
-        <div class="col-sm-6 col-md-4 col-lg-3 image-container">
-          {% for path in paths %}
+        <!--
+        <div class="row">
             <div class="col-sm-6 col-md-4 col-lg-3 image-container">
-          
+               {# {% for path in paths %} #}
+            <div class="col-sm-6 col-md-4 col-lg-3 image-container">
               <figure>
-                
-                  {% if ".mp4" in types[loop.index0] %}
-                    <div class="pic image"><video src='{{ path }}' class="img-thumbnail"></div>
-                  {% elif types[loop.index0] == "vid" %}
-                    <div class="pic image"><img src='{{ path }}' class="img-thumbnail"></div>                
-                  {% endif %}  
+                  {# {% if ".mp4" in types[loop.index0] %} #}
+                    <div class="pic image"><video src='{# {{ path }} #}' class="img-thumbnail"></div>
+                  {# {% elif types[loop.index0] == "vid" %} #}
+                    <div class="pic image"><img src='{# {{ path }} #}' class="img-thumbnail"></div>
+                  {# {% endif %}   #}
                   <figcaption>
-                    {{ doorbells[loop.index0]}}</br>
-                    {{ dates[loop.index0]}}
+                    {# {{ doorbells[loop.index0]}} #}</br>
+                    {# {{ dates[loop.index0]}} #}
                   </figcaption>
               </figure>
-      
-      
+
+
             </div>
-          {% endfor %}
-          </div>
-
-
-
+          {# {% endfor %} #}
+            </div>
+        </div>
+        -->
     </div>
-</div>
-<div class="popup-pic" id = "big1">
-    <span id="span1">&times;</span>
-    <img src='{{ paths[0] }}' alt="">
-  </div>
-  <div class="popup-pic" id = "big2">
+    <!--
+
+              <div class="popup-pic" id="big1">
+        <span id="span1">&times;</span>
+        <img src='{# {{ paths[0] }} #}' alt="">
+    </div>
+    <div class="popup-pic" id = "big2">
       <span id="span2">&times;</span>
-      <video src='{{ paths[0] }}' alt="" controls>
-  </div>
+      <video src='{# {{ paths[0] }} #}' alt="" controls>
+    </div>
+-->
 
     <script>
-    //IMGs
-    document.querySelectorAll('.image-container img').forEach(image =>{
-        image.onclick = () =>{
-        document.getElementById('big1').style.display = 'block';
-        document.querySelector('.popup-pic img').src = image.getAttribute('src');
-        }             
+        //IMGs
+        document.querySelectorAll('.image-container img').forEach(image => {
+            image.onclick = () => {
+                document.getElementById('big1').style.display = 'block';
+                document.querySelector('.popup-pic img').src = image.getAttribute('src');
+            }
         });
-    
-
-    document.querySelectorAll('.image-container video').forEach(vid =>{
-        vid.onclick = () =>{
-        document.getElementById('big2').style.display = 'block';
-        document.querySelector('.popup-pic video').src = vid.getAttribute('src');
-        }      
-      });
-
-    document.getElementById('span1').onclick = () =>{
-        document.getElementById('big1').style.display = 'none';
-    };
-    document.getElementById('span2').onclick = () =>{
-        document.getElementById('big2').style.display = 'none';
-    };
 
 
-    //Btns
-    function takePic(){
-        //request server take a pic, wait and refresh?
-    }
-    function takePic(){
-        //request server save a video, wait and refresh?
-    }
+        document.querySelectorAll('.image-container video').forEach(vid => {
+            vid.onclick = () => {
+                document.getElementById('big2').style.display = 'block';
+                document.querySelector('.popup-pic video').src = vid.getAttribute('src');
+            }
+        });
 
-    function rebuild(){
-        //reload page
-        window.location.reload(); //needs testing
-        return false; //needs to return false?
-    }
+        /*document.getElementById('span1').onclick = () =>{
+            document.getElementById('big1').style.display = 'none';
+        };
+        document.getElementById('span2').onclick = () =>{
+            document.getElementById('big2').style.display = 'none';
+        };*/
 
 
-   
-    function getText(){
-        if ((document.getElementById("textarea").value == name.defaultValue && document.getElementById("username").value) || document.getElementById("password").value) //this checks for changes to form, needs testing
-            return
-        var text = document.getElementById("textarea").value;
-        var words = text.split(/\r?\n/);       
-        for (i in words) {
-            if(!validateEmail(words[i]))
-                creatAlert(words[i])
+        function getText() {
+            if ((document.getElementById("textarea").value == name.defaultValue && document.getElementById("username").value) || document.getElementById("password").value) //this checks for changes to form, needs testing
+                return
+            var text = document.getElementById("textarea").value;
+            var words = text.split(/\r?\n/);
+            for (i in words) {
+                if (!validateEmail(words[i]))
+                    creatAlert(words[i])
                 return;
         }
     }
@@ -155,15 +143,25 @@
         ele.innerHTML = "<span class='closebtn'>&times;</span>\nInvalid Email: " + email
         node.parentNode.parentNode.insertBefore(ele, document.getElementById("targeNode").nextSibling);
         document.querySelector(".closebtn").addEventListener("click", gone)
-    } 
-
-    function gone(){
-        div = document.querySelector(".alert")
-        div.parentNode.removeChild(div)  
     }
 
+        function gone() {
+            div = document.querySelector(".alert")
+            div.parentNode.removeChild(div)
+        }
 
-    //missing a post with the new data that sends password to comfirm identity
-</script>
 
+        //missing a post with the new data that sends password to comfirm identity
+    </script>
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        window.addEventListener('load', function () {
+            const stream = document.getElementById('stream-view');
+            if (stream) {
+                stream.data = stream.getAttribute('url');
+            }
+        });
+    </script>
 {% endblock %}
