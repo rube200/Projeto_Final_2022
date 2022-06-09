@@ -18,7 +18,6 @@ class EspClient(ClientSocket, ClientRecord):
         ClientRecord.__init__(self, lambda: self._camera)
 
         self.__events = events
-        self.__events.on_camera_requested += self.__on_camera_requested
         self.__events.on_open_doorbell_requested += self.__on_open_doorbell_requested
         self.__events.on_start_stream_requested += self.on_start_stream_requested
         self.__events.on_stop_stream_requested += self.on_stop_stream_requested
@@ -37,7 +36,6 @@ class EspClient(ClientSocket, ClientRecord):
         self.__events.on_stop_stream_requested -= self.on_stop_stream_requested
         self.__events.on_start_stream_requested -= self.on_start_stream_requested
         self.__events.on_open_doorbell_requested -= self.__on_open_doorbell_requested
-        self.__events.on_camera_requested -= self.__on_camera_requested
         self.__events = None
         del self.__config_bell_duration
         del self.__config_motion_duration
@@ -84,17 +82,12 @@ class EspClient(ClientSocket, ClientRecord):
     def _process_motion_detected(self) -> None:
         self.__prepare_and_notify(NotificationType.Movement, self.__config_motion_duration)
 
-    def __on_camera_requested(self, uuid: int) -> bytes or None:
-        if uuid is self._uuid:
-            return self.camera
-        return None
-
     def __on_open_doorbell_requested(self, uuid: int) -> None:
-        if uuid is self._uuid:
+        if uuid == self._uuid:
             self._send_open_relay()
 
     def on_start_stream_requested(self, uuid: int, is_maintain_stream: bool) -> None:
-        if uuid is not self._uuid:
+        if uuid != self._uuid:
             return
 
         if is_maintain_stream:
@@ -106,7 +99,7 @@ class EspClient(ClientSocket, ClientRecord):
             self._send_start_stream()
 
     def on_stop_stream_requested(self, uuid: int) -> None:
-        if uuid is not self._uuid:
+        if uuid != self._uuid:
             return
 
         self.__stream_requests -= 1

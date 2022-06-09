@@ -34,3 +34,14 @@ create table if not exists notifications
     checked boolean   default false not null,
     path    text
 );
+
+create table if not exists doorbell_notifications
+(
+    uuid  integer
+        references doorbell
+            on update cascade on delete cascade,
+    email text,
+    constraint doorbell_notifications_pk
+        primary key (uuid, email)
+);
+create index if not exists doorbell_notifications_nocase_email ON doorbell_notifications (email COLLATE NOCASE);

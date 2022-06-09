@@ -24,7 +24,7 @@ class DatabaseAccessor:
         try:
             cursor.execute('SELECT owner FROM doorbell WHERE id = ? LIMIT 1', [uuid])
             data = cursor.fetchone()
-            return data[0] if data else None
+            return data['owner'] if data else None
         finally:
             cursor.close()
             con.close()
@@ -70,7 +70,7 @@ class DatabaseAccessor:
                 'SELECT u.email FROM user u INNER JOIN doorbell d on u.username = d.owner WHERE d.id = ? LIMIT 1',
                 [uuid])
             data = cursor.fetchone()
-            return data[0] if data else None
+            return data['email'] if data else None
         finally:
             cursor.close()
             con.close()
@@ -92,7 +92,7 @@ class DatabaseAccessor:
         try:
             cursor.execute('SELECT username, name FROM user WHERE username = ? LIMIT 1', [username.upper()])
             data = cursor.fetchone()
-            return data[0], data[1] if data else None
+            return data['username'], data['name'] if data else None
         finally:
             cursor.close()
             con.close()
@@ -110,9 +110,9 @@ class DatabaseAccessor:
         if not data:
             return None
 
-        usr = data[0]
-        name = data[1]
-        pwd = data[2]
+        usr = data['username']
+        name = data['name']
+        pwd = data['password']
         if not usr or not name or not pwd or not bcrypt.checkpw(password.encode('utf-8'), pwd):
             return None
 
@@ -131,7 +131,7 @@ class DatabaseAccessor:
 
             cursor.execute('SELECT username, name FROM user WHERE username = ?', [username.upper()])
             data = cursor.fetchone()
-            return data[0], data[1] if data else None
+            return data['username'], data['name'] if data else None
         finally:
             cursor.close()
             con.close()
@@ -146,17 +146,17 @@ class DatabaseAccessor:
             cursor.close()
             con.close()
 
-    def _get_notifications(self, username: str):
+    def _get_notifications_by_username(self, username: str, exclude_checked: bool = True):
         con = self._get_connection()
         cursor = con.cursor()
         try:
-            cursor.execute('SELECT n.id, d.name, n.time, n.type '
-                           'FROM notifications n '
-                           'INNER JOIN doorbell d '
-                           'ON n.uuid = d.id '
-                           'WHERE NOT n.checked '
-                           'AND d.owner = ?',
-                           [username.upper()]),
+            cursor.execute(
+                f'SELECT n.id, d.name, n.time, n.type, n.path{", n.checked " if not exclude_checked else " "}'
+                'FROM notifications n '
+                'INNER JOIN doorbell d '
+                f'ON {"NOT n.checked AND" if exclude_checked else ""} n.uuid = d.id '
+                f'WHERE d.owner = ?',
+                [username.upper()]),
             return cursor.fetchall()
         finally:
             cursor.close()
