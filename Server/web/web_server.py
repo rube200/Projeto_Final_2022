@@ -53,6 +53,10 @@ class WebServer(DatabaseAccessor, Flask):
         self.__setup_db()
         self.__setup_web()
 
+    def __del__(self):
+        DatabaseAccessor.__del__(self)
+        # todo
+
     def __setup_db(self):
         con = self._get_connection()
         cursor = con.cursor()
@@ -160,13 +164,13 @@ class WebServer(DatabaseAccessor, Flask):
             email = self._get_owner_email(client.uuid)
             if not email:
                 return
-
-            self.__mail.send(
-                Message('Doorbell pressed' if notification_type is NotificationType.Bell else 'Motion detected',
-                        [email],
-                        'GOT CHECK IT NOW. MOTHERFUCKER'))
+            # todo email set
+            # with self.app_context():
+            #    self.__mail.send(
+            #        Message('Doorbell pressed' if notification_type is NotificationType.Bell else 'Motion detected',
+            #                [email], 'GOT CHECK IT NOW. MOTHERFUCKER'))#email
         except Exception as ex:
-            log.error(f'Exception while getting email for esp_id {client.uuid}: {ex!r}')
+            log.error(f'Exception while getting email for uuid {client.uuid}: {ex!r}')
 
     def __endpoint_index(self):
         if self.__authenticate():
@@ -216,24 +220,22 @@ class WebServer(DatabaseAccessor, Flask):
 
         return redirect_after_auth(data[0], data[1])
 
-
-
-
     def __endpoint_doorbells(self):
         bells = self.__get_doorbells()
         if bells is None:
             return redirect(url_for('index'))
 
         return render_template('doorbells.html', doorbells=bells)
+
     # todo recheck this one
     # noinspection PyMethodMayBeStatic,PyUnusedLocal
     def __endpoint_doorbell(self, uuid: int):
         con = self._get_connection()
         cursor = con.cursor()
-        #get doorbell data
+        # get doorbell data
         try:
             cursor.execute(
-                'SELECT name, ,emails, owner ' 
+                'SELECT name, ,emails, owner '
                 'FROM doorbell '
                 'WHERE id LIKE ? ',
                 [uuid])
@@ -244,12 +246,12 @@ class WebServer(DatabaseAccessor, Flask):
             for email in list:
                 emails.append(email)
             owner = cursor[2]
-        #get pics
+            # get pics
             cursor.execute(
                 'SELECT d.id, d.name, n.time, n.path '
                 'FROM doorbell d '
                 'INNER JOIN notifications n '
-                'ON d.id = n.esp_id '
+                'ON d.id = n.uuid '
                 'WHERE d.owner LIKE ? '
                 'AND n.type <> 0 '
                 'AND d.id like ?'
@@ -266,8 +268,7 @@ class WebServer(DatabaseAccessor, Flask):
         finally:
             cursor.close()
             con.close()
-        return render_template('doorbell.html', name = name, emails=emails, paths=paths, dates=dates, doorbells=names) 
-
+        return render_template('doorbell.html', name=name, emails=emails, paths=paths, dates=dates, doorbells=names)
 
     def __endpoint_streams(self):
         bells = self.__get_doorbells()
@@ -275,6 +276,7 @@ class WebServer(DatabaseAccessor, Flask):
             return redirect(url_for('index'))
 
         return render_template('streams.html', doorbells=bells)
+
     def __endpoint_stream(self, uuid: int):
         user_id = self.__authenticate()
         if not user_id or not self._check_owner(user_id, uuid):
@@ -282,7 +284,6 @@ class WebServer(DatabaseAccessor, Flask):
 
         stream_context = stream_with_context(self.__generate_stream(uuid))
         return self.response_class(stream_context, mimetype='multipart/x-mixed-replace; boundary=frame')
-
 
     # todo recheck this one
     def __endpoint_notifications(self):
@@ -297,7 +298,7 @@ class WebServer(DatabaseAccessor, Flask):
                 'SELECT d.id, d.name, n.time, n.path '
                 'FROM doorbell d '
                 'INNER JOIN notifications n '
-                'ON d.id = n.esp_id '
+                'ON d.id = n.uuid '
                 'WHERE d.owner LIKE ? '
                 'AND n.type <> 0 '
                 'ORDER BY N.time DESC',
@@ -318,6 +319,7 @@ class WebServer(DatabaseAccessor, Flask):
         finally:
             cursor.close()
             con.close()
+
     def __endpoint_notifications_api(self):
         username = self.__authenticate()
         if not username:
@@ -325,7 +327,6 @@ class WebServer(DatabaseAccessor, Flask):
 
         notifications = self._get_notifications(username)
         return jsonify(notifications)
-
 
     def __endpoint_open_doorbell(self, uuid: int):
         user_id = self.__authenticate()

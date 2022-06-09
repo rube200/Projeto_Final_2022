@@ -6,7 +6,7 @@
 {% block e_bell_content %}
     <div class="d-flex flex-wrap justify-content-around">
         {% for doorbell in doorbells %}
-            <div class="m-2" onclick="location.href=&quot;{{ url_for('doorbell', esp_id=doorbell.id) }}&quot;">
+            <div class="m-2" onclick="location.href=&quot;{{ url_for('doorbell', uuid=doorbell.id) }}&quot;">
                 <img alt="Last image from stream for {{ doorbell.name }}"
                      class="card-img-top"
                      src="{{ doorbell.image }}"
