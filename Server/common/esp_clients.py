@@ -19,5 +19,5 @@ class EspClients:
     def esp_clients(self) -> dict:
         return dict(self.__esp_clients)
 
-    def get_client(self, esp_id: int) -> EspClient:
-        return self.__esp_clients.get(esp_id)
+    def get_client(self, uuid: int) -> EspClient:
+        return self.__esp_clients.get(uuid)

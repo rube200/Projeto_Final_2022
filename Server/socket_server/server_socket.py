@@ -2,7 +2,7 @@ import logging as log
 from multiprocessing import Event
 from os import environ
 from selectors import DefaultSelector, EVENT_READ
-from socket import socket, AF_INET, SOCK_STREAM, SOL_SOCKET, SO_KEEPALIVE
+from socket import socket, AF_INET, SHUT_RDWR, SOCK_STREAM, SOL_SOCKET, SO_KEEPALIVE
 from traceback import format_exc
 from typing import Tuple
 
@@ -46,19 +46,24 @@ class ServerSocket(DatabaseAccessor):
         pass  # todo
 
     def __accept_new_client(self, _) -> None:
+        connection = None
         try:
             connection, address = self.__tcp_socket.accept()
             socket_opt(connection)
-
-            EspClient(address, self.__selector, connection, self.__events)
+            esp_client = EspClient(address, self.__selector, connection, self.__events)
+            esp_client.send_uuid_request()
             log.info(f'Accepted a connection from {address!r}')
 
         except OSError as ex:
             log.debug(f'OS error while accepting: {ex!r}')
+            connection.shutdown(SHUT_RDWR)
+            connection.close()
 
         except Exception as ex:
             log.error(f'Exception while accepting client: {ex!r}')
             log.error(format_exc())
+            connection.shutdown(SHUT_RDWR)
+            connection.close()
 
     def __on_esp_uuid_recv(self, client: EspClient) -> Tuple[bool, int, int, int] or None:
         uuid = client.uuid
@@ -83,23 +88,17 @@ class ServerSocket(DatabaseAccessor):
 
     def __process_tcp(self, key, events: int) -> None:
         if not key.data:
-            self.__selector.unregister(key)
-            log.warning(f'Selector have no data: {key!r}')
+            self.__accept_new_client(key)
             return
 
-        if not isinstance(key.data, tuple):
-            self.__selector.unregister(key)
-            log.warning(f'Selector have invalid data: {key!r}')
-            return
-
-        (client, func) = key.data
-        if not client or not func:
+        client = key.data
+        if not hasattr(client, 'process_socket'):
             self.__selector.unregister(key)
             log.warning(f'Selector have invalid data: {key!r}')
             return
 
         try:
-            func(events)
+            client.process_socket(events)
         except ConnectionResetError as ex:
             if ex.errno != 10054:
                 log.error(f'Exception while processing client {client.address}: {ex!r}')
@@ -114,7 +113,7 @@ class ServerSocket(DatabaseAccessor):
             del self.__clients[client.uuid]
 
     def run_forever(self) -> None:
-        self.__selector.register(self.__tcp_socket, EVENT_READ, (self, self.__accept_new_client))
+        self.__selector.register(self.__tcp_socket, EVENT_READ)
         self.__tcp_socket.listen()
         log.info('Waiting connections...')
 

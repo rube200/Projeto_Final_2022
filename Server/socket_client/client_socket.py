@@ -18,7 +18,7 @@ class ClientSocket(ClientData):
         self.__address = address
         self.__packet_read = Packet()
         self.__selector = selector
-        self.__selector.register(tcp_socket, EVENT_READ, (self, self.__process_socket))
+        self.__selector.register(tcp_socket, EVENT_READ, self)
         self.__tcp_socket = tcp_socket
         self.__wait_username = False
         self.__write_buffer = b''
@@ -36,20 +36,20 @@ class ClientSocket(ClientData):
         del self.__write_buffer
 
     def __set_mode(self, mode: int):
-        self.__selector.modify(self.__tcp_socket, mode, (self, self.__process_socket))
+        self.__selector.modify(self.__tcp_socket, mode, self)
 
-    def __process_socket(self, events: int) -> None:
+    def process_socket(self, events: int) -> None:
         if events & EVENT_READ:
             self.__read_socket()
 
         if events & EVENT_WRITE:
             self.__write_socket()
 
-    def __process_packet(self) -> None:
+    def _process_packet(self) -> None:
         pkt_type = self.__packet_read.pkt_type
         pkt_data = self.__packet_read.pkt_data
         if pkt_type is PacketType.Uuid:
-            self.__process_uuid(pkt_data)
+            self._process_uuid(pkt_data)
             return
 
         if not self.uuid:
@@ -57,7 +57,7 @@ class ClientSocket(ClientData):
             return
 
         if pkt_type is PacketType.Username:
-            self.__process_username(pkt_data)
+            self._process_username(pkt_data)
             return
 
         if self.__wait_username:
@@ -65,32 +65,32 @@ class ClientSocket(ClientData):
             return
 
         if pkt_type is PacketType.Image:
-            self.__process_camera(pkt_data)
+            self._process_camera(pkt_data)
             return
 
         if pkt_type is PacketType.BellPressed:
-            self.__process_bell_pressed()
+            self._process_bell_pressed()
             return
 
         if pkt_type is PacketType.MotionDetected:
-            self.__process_motion_detected()
+            self._process_motion_detected()
             return
 
         raise ValueError(f'Unknown {pkt_type!r} from {self.__address!r}')
 
-    def __process_uuid(self, data: bytes) -> None:
-        self.__uuid = int(data.hex(), base=16)
+    def _process_uuid(self, data: bytes) -> None:
+        self._uuid = int(data.hex(), base=16)
 
-    def __process_username(self, data: bytes) -> None:
+    def _process_username(self, data: bytes) -> None:
         raise NotImplementedError(f'{self.__name__} does not implement __process_username')
 
-    def __process_camera(self, data: bytes) -> None:
-        self.__camera = data
+    def _process_camera(self, data: bytes) -> None:
+        self._camera = data
 
-    def __process_bell_pressed(self) -> None:
+    def _process_bell_pressed(self) -> None:
         raise NotImplementedError(f'{self.__name__} does not implement __process_bell_pressed')
 
-    def __process_motion_detected(self) -> None:
+    def _process_motion_detected(self) -> None:
         raise NotImplementedError(f'{self.__name__} does not implement __process_bell_pressed')
 
     def __read_socket(self) -> None:
@@ -108,24 +108,30 @@ class ClientSocket(ClientData):
         if not self.__packet_read.is_ready():
             return
 
-        self.__process_packet()
-        self.__packet_read.reset_packet()
+        try:
+            self._process_packet()
+        finally:
+            self.__packet_read.reset_packet()
 
-    def __send_config(self, config: Tuple[bool, int, int, int]) -> None:
-        data = pack('>iB?iii', 13, PacketType.Config.value, config)
+    def send_uuid_request(self):
+        data = pack('>iB', 0, PacketType.Uuid.value)
         self.__write_data(data)
 
-    def __send_username_confirmation(self, valid_username: bool):
+    def _send_config(self, config: Tuple[bool, int, int, int]) -> None:
+        data = pack('>iB?iii', 13, PacketType.Config.value, *config)
+        self.__write_data(data)
+
+    def _send_username_confirmation(self, valid_username: bool):
         data = pack('>iB?', 1, PacketType.Username.value, valid_username)
         self.__write_data(data)
 
-    def __send_open_relay(self):
+    def _send_open_relay(self):
         self.__send_empty_packet(PacketType.OpenRelay)
 
-    def __send_start_stream(self):
+    def _send_start_stream(self):
         self.__send_empty_packet(PacketType.StartStream)
 
-    def __send_stop_stream(self):
+    def _send_stop_stream(self):
         self.__send_empty_packet(PacketType.StopStream)
 
     def __send_empty_packet(self, packet_type: PacketType) -> None:

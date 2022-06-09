@@ -1,16 +1,16 @@
 class ClientData:
     def __init__(self):
-        self.__uuid = 0
-        self.__camera = b''
+        self._uuid = 0
+        self._camera = b''
 
     def __del__(self):
-        del self.__uuid
-        del self.__camera
+        del self._uuid
+        del self._camera
 
     @property
     def uuid(self):
-        return self.__uuid
+        return self._uuid
 
     @property
     def camera(self):
-        return self.__camera
+        return self._camera
