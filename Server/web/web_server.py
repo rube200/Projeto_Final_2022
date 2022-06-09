@@ -83,6 +83,7 @@ class WebServer(DatabaseAccessor, Flask):
         self.add_url_rule('/notifications', 'notifications', self.__endpoint_notifications)
         self.add_url_rule('/notifications-api', 'notifications-api', self.__endpoint_notifications_api)
         self.add_url_rule('/open_doorbell/<int:uuid>', 'open_doorbell', self.__endpoint_open_doorbell)
+        self.add_url_rule('/alerts', 'alerts', self.__endpoint_open_alerts)
         self.register_error_handler(400, lambda e: redirect(url_for('index')))
         self.register_error_handler(404, lambda e: redirect(url_for('index')))
         self.template_context_processors[None].append(lambda: dict(debug=self.debug, nav=NAV_DICT))
@@ -413,3 +414,57 @@ class WebServer(DatabaseAccessor, Flask):
         self._doorbell_update(username, password, uuid, doorbell_name, alert_emails)
         # todo check return from update
         return 'OK', 200
+
+    def __endpoint_open_alerts(self):
+        username = self.__authenticate()
+        if not username:
+            return redirect(url_for('index'))
+
+        con = self._get_connection()
+        cursor = con.cursor()
+        try:
+            cursor.execute(
+                'SELECT d.id, d.name, n.time, n.path, n.checked, n.type  '
+                'FROM doorbell d '
+                'INNER JOIN notifications n '
+                'ON d.id = n.uuid '
+                'WHERE d.owner LIKE ? '
+                'ORDER BY N.time DESC',
+                [username])
+            rows = cursor.fetchall()
+            # types = []
+            paths = []
+            names = []
+            dates = []
+            checked = []
+            types = []
+            for row in rows:
+                # types.append(bell[0])
+                paths.append(row[3])
+                dates.append(row[2].split(".")[0])  # split to remove milliseconds
+                names.append(row[1])
+                checked.append(row[4])
+                types.append(row[5])
+
+
+            #dummy data
+            paths.append(url_for('static', filename='default_profile.png'))
+            dates.append('12.2.20')  # split to remove milliseconds
+            names.append('doorbell1')
+            checked.append(False)
+            types.append(0)         
+            paths.append(url_for('static', filename='default_profile.png'))
+            dates.append('12.2.21')  # split to remove milliseconds
+            names.append('doorbell2')
+            checked.append(False)
+            types.append(2)         
+            paths.append(url_for('static', filename='default_profile.png'))
+            dates.append('12.2.23')  # split to remove milliseconds
+            names.append('doorbell3')
+            checked.append(False)
+            types.append(1)
+            # return render_template('imageGal.html', types = types, paths = paths, dates = dates, doorbells = names)
+            return render_template('alerts.html', paths=paths, dates=dates, doorbells=names, checks = checked, types = types)
+        finally:
+            cursor.close()
+            con.close()

@@ -3,28 +3,28 @@
 {% set nav_title='Doorbell' %}
 
 {% block e_bell_content %}
-    <div class="align-items-baseline d-flex doorbell flex-wrap justify-content-evenly h-auto">
+    <div class="align-items-baseline d-flex doorbell flex-wrap justify-content-evenly h-100">
         <div class="card doorbell-detail-container mt-5 mx-2">
-            <div class="doorbell-detail-title card-body">
+            <div class="card-body doorbell-detail-title ">
                 <h2 class="card-title text-center">Stream</h2>
             </div>
-            <object
-                    width="320"
-                    height="240"
-                    class="doorbell-detail-stream img-fluid"
-                    data="{{ doorbell.image }}"
-                    {% if doorbell.online == True %}
-                    id="stream-view"
-                    url="{{ url_for('stream', uuid=doorbell.id) }}"
-                    {% endif %}
-                    type='image/jpeg'>
-            </object>
-            <!--
-            <div class="card-body d-flex flex-nowrap justify-content-evenly m-1 text-center w-auto">
-                <button class="border-0 btn btn-cyan p-2 text-white w-35" onclick="takePic()" type="button" >Take Picture</button>
-                <button class="border-0 btn btn-violet p-2 text-white w-35" onclick="takeVid()" type="button" >Save Recording</button>
+            <div class="align-self-center card-img w-auto m-3">
+                <object
+                        width="320"
+                        height="240"
+                        class="img-fluid"
+                        data="{{ doorbell.image }}"
+                        {% if doorbell.online == True %}
+                        id="stream-view"
+                        url="{{ url_for('stream', uuid=doorbell.id) }}"
+                        {% endif %}
+                        type='image/jpeg'>
+                </object>
             </div>
-            -->
+            <div class="card-body d-flex flex-nowrap justify-content-evenly text-center w-auto">
+                <button class="border-0 btn btn-cyan p-2 text-white w-35" onclick="takePic()" type="button" >Take Picture</button>
+                <button class="border-0 btn btn-violet p-2 text-white w-35" onclick="openDoor()" type="button" >Open Door</button>
+            </div>
         </div>
         <div class="card doorbell-detail-container my-5 mx-2">
             <div class="doorbell-detail-title card-body">
@@ -55,18 +55,15 @@
                 </form>
             </div>
         </div>
-        <div class="">
-
-        </div>
         <!--
         <div class="row">
             <div class="col-sm-6 col-md-4 col-lg-3 image-container">
                {# {% for path in paths %} #}
             <div class="col-sm-6 col-md-4 col-lg-3 image-container">
               <figure>
-                  {# {% if ".mp4" in types[loop.index0] %} #}
+                  {# {% if ".mp4" in path %} #}
                     <div class="pic image"><video src='{# {{ path }} #}' class="img-thumbnail"></div>
-                  {# {% elif types[loop.index0] == "vid" %} #}
+                  {# {% else %} #}
                     <div class="pic image"><img src='{# {{ path }} #}' class="img-thumbnail"></div>
                   {# {% endif %}   #}
                   <figcaption>
@@ -78,21 +75,13 @@
 
             </div>
           {# {% endfor %} #}
-            </div>
-        </div>
-        -->
+            </div>-->
     </div>
-    <!--
+    <div class="popup-pic" id="popup-container">
+        <span id="popup-pic close-button">&times;</span>
+        <img alt="Bigger image selected by user" id="popup-image" src="{{ doorbell.image }}">
+    </div>
 
-              <div class="popup-pic" id="big1">
-        <span id="span1">&times;</span>
-        <img src='{# {{ paths[0] }} #}' alt="">
-    </div>
-    <div class="popup-pic" id = "big2">
-      <span id="span2">&times;</span>
-      <video src='{# {{ paths[0] }} #}' alt="" controls>
-    </div>
--->
 
     <script>
         //IMGs
@@ -111,13 +100,12 @@
             }
         });
 
-        /*document.getElementById('span1').onclick = () =>{
+        document.getElementById('span1').onclick = () =>{
             document.getElementById('big1').style.display = 'none';
         };
         document.getElementById('span2').onclick = () =>{
             document.getElementById('big2').style.display = 'none';
-        };*/
-
+        };
 
         function getText() {
             if ((document.getElementById("textarea").value == name.defaultValue && document.getElementById("username").value) || document.getElementById("password").value) //this checks for changes to form, needs testing
@@ -130,6 +118,10 @@
                 return;
         }
     }
+
+
+
+
     //Alert
 
     function validateEmail (email){ //this function is not working, always returns false
@@ -160,13 +152,26 @@
 
 {% block scripts %}
     <script>
+        const uuid = {{ doorbell.id }};
         const emails = [
             {% for email in doorbell.emails %}
             '{{ email }}',
             {% endfor %}
         ];
+        console.debug(emails);
 
-        console.debug(emails)
+        function openDoor() {
+            fetch('{{ url_for('open_doorbell', uuid=doorbell.id) }}', {method: 'POST'})
+                .then(response => console.debug(`Doorbell opened: ${response}`))
+                .catch(error => console.error(`Error opening doorbell ${uuid}: ${error}`));
+        }
+
+        function takePic(){
+            /*fetch('{# { url_for('take_picture', uuid=doorbell.id) }#}', {method: 'POST'})
+                .then(response => console.debug(`TODO opened: ${response}`))
+                .catch(error => console.error(`TODO ${uuid}: ${error}`));*/
+        }
+
         window.addEventListener('load', function () {
             const emailsElement = document.getElementById('alert-emails');
             if (emailsElement) {
