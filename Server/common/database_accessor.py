@@ -40,6 +40,8 @@ class DatabaseAccessor:
 
             cursor.execute('INSERT OR IGNORE INTO doorbell(id, name, owner) VALUES (?, ?, ?)',
                            [uuid, uuid, username.upper()])
+            cursor.execute('INSERT OR IGNORE INTO doorbell_notifications '
+                           'SELECT ?, email FROM user WHERE username = ?', [uuid, username.upper()])
             con.commit()
             if cursor.rowcount > 0:
                 return True
@@ -55,7 +57,7 @@ class DatabaseAccessor:
         con = self._get_connection()
         cursor = con.cursor()
         try:
-            cursor.execute('INSERT INTO notifications(uuid, type, path) VALUES (?, ?, ?)',
+            cursor.execute('INSERT OR IGNORE INTO notifications(uuid, type, path) VALUES (?, ?, ?)',
                            [uuid, notification_type.value, path])
             con.commit()
         finally:
@@ -187,16 +189,11 @@ class DatabaseAccessor:
         cursor = con.cursor()
         try:
             cursor.execute('UPDATE doorbell SET name = ? WHERE id = ?', [doorbell_name, uuid])
-            con.commit()
-
             cursor.execute('DELETE FROM doorbell_notifications WHERE uuid = ?', [uuid])
-            con.commit()
+            if len(alert_emails):
+                cursor.executemany('INSERT OR IGNORE INTO doorbell_notifications VALUES (?, ?)',
+                                   zip([uuid] * len(alert_emails), alert_emails))
 
-            if not len(alert_emails):
-                return True
-
-            cursor.executemany('INSERT OR IGNORE INTO doorbell_notifications VALUES (?, ?)',
-                               zip([uuid] * len(alert_emails), alert_emails))
             con.commit()
             return True
         finally:

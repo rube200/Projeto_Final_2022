@@ -135,8 +135,6 @@ header {
 }
 
 
-
-
 .image-container {
     display: flex;
     flex-wrap: wrap;
@@ -211,7 +209,6 @@ header {
 }
 
 
-
 .center-green {
     align-items: center;
     color: rgb(89, 230, 107);
@@ -281,13 +278,13 @@ header {
 }
 
 /* The alert message box */
- .alert {
+.alert {
     padding: 5px;
     flex: 1;
-  }
-  
-  /* The close button */
-  .closebtn {
+}
+
+/* The close button */
+.closebtn {
     margin-left: 15px;
     color: rgb(12, 12, 12);
     font-weight: bold;
@@ -296,15 +293,15 @@ header {
     line-height: 20px;
     cursor: pointer;
     transition: 0.3s;
-  }
-  
-  /* When moving the mouse over the close button */
-  .closebtn:hover {
+}
+
+/* When moving the mouse over the close button */
+.closebtn:hover {
     color: rgba(203, 216, 17, 0.89);
-  } 
+}
 
 /**/
-.mark-btn{
+.mark-btn {
     display: inline-block;
     background-color: #3dd838ce;
     border-radius: 10px;
@@ -317,16 +314,17 @@ header {
     cursor: pointer;
     margin: 5px;
 }
+
 .vertical-center {
     margin-top: 5px;
     position: absolute;
     left: 50%;
-    -ms-transform: translateX( -50%);
+    -ms-transform: translateX(-50%);
     transform: translateX(-50%);
-  }
+}
 
-  .boxy {
+.boxy {
     height: 150px;
     position: relative;
-  }
+}
 

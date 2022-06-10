@@ -8,7 +8,7 @@ from time import monotonic, sleep
 import bcrypt
 import jwt
 from email_validator import EmailNotValidError, validate_email
-from flask import Flask, redirect, url_for, current_app, abort, session, render_template, request, flash, \
+from flask import Flask, redirect, url_for, current_app, session, render_template, request, flash, \
     stream_with_context, jsonify
 from flask_mail import Mail, Message
 
@@ -82,7 +82,8 @@ class WebServer(DatabaseAccessor, Flask):
         self.add_url_rule('/streams/<int:uuid>', 'stream', self.__endpoint_stream)
         self.add_url_rule('/notifications', 'notifications', self.__endpoint_notifications)
         self.add_url_rule('/notifications-api', 'notifications-api', self.__endpoint_notifications_api)
-        self.add_url_rule('/open_doorbell/<int:uuid>', 'open_doorbell', self.__endpoint_open_doorbell)
+        self.add_url_rule('/open_doorbell/<int:uuid>', 'open_doorbell', self.__endpoint_open_doorbell, methods=['POST'])
+        self.add_url_rule('/take_picture/<int:uuid>', 'take_picture', self.__endpoint_take_picture, methods=['POST'])
         self.add_url_rule('/alerts', 'alerts', self.__endpoint_open_alerts)
         self.register_error_handler(400, lambda e: redirect(url_for('index')))
         self.register_error_handler(404, lambda e: redirect(url_for('index')))
@@ -168,16 +169,21 @@ class WebServer(DatabaseAccessor, Flask):
             self.__events.on_stop_stream_requested(uuid)
             return b'Content-Length: 0'
 
-    def __on_notification(self, client: EspClient, notification_type: NotificationType, _):
+    def __on_notification(self, client: EspClient, notification_type: NotificationType, data: bytes, _) -> None:
         try:
             emails = self._get_alert_emails(client.uuid)
             if not emails:
                 return
-            # todo email set
+
+            message = Message(
+                subject='Doorbell pressed' if notification_type is NotificationType.Bell else 'Motion detected',
+                recipients=emails,
+                body='GOT CHECK IT NOW. MOTHERFUCKER',
+                sender='ru_dani@hotmail.com',  # todo
+                attachments=[('image.jpeg', data, 'image/jpeg')]
+            )
             with self.app_context():
-                self.__mail.send(
-                    Message('Doorbell pressed' if notification_type is NotificationType.Bell else 'Motion detected',
-                            [emails], 'GOT CHECK IT NOW. MOTHERFUCKER'))
+                self.__mail.send(message)
         except Exception as ex:
             log.error(f'Exception while getting email for uuid {client.uuid}: {ex!r}')
 
@@ -384,17 +390,29 @@ class WebServer(DatabaseAccessor, Flask):
     def __endpoint_open_doorbell(self, uuid: int):
         username = self.__authenticate()
         if not username or not self._check_owner(username, uuid):
-            return abort(401)
+            return self.response_class('Unauthorized request', 401)
 
         if self.__events.on_open_doorbell_requested(uuid):
-            return 'OK', 200
+            return 'OK', 200  # todo
 
-        return 'ERROR', 400
+        return 'ERROR', 400  # todo
+
+    def __endpoint_take_picture(self, uuid: int):
+        username = self.__authenticate()
+        if not username or not self._check_owner(username, uuid):
+            return self.response_class('Unauthorized request', 401)
+
+        esp = self.__clients.get_client(uuid)
+        if not esp:
+            return self.response_class('Esp is offline', 404)
+
+        data = esp.save_picture()
+        return self.response_class(data, 200, mimetype='image/jpeg')
 
     def __doorbell_update(self, uuid: int):
         username = self.__authenticate()
         if not username or not self._check_owner(username, uuid):
-            return abort(401)
+            return self.response_class('Unauthorized request', 401)
 
         password = request.form.get('password')
         doorbell_name = request.form.get('doorbell-name')
@@ -411,9 +429,9 @@ class WebServer(DatabaseAccessor, Flask):
                 continue
 
             alert_emails.append(email.strip())
-        self._doorbell_update(username, password, uuid, doorbell_name, alert_emails)
-        # todo check return from update
-        return 'OK', 200
+        if not self._doorbell_update(username, password, uuid, doorbell_name, alert_emails):
+            pass
+        return 'OK', 200  # todo
 
     def __endpoint_open_alerts(self):
         username = self.__authenticate()
@@ -446,18 +464,17 @@ class WebServer(DatabaseAccessor, Flask):
                 checked.append(row[4])
                 types.append(row[5])
 
-
-            #dummy data
+            # dummy data
             paths.append(url_for('static', filename='default_profile.png'))
             dates.append('12.2.20')  # split to remove milliseconds
             names.append('doorbell1')
             checked.append(False)
-            types.append(0)         
+            types.append(0)
             paths.append(url_for('static', filename='default_profile.png'))
             dates.append('12.2.21')  # split to remove milliseconds
             names.append('doorbell2')
             checked.append(False)
-            types.append(2)         
+            types.append(2)
             paths.append(url_for('static', filename='default_profile.png'))
             dates.append('12.2.23')  # split to remove milliseconds
             names.append('doorbell3')
@@ -467,37 +484,37 @@ class WebServer(DatabaseAccessor, Flask):
             dates.append('12.2.23')  # split to remove milliseconds
             names.append('doorbell3')
             checked.append(False)
-            types.append(1)
-            paths.append(url_for('static', filename='default_profile.png'))
-            dates.append('12.2.20')  # split to remove milliseconds
-            names.append('doorbell1')
-            checked.append(True)
-            types.append(0)         
-            paths.append(url_for('static', filename='default_profile.png'))
-            dates.append('12.2.21')  # split to remove milliseconds
-            names.append('doorbell2')
-            checked.append(True)
-            types.append(2)         
-            paths.append(url_for('static', filename='default_profile.png'))
-            dates.append('12.2.23')  # split to remove milliseconds
-            names.append('doorbell3')
-            checked.append(True)
-            types.append(1)
-            paths.append(url_for('static', filename='default_profile.png'))
-            dates.append('12.2.23')  # split to remove milliseconds
-            names.append('doorbell3')
-            checked.append(True)
             types.append(1)
             paths.append(url_for('static', filename='default_profile.png'))
             dates.append('12.2.20')  # split to remove milliseconds
             names.append('doorbell1')
             checked.append(True)
-            types.append(0)         
+            types.append(0)
             paths.append(url_for('static', filename='default_profile.png'))
             dates.append('12.2.21')  # split to remove milliseconds
             names.append('doorbell2')
             checked.append(True)
-            types.append(2)         
+            types.append(2)
+            paths.append(url_for('static', filename='default_profile.png'))
+            dates.append('12.2.23')  # split to remove milliseconds
+            names.append('doorbell3')
+            checked.append(True)
+            types.append(1)
+            paths.append(url_for('static', filename='default_profile.png'))
+            dates.append('12.2.23')  # split to remove milliseconds
+            names.append('doorbell3')
+            checked.append(True)
+            types.append(1)
+            paths.append(url_for('static', filename='default_profile.png'))
+            dates.append('12.2.20')  # split to remove milliseconds
+            names.append('doorbell1')
+            checked.append(True)
+            types.append(0)
+            paths.append(url_for('static', filename='default_profile.png'))
+            dates.append('12.2.21')  # split to remove milliseconds
+            names.append('doorbell2')
+            checked.append(True)
+            types.append(2)
             paths.append(url_for('static', filename='default_profile.png'))
             dates.append('12.2.23')  # split to remove milliseconds
             names.append('doorbell3')
@@ -509,7 +526,8 @@ class WebServer(DatabaseAccessor, Flask):
             checked.append(True)
             types.append(1)
             # return render_template('imageGal.html', types = types, paths = paths, dates = dates, doorbells = names)
-            return render_template('alerts.html', paths=paths, dates=dates, doorbells=names, checks = checked, types = types)
+            return render_template('alerts.html', paths=paths, dates=dates, doorbells=names, checks=checked,
+                                   types=types)
         finally:
             cursor.close()
             con.close()

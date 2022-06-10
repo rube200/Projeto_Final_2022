@@ -21,7 +21,7 @@ create table if not exists doorbell
             on update cascade on delete restrict,
     registered_at timestamp default current_timestamp not null
 );
-create index if not exists doorbell_nocase_owner ON doorbell(owner COLLATE NOCASE);
+create index if not exists doorbell_nocase_owner ON doorbell (owner COLLATE NOCASE);
 
 create table if not exists notifications
 (
@@ -32,7 +32,7 @@ create table if not exists notifications
     time    timestamp default current_timestamp not null,
     type    integer not null,
     checked boolean   default false not null,
-    path text not null
+    path    text    not null
 );
 
 create table if not exists doorbell_notifications

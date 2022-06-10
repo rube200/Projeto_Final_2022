@@ -37,7 +37,7 @@ class Esp32Server:
     def __init__(self):
         self.__clients = EspClients()
         self.__events = EspEvents()
-        self.__socket_server = ServerSocket(self.__clients, self.__events) if 'WERKZEUG_RUN_MAIN' in environ else None
+        self.__socket_server = ServerSocket(self.__clients, self.__events)
         self.__socket_thread = None
         self.__web_server = WebServer(self.__clients, self.__events)
 
@@ -55,7 +55,7 @@ class Esp32Server:
         del self.__events
 
     def run_servers(self, fcgi: bool = True):
-        if self.__socket_server:
+        if 'WERKZEUG_RUN_MAIN' in environ:
             log.info('Running Servers...')
             self.__socket_thread = Thread(daemon=True, target=self.__socket_server.run_forever)
             self.__socket_thread.start()

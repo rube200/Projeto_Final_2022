@@ -38,9 +38,6 @@ class ServerSocket(DatabaseAccessor):
         self.__shutdown_request = False
         self.__wait_shutdown = Event()
         self.__tcp_socket = socket(AF_INET, SOCK_STREAM)
-        self.__tcp_socket.bind(self.__server_address)
-        socket_opt(self.__tcp_socket)
-        log.info(f'Socket ready! Tcp: {self.__tcp_socket.getsockname()!r}')
 
     def __del__(self):
         pass  # todo
@@ -83,7 +80,7 @@ class ServerSocket(DatabaseAccessor):
     def __on_esp_username_recv(self, client: EspClient, username: str) -> bool:
         return self._register_doorbell(username, client.uuid)
 
-    def __on_notification(self, client: EspClient, notification_type: NotificationType, path: str) -> None:
+    def __on_notification(self, client: EspClient, notification_type: NotificationType, _, path: str) -> None:
         self._add_notification(client.uuid, notification_type, path)
 
     def __process_tcp(self, key, events: int) -> None:
@@ -114,7 +111,10 @@ class ServerSocket(DatabaseAccessor):
 
     def run_forever(self) -> None:
         self.__selector.register(self.__tcp_socket, EVENT_READ)
+        self.__tcp_socket.bind(self.__server_address)
+        socket_opt(self.__tcp_socket)
         self.__tcp_socket.listen()
+        log.info(f'Socket ready! Tcp: {self.__tcp_socket.getsockname()!r}')
         log.info('Waiting connections...')
 
         self.__shutdown_request = False

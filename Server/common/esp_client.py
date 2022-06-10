@@ -27,7 +27,7 @@ class EspClient(ClientSocket, ClientRecord):
         self.__esp_files_path = environ.get('ESP_FILES_PATH') or './esp_files'
         if not path.exists(self.__esp_files_path):
             makedirs(self.__esp_files_path)
-        self.__esp_to_save_paths = []
+        self.__esp_to_save_paths = {}
         self.__stream_requests = 0
 
     def __del__(self):
@@ -61,20 +61,31 @@ class EspClient(ClientSocket, ClientRecord):
 
     def _process_camera(self, data: bytes) -> None:
         super(EspClient, self)._process_camera(data)
+
         while self.__esp_to_save_paths:
-            filepath = self.__esp_to_save_paths.pop()
-            with open(filepath, 'wb') as f:
-                f.write(data)
+            filename, notification_type = self.__esp_to_save_paths.popitem()
+            if notification_type is NotificationType.Bell:
+                save_img = self.__config_bell_duration <= 0.0
+            else:
+                save_img = self.__config_motion_duration <= 0.0
+            if save_img:
+                self.save_picture(filename, data)
+
+            self.__events.on_notification(self, notification_type, data, filename)
 
     def __prepare_and_notify(self, notification_type: NotificationType, duration: float) -> None:
         time = monotonic()
         if duration > 0.0:
             filepath = path.join(self.__esp_files_path, secure_filename(f'{time}.mp4'))
             filepath = self.start_record(filepath, time + duration)
+            if not filepath:
+                return
+
+            filename = path.basename(filepath)
         else:
-            filepath = path.join(self.__esp_files_path, secure_filename(f'{time}.jpeg'))
-            self.__esp_to_save_paths.append(filepath)
-        self.__events.on_notification(self, notification_type, filepath)
+            filename = secure_filename(f'{time}.jpeg')
+
+        self.__esp_to_save_paths[filename] = notification_type
 
     def _process_bell_pressed(self) -> None:
         self.__prepare_and_notify(NotificationType.Bell, self.__config_bell_duration)
@@ -82,27 +93,41 @@ class EspClient(ClientSocket, ClientRecord):
     def _process_motion_detected(self) -> None:
         self.__prepare_and_notify(NotificationType.Movement, self.__config_motion_duration)
 
-    def __on_open_doorbell_requested(self, uuid: int) -> None:
-        if uuid == self._uuid:
-            self._send_open_relay()
-
-    def on_start_stream_requested(self, uuid: int, is_maintain_stream: bool) -> None:
+    def __on_open_doorbell_requested(self, uuid: int) -> bool:
         if uuid != self._uuid:
-            return
+            return False
+
+        self._send_open_relay()
+        return True
+
+    def on_start_stream_requested(self, uuid: int, is_maintain_stream: bool) -> bool:
+        if uuid != self._uuid:
+            return False
 
         if is_maintain_stream:
             self._send_start_stream()
-            return
+            return True
 
         self.__stream_requests += 1
         if self.__stream_requests == 1:
             self._send_start_stream()
+        return True
 
-    def on_stop_stream_requested(self, uuid: int) -> None:
+    def on_stop_stream_requested(self, uuid: int) -> bool:
         if uuid != self._uuid:
-            return
+            return False
 
         self.__stream_requests -= 1
         if self.__stream_requests == 0:
             self._send_stop_stream()
-            return
+            return True
+
+    def save_picture(self, filename: str = f'{monotonic()}.jpeg', image: bytes = None) -> Tuple[bytes, str]:
+        if not image:
+            image = self._camera
+
+        filepath = path.join(self.__esp_files_path, filename)
+        with open(filepath, 'wb') as f:
+            f.write(image)
+
+        return image, filename

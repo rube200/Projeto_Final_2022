@@ -6,15 +6,18 @@
     <form action="{{ url_for('register') }}" class="pt-4" method="POST">
         <div class="mb-2">
             <!--suppress HtmlFormInputWithoutLabel -->
-            <input class="form-control form-control-lg" placeholder="Username" name="username" type="text">
+            <input autocomplete="username" class="form-control form-control-lg" placeholder="Username" name="username"
+                   type="text">
         </div>
         <div class="mb-2">
             <!--suppress HtmlFormInputWithoutLabel -->
-            <input class="form-control form-control-lg" placeholder="Email" name="email" type="email">
+            <input autocomplete="email" class="form-control form-control-lg" placeholder="Email" name="email"
+                   type="email">
         </div>
         <div class="mb-4">
             <!--suppress HtmlFormInputWithoutLabel -->
-            <input class="form-control form-control-lg" placeholder="Password" name="password" type="password">
+            <input autocomplete="new-password" class="form-control form-control-lg" placeholder="Password"
+                   name="password" type="password">
         </div>
         <!--
         <div class="form-check">
