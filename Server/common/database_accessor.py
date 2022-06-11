@@ -3,7 +3,7 @@ from typing import List, Tuple
 
 import bcrypt
 
-from common.notification_type import NotificationType
+from common.alert_type import AlertType
 
 
 class DatabaseAccessor:
@@ -40,7 +40,7 @@ class DatabaseAccessor:
 
             cursor.execute('INSERT OR IGNORE INTO doorbell(id, name, owner) VALUES (?, ?, ?)',
                            [uuid, uuid, username.upper()])
-            cursor.execute('INSERT OR IGNORE INTO doorbell_notifications '
+            cursor.execute('INSERT OR IGNORE INTO doorbell_alerts '
                            'SELECT ?, email FROM user WHERE username = ?', [uuid, username.upper()])
             con.commit()
             if cursor.rowcount > 0:
@@ -53,12 +53,12 @@ class DatabaseAccessor:
             cursor.close()
             con.close()
 
-    def _add_notification(self, uuid: int, notification_type: NotificationType, path: str) -> None:
+    def _add_alert(self, uuid: int, alert_type: AlertType, path: str) -> None:
         con = self._get_connection()
         cursor = con.cursor()
         try:
-            cursor.execute('INSERT OR IGNORE INTO notifications(uuid, type, path) VALUES (?, ?, ?)',
-                           [uuid, notification_type.value, path])
+            cursor.execute('INSERT OR IGNORE INTO alerts(uuid, type, path) VALUES (?, ?, ?)',
+                           [uuid, alert_type.value, path])
             con.commit()
         finally:
             cursor.close()
@@ -69,7 +69,7 @@ class DatabaseAccessor:
         cursor = con.cursor()
         try:
             cursor.execute(
-                'SELECT e.email FROM doorbell_notifications e WHERE e.uuid = ?',
+                'SELECT e.email FROM doorbell_alerts e WHERE e.uuid = ?',
                 [uuid])
             data = cursor.fetchall()
             return [d['email'] for d in data] if data else []
@@ -148,13 +148,13 @@ class DatabaseAccessor:
             cursor.close()
             con.close()
 
-    def _get_notifications(self, username: str, exclude_checked: bool = True):
+    def _get_alerts(self, username: str, exclude_checked: bool = True):
         con = self._get_connection()
         cursor = con.cursor()
         try:
             cursor.execute(
                 f'SELECT n.id, d.name, n.time, n.type, n.path{", n.checked " if not exclude_checked else " "}'
-                'FROM notifications n '
+                'FROM alerts n '
                 'INNER JOIN doorbell d '
                 f'ON {"NOT n.checked AND " if exclude_checked else ""}n.uuid = d.id '
                 f'WHERE d.owner = ?'
@@ -165,13 +165,13 @@ class DatabaseAccessor:
             cursor.close()
             con.close()
 
-    def _get_doorbell_notifications(self, uuid: int):
+    def _get_doorbell_alerts(self, uuid: int):
         con = self._get_connection()
         cursor = con.cursor()
         try:
             cursor.execute(
                 f'SELECT n.id, n.time, n.type, n.path '
-                'FROM notifications n '
+                'FROM alerts n '
                 f'WHERE n.uuid = ?'
                 f'ORDER BY n.time DESC',
                 [uuid]),
@@ -188,7 +188,7 @@ class DatabaseAccessor:
             data = cursor.fetchone()
             name = data['name'] if data else uuid
 
-            cursor.execute('SELECT email FROM doorbell_notifications WHERE uuid = ?', [uuid]),
+            cursor.execute('SELECT email FROM doorbell_alerts WHERE uuid = ?', [uuid]),
             data = cursor.fetchall()
             emails = [d['email'] for d in data] if data else []
             return name, emails
@@ -205,9 +205,9 @@ class DatabaseAccessor:
         cursor = con.cursor()
         try:
             cursor.execute('UPDATE doorbell SET name = ? WHERE id = ?', [doorbell_name, uuid])
-            cursor.execute('DELETE FROM doorbell_notifications WHERE uuid = ?', [uuid])
+            cursor.execute('DELETE FROM doorbell_alerts WHERE uuid = ?', [uuid])
             if len(alert_emails):
-                cursor.executemany('INSERT OR IGNORE INTO doorbell_notifications VALUES (?, ?)',
+                cursor.executemany('INSERT OR IGNORE INTO doorbell_alerts VALUES (?, ?)',
                                    zip([uuid] * len(alert_emails), alert_emails))
 
             con.commit()

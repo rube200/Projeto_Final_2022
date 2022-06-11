@@ -23,25 +23,26 @@ create table if not exists doorbell
 );
 create index if not exists doorbell_nocase_owner ON doorbell (owner COLLATE NOCASE);
 
-create table if not exists notifications
+create table if not exists alerts
 (
     id      integer
-        constraint notifications_pk
+        constraint alerts_pk
             primary key autoincrement,
     uuid    integer not null,
     time    timestamp default current_timestamp not null,
     type    integer not null,
     checked boolean   default false not null,
-    path    text    not null
+    path    text    not null,
+    note    text      default null
 );
 
-create table if not exists doorbell_notifications
+create table if not exists doorbell_alerts
 (
     uuid  integer
         references doorbell
             on update cascade on delete cascade,
     email text,
-    constraint doorbell_notifications_pk
+    constraint doorbell_alerts_pk
         primary key (uuid, email)
 );
-create index if not exists doorbell_notifications_nocase_email ON doorbell_notifications (email COLLATE NOCASE);
+create index if not exists doorbell_alerts_nocase_email ON doorbell_alerts (email COLLATE NOCASE);

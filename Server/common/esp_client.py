@@ -6,8 +6,8 @@ from typing import Tuple
 
 from werkzeug.utils import secure_filename
 
+from common.alert_type import AlertType
 from common.esp_events import EspEvents
-from common.notification_type import NotificationType
 from socket_client.client_record import ClientRecord
 from socket_client.client_socket import ClientSocket
 
@@ -63,17 +63,17 @@ class EspClient(ClientSocket, ClientRecord):
         super(EspClient, self)._process_camera(data)
 
         while self.__esp_to_save_paths:
-            filename, notification_type = self.__esp_to_save_paths.popitem()
-            if notification_type is NotificationType.Bell:
+            filename, alert_type = self.__esp_to_save_paths.popitem()
+            if alert_type is AlertType.Bell:
                 save_img = self.__config_bell_duration <= 0.0
             else:
                 save_img = self.__config_motion_duration <= 0.0
             if save_img:
                 self.save_picture(filename, data)
 
-            self.__events.on_notification(self, notification_type, data, filename)
+            self.__events.on_alert(self, alert_type, data, filename)
 
-    def __prepare_and_notify(self, notification_type: NotificationType, duration: float) -> None:
+    def __prepare_and_notify(self, alert_type: AlertType, duration: float) -> None:
         time = monotonic()
         if duration > 0.0:
             filepath = path.join(self.__esp_files_path, secure_filename(f'{time}.mp4'))
@@ -85,13 +85,13 @@ class EspClient(ClientSocket, ClientRecord):
         else:
             filename = secure_filename(f'{time}.jpeg')
 
-        self.__esp_to_save_paths[filename] = notification_type
+        self.__esp_to_save_paths[filename] = alert_type
 
     def _process_bell_pressed(self) -> None:
-        self.__prepare_and_notify(NotificationType.Bell, self.__config_bell_duration)
+        self.__prepare_and_notify(AlertType.Bell, self.__config_bell_duration)
 
     def _process_motion_detected(self) -> None:
-        self.__prepare_and_notify(NotificationType.Movement, self.__config_motion_duration)
+        self.__prepare_and_notify(AlertType.Movement, self.__config_motion_duration)
 
     def __on_open_doorbell_requested(self, uuid: int) -> bool:
         if uuid != self._uuid:

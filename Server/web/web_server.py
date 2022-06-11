@@ -11,18 +11,18 @@ import jwt
 from email_validator import EmailNotValidError, validate_email
 from flask import Flask, redirect, url_for, current_app, session, render_template, request, flash, \
     stream_with_context, jsonify
-from flask_mail import Mail, Message
+from flask_mail import Mail, Message, Attachment
 
+from common.alert_type import AlertType, get_alert_message
 from common.database_accessor import DatabaseAccessor
 from common.esp_client import EspClient
 from common.esp_clients import EspClients
 from common.esp_events import EspEvents
-from common.notification_type import NotificationType
 
 NAV_DICT = [
     {'id': 'doorbells', 'title': 'Manage Doorbells', 'icon': 'bi-book-fill', 'url': 'doorbells'},
     {'id': 'streams', 'title': 'All Streams', 'icon': 'bi-cast', 'url': 'streams'},
-    {'id': 'notifications', 'title': 'Notifications', 'icon': 'bi-bell-fill', 'url': 'notifications'},
+    {'id': 'alerts', 'title': 'Alerts', 'icon': 'bi-bell-fill', 'url': 'alerts'},
     {'id': 'statistics', 'title': 'Statistics', 'icon': 'bi-bar-chart-fill', 'url': 'doorbells'},
 ]
 
@@ -39,38 +39,10 @@ def endpoint_logout():
     return redirect(url_for('index'))
 
 
-def get_notification_from_data(data: Row, load_images: bool = False):
-    filepath = data['path']
-    if not path.exists(filepath):
-        return None
-
-    doorbell_file = namedtuple('DoorbellFiles', 'id, name, time, image')
-    doorbell_file.id = data['id']
-    doorbell_file.type = data['type']
-    doorbell_file.time = data['time']
-
-    if 'name' in data:
-        doorbell_file.name = data['name']
-    else:
-        doorbell_file.name = 'Bell pressed' if doorbell_file.type is NotificationType.Bell else 'Motion detected'
-
-    if load_images:
-        with open(filepath, 'rb') as f:
-            doorbell_file.image = f.read()
-    else:
-        doorbell_file.image = data['path']
-
-    if 'checked' in data:
-        doorbell_file.checked = data['checked']
-    print('1')
-    print(type(doorbell_file))
-    return doorbell_file
-
-
 def redirect_after_auth(username: str, name: str):
     session['token'] = jwt.encode({'username': username}, current_app.config['JWT_SECRET_KEY'], 'HS256')
-    session['user_id'] = username
-    session['user_name'] = name
+    session['username'] = username
+    session['name'] = name
     return redirect(url_for('doorbells'))
 
 
@@ -81,7 +53,7 @@ class WebServer(DatabaseAccessor, Flask):
 
         self.__clients = clients
         self.__events = events
-        self.__events.on_notification += self.__on_notification
+        self.__events.on_alert += self.__on_alert
         self.config.from_pyfile('flask.cfg')
 
         if self.config.get('RANDOM_SECRET_KEY'):
@@ -116,11 +88,11 @@ class WebServer(DatabaseAccessor, Flask):
         self.add_url_rule('/doorbells/<int:uuid>', 'doorbell', self.__endpoint_doorbell, methods=['GET', 'POST'])
         self.add_url_rule('/streams', 'streams', self.__endpoint_streams)
         self.add_url_rule('/streams/<int:uuid>', 'stream', self.__endpoint_stream)
-        self.add_url_rule('/notifications', 'notifications', self.__endpoint_notifications)
-        self.add_url_rule('/notifications-api', 'notifications-api', self.__endpoint_notifications_api)
+        self.add_url_rule('/alerts', 'notifications', self.__endpoint_alerts)
+        self.add_url_rule('/alerts-api', 'notifications-api', self.__endpoint_alerts_api)
         self.add_url_rule('/open_doorbell/<int:uuid>', 'open_doorbell', self.__endpoint_open_doorbell, methods=['POST'])
         self.add_url_rule('/take_picture/<int:uuid>', 'take_picture', self.__endpoint_take_picture, methods=['POST'])
-        self.add_url_rule('/alerts', 'alerts', self.__endpoint_alerts)
+        self.add_url_rule('/alerts2', 'alerts2', self.__endpoint_alerts2)
         self.register_error_handler(400, lambda e: redirect(url_for('index')))
         self.register_error_handler(404, lambda e: redirect(url_for('index')))
         self.template_context_processors[None].append(lambda: dict(debug=self.debug, nav=NAV_DICT))
@@ -139,8 +111,8 @@ class WebServer(DatabaseAccessor, Flask):
             return None
 
         data = self._get_user(username)
-        session['user_id'] = username = data[0]
-        session['user_name'] = data[1]
+        session['username'] = username = data[0]
+        session['name'] = data[1]
         return username
 
     def __get_doorbells(self):
@@ -172,21 +144,48 @@ class WebServer(DatabaseAccessor, Flask):
 
         return doorbell
 
-    def __get_notifications(self, exclude_checked: bool = True, load_images: bool = False):
+    def __get_alert(self, data: Row, load_images: bool = False):
+        filepath = data['path']
+        if not path.exists(filepath):
+            return None
+
+        doorbell_file = namedtuple('DoorbellFiles', 'id, name, time, image')
+        doorbell_file.id = data['id']
+        doorbell_file.type = data['type']
+        doorbell_file.time = data['time']
+
+        if 'name' in data:
+            doorbell_file.name = data['name']
+        else:
+            doorbell_file.name = 'Bell pressed' if doorbell_file.type is AlertType.Bell else 'Motion detected'
+
+        if load_images:
+            with self.open_resource(filepath) as f:
+                doorbell_file.image = f.read()
+        else:
+            doorbell_file.image = data['path']
+
+        if 'checked' in data:
+            doorbell_file.checked = data['checked']
+        print('1')
+        print(type(doorbell_file))
+        return doorbell_file
+
+    def __get_alerts(self, exclude_checked: bool = True, load_images: bool = False):
         username = self.__authenticate()
         if not username:
             return None
 
-        data = self._get_notifications(username, exclude_checked)
+        data = self._get_alerts(username, exclude_checked)
         if not data:
             return []
 
-        notifications = []
-        for notification_data in data:
-            notification = get_notification_from_data(notification_data, load_images)
-            if notification:
-                notifications.append(notification)
-        return notifications
+        alerts = []
+        for alert_data in data:
+            alert = self.__get_alert(alert_data, load_images)
+            if alert:
+                alerts.append(alert)
+        return alerts
 
     def __generate_stream(self, uuid: int):
         esp = self.__clients.get_client(uuid)
@@ -218,18 +217,21 @@ class WebServer(DatabaseAccessor, Flask):
             self.__events.on_stop_stream_requested(uuid)
             return b'Content-Length: 0'
 
-    def __on_notification(self, client: EspClient, notification_type: NotificationType, data: bytes, _) -> None:
+    def __on_alert(self, client: EspClient, alert_type: AlertType, data: bytes, _) -> None:
         try:
+            if alert_type is AlertType.UserPicture or alert_type is AlertType.Invalid:
+                return
+
             emails = self._get_alert_emails(client.uuid)
             if not emails:
                 return
 
             message = Message(
-                subject='Doorbell pressed' if notification_type is NotificationType.Bell else 'Motion detected',
-                recipients=emails,
+                subject=get_alert_message(alert_type),
+                bcc=emails,
                 body='GOT CHECK IT NOW. MOTHERFUCKER',
                 sender='ru_dani@hotmail.com',  # todo
-                attachments=[('image.jpeg', data, 'image/jpeg')]
+                attachments=[Attachment('image.jpeg', 'image/jpeg', data)]
             )
             with self.app_context():
                 self.__mail.send(message)
@@ -306,13 +308,13 @@ class WebServer(DatabaseAccessor, Flask):
         doorbell = self.__get_doorbell({'id': uuid, 'name': doorbell_data[0]})
         doorbell.emails = doorbell_data[1]
 
-        notifications = self._get_doorbell_notifications(uuid)
-        if not notifications:
+        alerts = self._get_doorbell_alerts(uuid)
+        if not alerts:
             return render_template('doorbell.html', doorbell=doorbell)
 
         doorbell_files = []
-        for notification in notifications:
-            data = get_notification_from_data(notification, True)
+        for alert in alerts:
+            data = self.__get_alert(alert, True)
             if data:
                 doorbell_files.append(data)
 
@@ -334,7 +336,7 @@ class WebServer(DatabaseAccessor, Flask):
         return self.response_class(stream_context, mimetype='multipart/x-mixed-replace; boundary=frame')
 
     # todo recheck this one
-    def __endpoint_notifications(self):
+    def __endpoint_alerts(self):
         username = self.__authenticate()
         if not username:
             return redirect(url_for('index'))
@@ -368,12 +370,12 @@ class WebServer(DatabaseAccessor, Flask):
             cursor.close()
             con.close()
 
-    def __endpoint_notifications_api(self):
-        notifications = self.__get_notifications(load_images=False)
-        if notifications is None:
+    def __endpoint_alerts_api(self):
+        alerts = self.__get_alerts(load_images=False)
+        if alerts is None:
             return jsonify({'error': 'Not authenticated'}, 401)
 
-        return jsonify(notifications)
+        return jsonify(alerts)
 
     def __endpoint_open_doorbell(self, uuid: int):
         username = self.__authenticate()
@@ -398,7 +400,11 @@ class WebServer(DatabaseAccessor, Flask):
         if not image:
             return self.response_class('Doorbell is offline', 404)
 
-        return self.response_class(convert_image_to_base64(image), mimetype='image/jpeg')
+        self._add_alert(uuid, image, filename)
+        print(image)  # todo remove
+        img = convert_image_to_base64(image)
+        print(img)
+        return self.response_class(img, mimetype='image/jpeg')
 
     def __doorbell_update(self, uuid: int):
         username = self.__authenticate()
@@ -421,14 +427,14 @@ class WebServer(DatabaseAccessor, Flask):
             except EmailNotValidError:
                 continue
 
-            alert_emails.append(email)
+            alert_emails.append(email.lower())
         if not self._doorbell_update(username, password, uuid, doorbell_name, alert_emails):
             return self.response_class('Unauthorized request', 401)
 
         return self.response_class('Doorbell updated')
 
     # todo recheck this one
-    def __endpoint_alerts(self):
+    def __endpoint_alerts2(self):
         username = self.__authenticate()
         if not username:
             return redirect(url_for('index'))

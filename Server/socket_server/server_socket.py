@@ -6,11 +6,11 @@ from socket import socket, AF_INET, SHUT_RDWR, SOCK_STREAM, SOL_SOCKET, SO_KEEPA
 from traceback import format_exc
 from typing import Tuple
 
+from common.alert_type import AlertType
 from common.database_accessor import DatabaseAccessor
 from common.esp_client import EspClient
 from common.esp_clients import EspClients
 from common.esp_events import EspEvents
-from common.notification_type import NotificationType
 
 
 def get_address() -> Tuple[str, int]:
@@ -31,7 +31,7 @@ class ServerSocket(DatabaseAccessor):
         self.__events = events
         self.__events.on_esp_uuid_recv += self.__on_esp_uuid_recv
         self.__events.on_esp_username_recv += self.__on_esp_username_recv
-        self.__events.on_notification += self.__on_notification
+        self.__events.on_alert += self.__on_alert
 
         self.__selector = DefaultSelector()
         self.__server_address = get_address()
@@ -80,8 +80,8 @@ class ServerSocket(DatabaseAccessor):
     def __on_esp_username_recv(self, client: EspClient, username: str) -> bool:
         return self._register_doorbell(username, client.uuid)
 
-    def __on_notification(self, client: EspClient, notification_type: NotificationType, _, path: str) -> None:
-        self._add_notification(client.uuid, notification_type, path)
+    def __on_alert(self, client: EspClient, alert_type: AlertType, _, path: str) -> None:
+        self._add_alert(client.uuid, alert_type, path)
 
     def __process_tcp(self, key, events: int) -> None:
         if not key.data:
