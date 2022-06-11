@@ -1,22 +1,9 @@
-header {
-    min-width: 620px
+body {
+    overflow-x: hidden;
 }
 
-.auto-width {
-    min-width: 450px;
-}
-
-.img-sm {
-    width: 50px;
-    height: 50px;
-}
-
-.navbar {
-    height: 85px
-}
-
-.sidebar-width {
-    min-width: 200px
+.auth-width {
+    width: 400px;
 }
 
 .start-85 {

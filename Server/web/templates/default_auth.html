@@ -1,10 +1,19 @@
 {% extends 'default.html' %}
 
 {% block content %}
-    <div class="bg-info bg-opacity-10 container d-flex min-vh-100 min-vw-100">
-        <div class="auth-width m-auto">
-            <div class="bg-white border border-primary mt-3 p-5 rounded text-center">
-                {% block auth_content %}{% endblock %}
+    <div class="bg-info bg-opacity-10 container min-vw-100">
+        <div class="d-flex justify-content-center flex-wrap vh-100">
+            {% for category, message in get_flashed_messages(true) %}
+                <div class="alert alert-{{ category }} alert-dismissible fade mx-0 my-3 p-3 position-absolute show w-auto z-index-1"
+                     role="alert">
+                    <span class="mx-2">{{ message }}</span>
+                    <button aria-label="Close" class="btn-close" data-bs-dismiss="alert" type="button"></button>
+                </div>
+            {% endfor %}
+            <div class="my-auto">
+                <div class="auth-width bg-white border border-primary p-5 rounded text-center">
+                    {% block auth_content %}{% endblock %}
+                </div>
             </div>
         </div>
     </div>

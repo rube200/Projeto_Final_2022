@@ -5,7 +5,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" content="width=device-width, initial-scale=1" name="viewport">
+    <meta charset="utf-8" content="width=device-width, initial-scale=1.0, shrink-to-fit=no" name="viewport">
     <title>
         {% if title %}
             {{ title }}
@@ -13,27 +13,23 @@
             {{ name }}
         {% endif %}
     </title>
+    <link href="{{ url_for('static', filename='bootstrap.min.css') }}" rel="stylesheet">
     <link href="{{ url_for('static', filename='favicon.png') }}" rel="icon">
     <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
-    <link crossorigin="anonymous" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/css/bootstrap.min.css"
-          integrity="sha384-0evHe/X+R7YkIZDRvuzKMRqM+OrBnVFBL6DOitfPri4tjfHxaWutUpFmBp4vmVor" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.3/font/bootstrap-icons.css" rel="stylesheet">
 </head>
-<body>
-{% block main_nav %}{% endblock %}
+<body id="page-top">
+<div id="wrapper">
+    {% block main_nav %}{% endblock %}
 
-{% for category, message in get_flashed_messages(true) %}
-    <div class="d-flex justify-content-center top-0">
-        <div class="alert alert-{{ category }} alert-dismissible fade position-absolute show z-index-1" role="alert">
-            <span class="mx-2">{{ message }}</span>
-            <button aria-label="Close" class="btn-close" data-bs-dismiss="alert" type="button"></button>
-        </div>
-    </div>
-{% endfor %}
-
-{% block content %}{% endblock %}
-<script crossorigin="anonymous" integrity="sha384-pprn3073KE6tl6bjs2QrFaJGz5/SUsLqktiwsUTF55Jfv3qYSDhgCecCxMW52nD2"
-        src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/js/bootstrap.bundle.min.js"></script>
+    {% block content %}{% endblock %}
+    <a class="border d-none rounded d-inline scroll-to-top" href="#page-top">
+        <i class="bi bi-caret-up-fill"></i>
+    </a>
+</div>
+<script crossorigin="anonymous" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p"
+        src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ url_for('static', filename='theme.js') }}"></script>
 {% block template_scripts %}{% endblock %}
 {% block scripts %}{% endblock %}
 </body>
