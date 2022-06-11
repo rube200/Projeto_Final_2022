@@ -125,7 +125,7 @@ class DatabaseAccessor:
         cursor = con.cursor()
         try:
             cursor.execute('INSERT OR IGNORE INTO user (username, email, password, name) VALUES (?, ?, ?, ?)',
-                           [username.upper(), email.upper(), password, username])
+                           [username.upper(), email.lower(), password, username])
             con.commit()
 
             if cursor.rowcount < 1:
