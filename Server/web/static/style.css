@@ -27,11 +27,6 @@ header {
     width: 35% !important;
 }
 
-.doorbell {
-    overflow-x: hidden;
-    overflow-y: auto;
-}
-
 .doorbell-detail-container {
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
     width: 460px;

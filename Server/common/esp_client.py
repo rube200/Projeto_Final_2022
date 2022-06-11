@@ -122,9 +122,10 @@ class EspClient(ClientSocket, ClientRecord):
             self._send_stop_stream()
             return True
 
-    def save_picture(self, filename: str = f'{monotonic()}.jpeg', image: bytes = None) -> Tuple[bytes, str]:
+    def save_picture(self, filename: str = f'{monotonic()}.jpeg', image: bytes = None) -> Tuple[bytes or None, str]:
+        image = image or self._camera
         if not image:
-            image = self._camera
+            return None, filename
 
         filepath = path.join(self.__esp_files_path, filename)
         with open(filepath, 'wb') as f:

@@ -88,7 +88,7 @@ class DatabaseAccessor:
             cursor.close()
             con.close()
 
-    def _get_user_by_username(self, username: str) -> Tuple[str, str] or None:
+    def _get_user(self, username: str) -> Tuple[str, str] or None:
         con = self._get_connection()
         cursor = con.cursor()
         try:
@@ -99,7 +99,7 @@ class DatabaseAccessor:
             cursor.close()
             con.close()
 
-    def _try_login_user(self, username: str, password: str) -> Tuple[str, str] or None:
+    def _try_login(self, username: str, password: str) -> Tuple[str, str] or None:
         con = self._get_connection()
         cursor = con.cursor()
         try:
@@ -120,7 +120,7 @@ class DatabaseAccessor:
 
         return usr, name
 
-    def _try_register_user(self, username: str, email: str, password: bytes) -> Tuple[str, str] or None:
+    def _try_register(self, username: str, email: str, password: bytes) -> Tuple[str, str] or None:
         con = self._get_connection()
         cursor = con.cursor()
         try:
@@ -138,7 +138,7 @@ class DatabaseAccessor:
             cursor.close()
             con.close()
 
-    def _get_doorbells_by_owner(self, username: str):
+    def _get_doorbells(self, username: str):
         con = self._get_connection()
         cursor = con.cursor()
         try:
@@ -148,7 +148,7 @@ class DatabaseAccessor:
             cursor.close()
             con.close()
 
-    def _get_notifications_by_username(self, username: str, exclude_checked: bool = True):
+    def _get_notifications(self, username: str, exclude_checked: bool = True):
         con = self._get_connection()
         cursor = con.cursor()
         try:
@@ -156,15 +156,31 @@ class DatabaseAccessor:
                 f'SELECT n.id, d.name, n.time, n.type, n.path{", n.checked " if not exclude_checked else " "}'
                 'FROM notifications n '
                 'INNER JOIN doorbell d '
-                f'ON {"NOT n.checked AND" if exclude_checked else ""} n.uuid = d.id '
-                f'WHERE d.owner = ?',
+                f'ON {"NOT n.checked AND " if exclude_checked else ""}n.uuid = d.id '
+                f'WHERE d.owner = ?'
+                f'ORDER BY n.time DESC',
                 [username.upper()]),
             return cursor.fetchall()
         finally:
             cursor.close()
             con.close()
 
-    def _get_doorbell_by_uuid(self, uuid: int):
+    def _get_doorbell_notifications(self, uuid: int):
+        con = self._get_connection()
+        cursor = con.cursor()
+        try:
+            cursor.execute(
+                f'SELECT n.id, n.time, n.type, n.path '
+                'FROM notifications n '
+                f'WHERE n.uuid = ?'
+                f'ORDER BY n.time DESC',
+                [uuid]),
+            return cursor.fetchall()
+        finally:
+            cursor.close()
+            con.close()
+
+    def _get_doorbell(self, uuid: int):
         con = self._get_connection()
         cursor = con.cursor()
         try:
@@ -182,7 +198,7 @@ class DatabaseAccessor:
 
     def _doorbell_update(self, username: str, password: str, uuid: int, doorbell_name: str,
                          alert_emails: List[str]) -> bool:
-        if not self._try_login_user(username, password):
+        if not self._try_login(username, password):
             return False
 
         con = self._get_connection()
