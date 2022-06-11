@@ -1,9 +1,11 @@
 {% extends 'default_auth.html' %}
 
 {% block auth_content %}
-    <h4>Hello! let's get started</h4>
-    <h6 class="text-secondary">Sign in to continue.</h6>
-    <form action="{{ url_for('login') }}" class="pt-4" method="POST">
+    <div class="pb-5">
+        <h4>Hello! let's get started</h4>
+        <h6 class="mb-0 text-secondary">Sign in to continue.</h6>
+    </div>
+    <form action="{{ url_for('login') }}" method="POST">
         <div class="mb-2">
             <!--suppress HtmlFormInputWithoutLabel -->
             <input autocomplete="username" class="form-control form-control-lg" placeholder="Username" name="username"
@@ -14,7 +16,7 @@
             <input autocomplete="current-password" class="form-control form-control-lg" placeholder="Password"
                    name="password" type="password">
         </div>
-        <div class="my-2 d-flex justify-content-between text-nowrap">
+        <div class="mb-1 d-flex justify-content-between text-nowrap">
             <div class="form-check">
                 <input class="form-check-input ml-0" id="keep_sign" name="keep_sign" type="checkbox" checked>
                 <label class="form-check-label text-muted" for="keep_sign">
@@ -27,7 +29,7 @@
         <button class="btn btn-info btn-lg w-100" type="submit">
             SIGN IN
         </button>
-        <div class="text-center mt-4 fw-light">
+        <div class="fw-light mt-3 text-center">
             Don't have an account?
             <a href="{{ url_for('register') }}" class="text-primary">
                 Create
