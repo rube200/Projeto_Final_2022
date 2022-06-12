@@ -3,7 +3,7 @@
 
 #include "Esp32Utils.h"
 
-#define DEBOUNCE_DELAY 150000//50ms
+#define DEBOUNCE_DELAY 500000//500ms
 
 #define BELL_PIN gpio_num_t(14)
 #define BELL_PIN_BIT BIT14

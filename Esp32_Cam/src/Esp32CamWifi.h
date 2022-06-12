@@ -6,8 +6,6 @@
 #include "WiFiManager.h"
 
 #define ACCESS_POINT_NAME "Video-Doorbell"
-#define REMOTE_HOST "192.168.137.1"
-#define REMOTE_PORT "2376"
 
 //work around for private stuff in WifiManager
 //consider using libs from martong in github
@@ -30,10 +28,12 @@ public:
 
     void begin();
 
+#if DEBUG
     const char *getHostParam() const;
 
     uint16_t getPortParam() const;
-
+#endif
+    
     static bool isReady();
 
     boolean requestSocketConfig();
@@ -55,7 +55,7 @@ private:
     bool isPortalSaved = false;
     byte isUsernameMode = 0;//0 not usernameMode, 1 first time usernameMode, 2 and above not first time in usernameMode(Used to show that last username inserted does not exist)
     WifiManagerParam socket_host_parameter = WifiManagerParam("Host", "Socket host", REMOTE_HOST, 50);
-    WifiManagerParam socket_port_parameter = WifiManagerParam("Port", "Socket port", REMOTE_PORT, 5);
+    WifiManagerParam socket_port_parameter = WifiManagerParam("Port", "Socket port", REMOTE_PORT_STR, 5);
     WifiManagerParam username_parameter = WifiManagerParam("Username","Doorbell not registered, please insert your username:","", 50);
 };
 

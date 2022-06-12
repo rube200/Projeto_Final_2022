@@ -67,8 +67,8 @@ private:
     bool sendPacket(const Esp32CamPacket &, const String & = String());
 
 
-    const char *host = nullptr;
-    uint16_t port = 0;
+    const char *host = REMOTE_HOST;
+    uint16_t port = REMOTE_PORT;
     const char *username = nullptr;
 
 

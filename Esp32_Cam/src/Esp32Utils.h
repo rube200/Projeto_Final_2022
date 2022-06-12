@@ -6,7 +6,11 @@
 
 #define DEBUG 1
 #define DEBUG_CAMERA (DEBUG & 0)
-#define DEBUG_WIFI (DEBUG & 0)
+#define DEBUG_WIFI (DEBUG & 1)
+
+#define REMOTE_HOST "proj47-ipl-2022.duckdns.org"
+#define REMOTE_PORT_STR "2376"
+#define REMOTE_PORT 2376
 
 /*
  * Delays explanation

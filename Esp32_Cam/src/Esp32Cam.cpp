@@ -10,6 +10,8 @@ void Esp32Cam::begin() {
     Serial.begin(SERIAL_BAUD);
 #if DEBUG
     Serial.setDebugOutput(true);
+#else
+    Serial.setDebugOutput(true);
 #endif
     wifi.begin();
     camera.begin();
@@ -19,6 +21,7 @@ void Esp32Cam::begin() {
     Serial.println("Setup Completed!");
 }
 
+#if DEBUG
 void Esp32Cam::startSocket() {
     socket.setHost(wifi.getHostParam(), wifi.getPortParam());
 
@@ -32,7 +35,15 @@ void Esp32Cam::startSocket() {
         socket.setHost(wifi.getHostParam(), wifi.getPortParam());
     }
 }
-
+#else
+void Esp32Cam::startSocket() {
+    if (!socket.connectSocket()) {
+        Serial.println("Exit requested");
+        restartEsp();
+        return;
+    }
+}
+#endif
 void Esp32Cam::loop() {
     if (!Esp32CamWifi::isReady()) {
         restartEsp();

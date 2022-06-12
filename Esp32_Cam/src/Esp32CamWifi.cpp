@@ -2,15 +2,20 @@
 
 Esp32CamWifi::Esp32CamWifi() {
 #if DEBUG_WIFI
-    wifiManager.setDebugOutput(true);
+    setDebugOutput(true);
+#else
+    setDebugOutput(false);
 #endif
     setDarkMode(true);
 
     const char *wifiMenu[] = {"wifi", "exit"};
     setMenu(wifiMenu, 2);
 
+#if DEBUG
     addParameter(&socket_host_parameter);
     addParameter(&socket_port_parameter);
+#endif
+
     setSaveParamsCallback([this] {
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "UnusedValue"
@@ -26,7 +31,9 @@ Esp32CamWifi::Esp32CamWifi() {
 void Esp32CamWifi::begin() {
     Serial.println("Starting WiFiManager...");
 
+#if DEBUG
     loadCostumeParameters();
+#endif
 
     //Fix bug related to params and EEPROM save
     if (!getWiFiIsSaved()) {
@@ -52,6 +59,7 @@ void Esp32CamWifi::begin() {
     Serial.println("Successfully connected to WiFi.");
 }
 
+#if DEBUG
 const char *Esp32CamWifi::getHostParam() const {
     return socket_host_parameter.getValue();
 }
@@ -59,6 +67,7 @@ const char *Esp32CamWifi::getHostParam() const {
 uint16_t Esp32CamWifi::getPortParam() const {
     return atoi(socket_port_parameter.getValue()); // NOLINT(cert-err34-c)
 }
+#endif
 
 bool Esp32CamWifi::isReady() {
     if (WiFi.isConnected()) {
