@@ -23,3 +23,5 @@ def get_alert_message(alert: AlertType) -> str:
         return "Motion detected"
     elif alert == AlertType.UserPicture:
         return "User requested picture"
+    else:
+        return "Unknown alert type"

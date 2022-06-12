@@ -64,6 +64,19 @@ class DatabaseAccessor:
             cursor.close()
             con.close()
 
+    def _get_doorbell_name(self, uuid: int) -> str or None:
+        con = self._get_connection()
+        cursor = con.cursor()
+        try:
+            cursor.execute(
+                'SELECT name FROM doorbell WHERE id = ? LIMIT 1',
+                [uuid])
+            data = cursor.fetchone()
+            return data['name'] if data else None
+        finally:
+            cursor.close()
+            con.close()
+
     def _get_alert_emails(self, uuid: int) -> str or None:
         con = self._get_connection()
         cursor = con.cursor()

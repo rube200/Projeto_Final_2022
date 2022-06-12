@@ -2,6 +2,7 @@ import logging as log
 import re
 from base64 import b64encode
 from collections import namedtuple
+from datetime import datetime
 from os import environ, path
 from sqlite3 import Row
 from time import monotonic, sleep
@@ -11,7 +12,7 @@ import jwt
 from email_validator import EmailNotValidError, validate_email
 from flask import Flask, redirect, url_for, current_app, session, render_template, request, flash, \
     stream_with_context, jsonify
-from flask_mail import Mail, Message, Attachment
+from flask_mail import Mail, Message
 
 from common.alert_type import AlertType, get_alert_message
 from common.database_accessor import DatabaseAccessor
@@ -80,6 +81,8 @@ class WebServer(DatabaseAccessor, Flask):
         con.close()
 
     def __setup_web(self):
+        icon_path = path.join(self.static_folder, 'favicon.png')
+        self.icon_base64 = convert_image_to_base64(self.open_resource(icon_path).read())
         self.add_url_rule('/', 'index', self.__endpoint_index)
         self.add_url_rule('/login', 'login', self.__endpoint_login, methods=['GET', 'POST'])
         self.add_url_rule('/register', 'register', self.__endpoint_register, methods=['GET', 'POST'])
@@ -88,8 +91,8 @@ class WebServer(DatabaseAccessor, Flask):
         self.add_url_rule('/doorbells/<int:uuid>', 'doorbell', self.__endpoint_doorbell, methods=['GET', 'POST'])
         self.add_url_rule('/streams', 'streams', self.__endpoint_streams)
         self.add_url_rule('/streams/<int:uuid>', 'stream', self.__endpoint_stream)
-        self.add_url_rule('/alerts', 'notifications', self.__endpoint_alerts)
-        self.add_url_rule('/alerts-api', 'notifications-api', self.__endpoint_alerts_api)
+        self.add_url_rule('/alerts', 'alerts', self.__endpoint_alerts)
+        self.add_url_rule('/alerts-api', 'alerts-api', self.__endpoint_alerts_api)
         self.add_url_rule('/open_doorbell/<int:uuid>', 'open_doorbell', self.__endpoint_open_doorbell, methods=['POST'])
         self.add_url_rule('/take_picture/<int:uuid>', 'take_picture', self.__endpoint_take_picture, methods=['POST'])
         self.add_url_rule('/alerts2', 'alerts2', self.__endpoint_alerts2)
@@ -222,19 +225,21 @@ class WebServer(DatabaseAccessor, Flask):
             if alert_type is AlertType.UserPicture or alert_type is AlertType.Invalid:
                 return
 
+            doorbell_name = self._get_doorbell_name(client.uuid)
             emails = self._get_alert_emails(client.uuid)
-            if not emails:
+            if not doorbell_name or not emails:
                 return
 
-            message = Message(
-                subject=get_alert_message(alert_type),
-                bcc=emails,
-                body='GOT CHECK IT NOW. MOTHERFUCKER',
-                sender='ru_dani@hotmail.com',  # todo
-                attachments=[Attachment('image.jpeg', 'image/jpeg', data)]
-            )
+            message = f'{get_alert_message(alert_type)} at {datetime.now()}'
             with self.app_context():
-                self.__mail.send(message)
+                self.__mail.send(Message(
+                    subject=get_alert_message(alert_type),
+                    bcc=emails,
+                    html=render_template('email.html',
+                                         icon=self.icon_base64,
+                                         image=convert_image_to_base64(data),
+                                         message=message)
+                ))
         except Exception as ex:
             log.error(f'Exception while getting email for uuid {client.uuid}: {ex!r}')
 
@@ -347,7 +352,7 @@ class WebServer(DatabaseAccessor, Flask):
             cursor.execute(
                 'SELECT d.id, d.name, n.time, n.path '
                 'FROM doorbell d '
-                'INNER JOIN notifications n '
+                'INNER JOIN alerts n '
                 'ON d.id = n.uuid '
                 'WHERE d.owner LIKE ? '
                 'AND n.type <> 0 '
@@ -365,7 +370,7 @@ class WebServer(DatabaseAccessor, Flask):
                 names.append(row[3])
 
             # return render_template('imageGal.html', types = types, paths = paths, dates = dates, doorbells = names)
-            return render_template('notifications.html', paths=paths, dates=dates, doorbells=names)
+            return render_template('notifications.html', paths=paths, dates=dates, doorbells=names)  # todo rename
         finally:
             cursor.close()
             con.close()
@@ -445,7 +450,7 @@ class WebServer(DatabaseAccessor, Flask):
             cursor.execute(
                 'SELECT d.id, d.name, n.time, n.path, n.checked, n.type  '
                 'FROM doorbell d '
-                'INNER JOIN notifications n '
+                'INNER JOIN alerts n '
                 'ON d.id = n.uuid '
                 'WHERE d.owner LIKE ? '
                 'ORDER BY N.time DESC',

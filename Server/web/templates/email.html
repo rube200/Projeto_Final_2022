@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>E-Bell Alert</title>
+    <link href="{{ icon }}" rel="icon" type="image/x-icon">
+</head>
+<body>
+<div class="border my-5">
+    <div class="align-items-center d-flex mt-4 text-center" style="margin: auto;">
+        <img alt="E-Bell icon" src="{{ icon }}" height="32" width="32">
+        <h1>E-Bell</h1>
+    </div>
+    <p class="my-3 text-wrap text-center" id="mail-message">{{ message }}</p>
+    <img alt="Image taken from doorbell" id="mail-image" src="{{ image }}">
+</div>
+<style>
+    body {
+        margin: auto;
+        max-width: 320px;
+    }
+
+    .align-items-center {
+        align-items: center;
+    }
+
+    .border {
+        border: 2px solid #dee2e6;
+    }
+
+    .d-flex {
+        display: flex;
+    }
+
+    .flex-nowrap {
+        flex-wrap: nowrap;
+    }
+
+    .mt-4 {
+        margin-top: 1.5rem;
+    }
+
+    .my-3 {
+        margin-bottom: 1rem;
+        margin-top: 1rem;
+    }
+
+    .my-5 {
+        margin-bottom: 3rem;
+        margin-top: 3rem;
+    }
+
+    .text-center {
+        text-align: center;
+    }
+
+    .text-wrap {
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+</style>
+</body>
+</html>

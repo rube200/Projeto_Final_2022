@@ -1,13 +1,12 @@
 {% extends 'default_e_bell.html' %}
 
-{% set nav_title='Doorbells registered to this user' %}
+{% set nav_title='Doorbells' %}
 {% set no_bells=doorbells|length <= 0 %}
 
 {% block e_bell_content %}
     <div class="d-flex flex-wrap justify-content-evenly">
         {% for doorbell in doorbells %}
-            <div class="card card-hover card-hover-cyan m-5"
-                 onclick="location.href=&quot;{{ url_for('doorbell', uuid=doorbell.id) }}&quot;">
+            <div class="card card-hover card-hover-cyan m-5" onclick="redirectToDoorbell({{ doorbell.id }})">
                 <img alt="Last image from stream for {{ doorbell.name }}"
                      class="figure-img img-fluid"
                      src="{{ doorbell.image }}"
@@ -21,4 +20,16 @@
             </div>
         {% endfor %}
     </div>
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        const elements = {}
+        {% for doorbell in doorbells %}
+            elements[{{ doorbell.id }}] = "{{ url_for('doorbell', uuid=doorbell.id) }}";
+        {% endfor %}
+        function redirectToDoorbell(uuid) {
+            location.href = elements[uuid];
+        }
+    </script>
 {% endblock %}

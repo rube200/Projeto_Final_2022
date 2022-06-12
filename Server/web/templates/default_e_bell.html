@@ -1,107 +1,126 @@
 {% extends 'default.html' %}
 
-{% block main_nav %}
-    <header class="bg-dark navbar navbar-dark navbar-expand-lg">
-        <nav class="container-fluid flex-nowrap p-1">
-            <a class="navbar-brand sidebar-width text-center" href="{{ url_for('index') }}">
-                <img alt="E-Bell logo" class="my-auto" src="{{ url_for('static', filename='logo.png') }}" width="130"
-                     height="65"/>
-            </a>
-            <div class="align-items-center d-flex flex-grow-1 ms-3">
-                <div class="me-auto">
-                    <span class="h5 navbar-text text-nowrap">
-                        {% if nav_title %}
-                            {{ nav_title }}
-                        {% else %}
-                            "Missing Nav Title"
-                        {% endif %}
-                    </span>
-                </div>
-                <div class="ms-4">
-                    <ul class="align-items-center flex-row navbar-nav ms-auto">
-                        <li class="nav-item dropdown">
-                            <button aria-expanded="false" aria-haspopup="true"
-                                    class="bi bi-bell-fill btn btn-dark btn-link nav-link shadow-none"
-                                    data-bs-display="static"
-                                    onclick="location.href=&quot;{{ url_for('notifications') }}&quot;">
-                                <span class="badge bg-danger position-absolute rounded-circle start-100 text-center translate-middle top-0"
-                                      name="notifications-count">0</span>
-                            </button>
-                        </li>
-                        <li class="nav-item mx-4">
-                            <img alt="Profile picture for {{ session.name }}"
-                                 class="img-sm rounded-circle"
-                                 src="{{ url_for('static', filename='default_profile.png') }}">
-                            <span class="navbar-text ms-1">{{ session.name }}</span>
-                        </li>
-                        <li class="nav-item me-2">
-                            <a class="nav-link" href="{{ url_for('logout') }}">
-                                <i class="bi bi-box-arrow-right"></i>
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </nav>
-    </header>
-{% endblock %}
+{% set nav_title = nav_title or "Missing Nav Title" %}
 
-{% block content %}
-    <div class="container d-flex flex-nowrap mx-0 px-0 h-100 min-vw-100">
-        <div class="bg-dark d-flex flex-column py-3">
-            <ul class="nav nav-pills flex-column list-group list-group-flush text-center text-nowrap">
-                <li class="nav-item">
-                    <a class="disabled nav-link text-white" href="#">
-                        UI Elements
-                    </a>
-                </li>
-                <hr/>
+{% block main_nav %}
+    <nav class="navbar navbar-dark align-items-start bg-dark sidebar sidebar-dark sidebar-width accordion p-0">
+        <div class="container-fluid d-flex flex-column p-0">
+            <a class="navbar-brand d-flex justify-content-center align-items-center sidebar-brand my-2 mx-0"
+               href="{{ url_for('index') }}">
+                <div class="sidebar-brand-icon">
+                    <img
+                            width="38"
+                            height="64"
+                            alt="E-Bell logo"
+                            src="{{ url_for('static', filename='logo.png') }}">
+                </div>
+                <div class="display-6 sidebar-brand-text mx-3">
+                    <span>E-Bell</span>
+                </div>
+            </a>
+            <hr class="sidebar-divider my-3">
+            <ul class="nav-pills navbar-nav list-group list-group-flush text-light" id="accordionSidebar">
                 {% for nv in nav %}
-                    <li class="bg-dark border-white list-group-item nav-item">
-                        <a class="{% if nv.id|lower == name|lower %} active disabled {% endif %} nav-link text-white"
+                    <li class="bg-dark border-white list-group-item nav-item p-0">
+                        <a class="nav-link {% if nv.id|lower == name|lower %}active disabled{% endif %} m-2 p-2 text-center"
                            href="{{ url_for(nv.url) }}">
-                            <span class="menu-title me-2">{{ nv.title }}</span>
-                            <span class="bi {{ nv.icon }}">
-                                {% if nv.id|lower == 'notifications' %}
-                                    <span class="badge bg-danger position-absolute rounded-circle start-85 text-center translate-middle top-50"
-                                          name="notifications-count">0</span>
-                                {% endif %}
-                            </span>
+                            <i class="bi {{ nv.icon }}"></i>
+                            <span>{{ nv.title }}</span>
                         </a>
                     </li>
                 {% endfor %}
             </ul>
+            <div class="text-center d-none d-md-inline">
+                <button class="btn rounded-circle border-0" id="sidebarToggle" type="button"></button>
+            </div>
         </div>
-        <div class="container-fluid overflow-auto">
-            {% block e_bell_content %}{% endblock %}
-            {% if no_bells == True %}
-                <h1 class="p-5 text-center">No doorbells.</h1>
-            {% endif %}
+    </nav>
+{% endblock %}
+
+{% block content %}
+    <div class="d-flex flex-column" id="content-wrapper">
+        <div id="content">
+            <nav class="bg-dark navbar navbar-dark navbar-expand mb-4 topbar static-top">
+                <div class="container-fluid">
+                    <button class="btn btn-dark d-md-none rounded-circle me-3" id="sidebarToggleTop" type="button">
+                        <i class="bi bi-list"></i>
+                    </button>
+                    <ul class="navbar-nav flex-nowrap ms-auto">
+                        <li class="nav-item dropdown no-arrow mx-1">
+                            <div class="nav-item dropdown no-arrow">
+                                <a class="dropdown-toggle nav-link"
+                                   aria-expanded="false" data-bs-toggle="dropdown"
+                                   href="{{ url_for('alerts') }}">
+                                    <span class="badge bg-danger badge-counter" id="alerts-count">3</span>
+                                    <i class="bi bi-bell-fill icon-small"></i>
+                                </a>
+                                <div class="dropdown-menu dropdown-menu-dark dropdown-menu-end dropdown-list animated--grow-in">
+                                    <a class="border-dark dropdown-item d-flex align-items-center" href="#">
+                                        <div class="me-3">
+                                            <div class="bg-primary icon-circle">
+                                                <i class="fas fa-file-alt text-white"></i>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <span class="small">December 12, 2019</span>
+                                            <p>A new monthly report is ready to download!</p>
+                                        </div>
+                                    </a>
+                                    <a class="border-dark dropdown-item small text-center"
+                                       href="{{ url_for('alerts') }}">Show All Alerts</a>
+                                </div>
+                            </div>
+                        </li>
+                        <li class="nav-item dropdown no-arrow">
+                            <div class="nav-item dropdown no-arrow">
+                                <a class="dropdown-toggle nav-link" aria-expanded="false" data-bs-toggle="dropdown"
+                                   href="#">
+                                    <span class="d-none d-lg-inline me-2 small">{{ session.name }}</span>
+                                    <img alt="Profile picture for {{ session.name }}"
+                                         class="border rounded-circle img-profile"
+                                         src="{{ url_for('static', filename='default_profile.png') }}">
+                                </a>
+                                <div class="border-dark dropdown-menu dropdown-menu-dark shadow dropdown-menu-end animated--grow-in">
+                                    <a class="dropdown-item" href="{{ url_for('logout') }}">
+                                        <i class="bi bi-box-arrow-right me-2"></i>&nbsp;Logout
+                                    </a>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+            <div class="container container-fluid overflow-auto h-100">
+                {% block e_bell_content %}{% endblock %}
+                {% if no_bells == True %}
+                    <h1 class="p-5 text-center">No doorbells.</h1>
+                {% endif %}
+            </div>
         </div>
     </div>
 {% endblock %}
 
 {% block template_scripts %}
     <script>
-        function getNotificationsCount(elements) {
-            fetch('{{ url_for('notifications-api') }}')
+        function getAlerts(element) {
+            fetch('{{ url_for('alerts-api') }}')
                 .then(response => response.json())
                 .then(data => {
                     console.debug(data);
                     if (!data || data.error) {
-                        console.error(`Error getting notifications: ${data.error}`);
+                        console.error(`Error getting alerts: ${data.error}`);
                         return;
                     }
 
-                    elements.forEach(element => element.innerText = data.length);
+                    element.innerText = data.length;
                 })
-                .catch(error => console.error(`Error calling notifications-api: ${error}`));
+                .catch(error => console.error(`Error calling alerts-api: ${error}`));
         }
 
         window.addEventListener('load', function () {
-            const notificationsCount = document.getElementsByName('notifications-count');
-            setInterval(() => getNotificationsCount(notificationsCount), 5000);
-            getNotificationsCount(notificationsCount);
+            const alertsCount = document.getElementById('alerts-count');
+            setInterval(() => getAlerts(alertsCount), 5000);
+            getAlerts(alertsCount);
         });
     </script>
 {% endblock %}
