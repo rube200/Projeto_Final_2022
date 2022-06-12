@@ -5,7 +5,7 @@ from collections import namedtuple
 from datetime import datetime
 from os import environ, path
 from sqlite3 import Row
-from time import monotonic, sleep
+from time import monotonic, sleep, time
 
 import bcrypt
 import jwt
@@ -16,7 +16,6 @@ from flask_mail import Mail, Message
 
 from common.alert_type import AlertType, get_alert_message
 from common.database_accessor import DatabaseAccessor
-from common.esp_client import EspClient
 from common.esp_clients import EspClients
 from common.esp_events import EspEvents
 
@@ -129,7 +128,7 @@ class WebServer(DatabaseAccessor, Flask):
 
         return [self.__get_doorbell(bell_data) for bell_data in data]
 
-    def __get_doorbell(self, bell_data: Row or dict) -> type:
+    def __get_doorbell(self, bell_data: Row or dict):
         doorbell = namedtuple('Bell', 'id, name, image, online')
         doorbell.id = bell_data['id']
         doorbell.name = bell_data['name']
@@ -170,8 +169,7 @@ class WebServer(DatabaseAccessor, Flask):
 
         if 'checked' in data:
             doorbell_file.checked = data['checked']
-        print('1')
-        print(type(doorbell_file))
+
         return doorbell_file
 
     def __get_alerts(self, exclude_checked: bool = True, load_images: bool = False):
@@ -220,28 +218,33 @@ class WebServer(DatabaseAccessor, Flask):
             self.__events.on_stop_stream_requested(uuid)
             return b'Content-Length: 0'
 
-    def __on_alert(self, client: EspClient, alert_type: AlertType, data: bytes, _) -> None:
+    def __on_alert(self, uuid: int, alert_type: AlertType, data: dict):
         try:
-            if alert_type is AlertType.UserPicture or alert_type is AlertType.Invalid:
+            if alert_type is AlertType.Invalid or alert_type is AlertType.UserPicture or 'image' not in data:
                 return
 
-            doorbell_name = self._get_doorbell_name(client.uuid)
-            emails = self._get_alert_emails(client.uuid)
+            doorbell_name = self._get_doorbell_name(uuid)
+            emails = self._get_alert_emails(uuid)
             if not doorbell_name or not emails:
                 return
 
-            message = f'{get_alert_message(alert_type)} at {datetime.now()}'
+            alert_message = get_alert_message(alert_type)
+            alert_time = data.get('time') or time()
+            date = datetime.fromtimestamp(alert_time).strftime('%Y-%m-%d %H:%M')
+
+            message = f'{alert_message} at your doorbell({doorbell_name})'
             with self.app_context():
                 self.__mail.send(Message(
                     subject=get_alert_message(alert_type),
                     bcc=emails,
                     html=render_template('email.html',
                                          icon=self.icon_base64,
-                                         image=convert_image_to_base64(data),
-                                         message=message)
+                                         image=convert_image_to_base64(data['image']),
+                                         message=message,
+                                         time=f'Time: {date}')
                 ))
         except Exception as ex:
-            log.error(f'Exception while getting email for uuid {client.uuid}: {ex!r}')
+            log.error(f'Exception while getting email for uuid {uuid}: {ex!r}')
 
     def __endpoint_index(self):
         if self.__authenticate():
@@ -314,15 +317,19 @@ class WebServer(DatabaseAccessor, Flask):
         doorbell.emails = doorbell_data[1]
 
         alerts = self._get_doorbell_alerts(uuid)
+        print(alerts)
         if not alerts:
             return render_template('doorbell.html', doorbell=doorbell)
 
         doorbell_files = []
+        print("test")
         for alert in alerts:
             data = self.__get_alert(alert, True)
+            print(data)
             if data:
                 doorbell_files.append(data)
 
+        print(doorbell_files)
         return render_template('doorbell.html', doorbell=doorbell, doorbell_files=doorbell_files)
 
     def __endpoint_streams(self):
@@ -378,19 +385,19 @@ class WebServer(DatabaseAccessor, Flask):
     def __endpoint_alerts_api(self):
         alerts = self.__get_alerts(load_images=False)
         if alerts is None:
-            return jsonify({'error': 'Not authenticated'}, 401)
+            return {'error': 'Unauthorized request'}, 401
 
-        return jsonify(alerts)
+        return jsonify(alerts), 200
 
     def __endpoint_open_doorbell(self, uuid: int):
         username = self.__authenticate()
         if not username or not self._check_owner(username, uuid):
-            return self.response_class('Unauthorized request', 401)
+            return {'error': 'Unauthorized request'}, 401
 
-        if self.__events.on_open_doorbell_requested(uuid):
-            return self.response_class('Doorbell opened')
+        if not self.__events.on_open_doorbell_requested(uuid):
+            return {'error': 'Doorbell is offline'}, 404
 
-        return self.response_class('Doorbell is offline', 404)
+        return 'Doorbell opened', 200
 
     def __endpoint_take_picture(self, uuid: int):
         username = self.__authenticate()
@@ -405,38 +412,46 @@ class WebServer(DatabaseAccessor, Flask):
         if not image:
             return self.response_class('Doorbell is offline', 404)
 
-        self._add_alert(uuid, image, filename)
+        self.__events.on_alert(uuid, AlertType.UserPicture, {'image': image, 'path': filename})
         print(image)  # todo remove
         img = convert_image_to_base64(image)
         print(img)
         return self.response_class(img, mimetype='image/jpeg')
 
     def __doorbell_update(self, uuid: int):
-        username = self.__authenticate()
-        if not username or not self._check_owner(username, uuid):
-            return self.response_class('Unauthorized request', 401)
-
-        password = request.form.get('password')
         doorbell_name = request.form.get('doorbell-name')
         emails = request.form.get('alert-emails')
+        password = request.form.get('password')
+        if not doorbell_name or not emails or not password:
+            return {'error': 'Missing parameters'}, 400
+
+        username = self.__authenticate()
+        if not username or not self._check_owner(username, uuid):
+            return {'error': 'Unauthorized request'}, 401
+
         re_emails = re.split('[,;\r\n ]', emails)
         alert_emails = []
         for email in re_emails:
-            email.strip()
+            email = email.strip().lower()
             if not email:
                 continue
 
-            email = email.strip()
             try:
                 validate_email(email)
             except EmailNotValidError:
                 continue
 
-            alert_emails.append(email.lower())
-        if not self._doorbell_update(username, password, uuid, doorbell_name, alert_emails):
-            return self.response_class('Unauthorized request', 401)
+            if email not in alert_emails:
+                alert_emails.append(email)
 
-        return self.response_class('Doorbell updated')
+        if not self._doorbell_update(username, password, uuid, doorbell_name, alert_emails):
+            return {'error': 'Unauthorized request'}, 401
+
+        return {
+                   'id': uuid,
+                   'name': doorbell_name,
+                   'emails': alert_emails
+               }, 200
 
     # todo recheck this one
     def __endpoint_alerts2(self):
