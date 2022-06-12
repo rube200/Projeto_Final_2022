@@ -6,7 +6,7 @@
             {% for category, message in get_flashed_messages(true) %}
                 <div class="alert alert-{{ category }} alert-dismissible fade mx-0 my-3 p-3 position-absolute show w-auto z-index-1"
                      role="alert">
-                    <span class="mx-2">{{ message }}</span>
+                    <span class="mx-2 pe-4">{{ message }}</span>
                     <button aria-label="Close" class="btn-close" data-bs-dismiss="alert" type="button"></button>
                 </div>
             {% endfor %}

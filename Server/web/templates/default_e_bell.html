@@ -90,7 +90,7 @@
                     </ul>
                 </div>
             </nav>
-            <div class="container container-fluid overflow-auto h-100">
+            <div class="container container-fluid h-auto">
                 {% block e_bell_content %}{% endblock %}
                 {% if no_bells == True %}
                     <h1 class="p-5 text-center">No doorbells.</h1>
@@ -106,7 +106,6 @@
             fetch('{{ url_for('alerts-api') }}')
                 .then(response => response.json())
                 .then(data => {
-                    console.debug(data);
                     if (!data || data.error) {
                         console.error(`Error getting alerts: ${data.error}`);
                         return;
