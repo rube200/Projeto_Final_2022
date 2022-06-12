@@ -1,5 +1,5 @@
 from threading import Thread, Event
-from time import sleep, monotonic
+from time import monotonic, sleep
 from typing import Callable
 
 import numpy

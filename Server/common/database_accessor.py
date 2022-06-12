@@ -3,7 +3,7 @@ from typing import List, Tuple
 
 import bcrypt
 
-from common.alert_type import AlertType
+alerts_columns = ['uuid', 'type', 'time', 'checked', 'path', 'notes']
 
 
 class DatabaseAccessor:
@@ -53,12 +53,25 @@ class DatabaseAccessor:
             cursor.close()
             con.close()
 
-    def _add_alert(self, uuid: int, alert_type: AlertType, path: str) -> None:
+    def _add_alert(self, info: dict) -> None:
+        columns = []
+        values = []
+        for k in alerts_columns:
+            v = info.get(k)
+            if not v:
+                continue
+
+            columns.append(k)
+            values.append(v)
+
+        columns_placer = ', '.join(columns)
+        values_placer = ', '.join(['?'] * len(values))
+
         con = self._get_connection()
         cursor = con.cursor()
         try:
-            cursor.execute('INSERT OR IGNORE INTO alerts(uuid, type, path) VALUES (?, ?, ?)',
-                           [uuid, alert_type.value, path])
+            # noinspection SqlInsertValues
+            cursor.execute(f'INSERT OR IGNORE INTO alerts({columns_placer}) VALUES ({values_placer})', values)
             con.commit()
         finally:
             cursor.close()

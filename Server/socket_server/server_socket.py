@@ -1,4 +1,5 @@
 import logging as log
+from datetime import datetime
 from multiprocessing import Event
 from os import environ
 from selectors import DefaultSelector, EVENT_READ
@@ -38,6 +39,9 @@ class ServerSocket(DatabaseAccessor):
         self.__shutdown_request = False
         self.__wait_shutdown = Event()
         self.__tcp_socket = socket(AF_INET, SOCK_STREAM)
+        self.__tcp_socket.bind(self.__server_address)
+        socket_opt(self.__tcp_socket)
+        self.__selector.register(self.__tcp_socket, EVENT_READ)
 
     def __del__(self):
         pass  # todo
@@ -80,8 +84,18 @@ class ServerSocket(DatabaseAccessor):
     def __on_esp_username_recv(self, client: EspClient, username: str) -> bool:
         return self._register_doorbell(username, client.uuid)
 
-    def __on_alert(self, client: EspClient, alert_type: AlertType, _, path: str) -> None:
-        self._add_alert(client.uuid, alert_type, path)
+    def __on_alert(self, uuid: int, alert_type: AlertType, info: dict) -> None:
+        data = {'uuid': uuid, 'type': alert_type.value}
+        if 'time' in info:
+            data['time'] = datetime.fromtimestamp(info['time'])
+        if 'checked' in info:
+            data['checked'] = info['checked']
+        if 'path' in info:
+            data['path'] = info['path']
+        if 'notes' in info:
+            data['notes'] = info['notes']
+
+        self._add_alert(data)
 
     def __process_tcp(self, key, events: int) -> None:
         if not key.data:
@@ -101,7 +115,7 @@ class ServerSocket(DatabaseAccessor):
                 log.error(f'Exception while processing client {client.address}: {ex!r}')
                 log.error(format_exc())
             else:
-                log.info(f'Client disconnect/timeout from {client.address!r}')
+                log.info(f'Client disconnect/timeout from {client.address!r}: {ex!r}')
             del self.__clients[client.uuid]
 
         except Exception as ex:
@@ -110,9 +124,6 @@ class ServerSocket(DatabaseAccessor):
             del self.__clients[client.uuid]
 
     def run_forever(self) -> None:
-        self.__selector.register(self.__tcp_socket, EVENT_READ)
-        self.__tcp_socket.bind(self.__server_address)
-        socket_opt(self.__tcp_socket)
         self.__tcp_socket.listen()
         log.info(f'Socket ready! Tcp: {self.__tcp_socket.getsockname()!r}')
         log.info('Waiting connections...')

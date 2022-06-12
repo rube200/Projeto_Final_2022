@@ -1,7 +1,7 @@
 from os import environ, path, makedirs
 from selectors import BaseSelector
 from socket import socket
-from time import monotonic
+from time import monotonic, time
 from typing import Tuple
 
 from werkzeug.utils import secure_filename
@@ -31,6 +31,7 @@ class EspClient(ClientSocket, ClientRecord):
         self.__stream_requests = 0
 
     def __del__(self):
+        print("esp_client del")  # todo remove
         ClientSocket.__del__(self)
         ClientRecord.__del__(self)
         self.__events.on_stop_stream_requested -= self.on_stop_stream_requested
@@ -59,33 +60,33 @@ class EspClient(ClientSocket, ClientRecord):
         is_valid = self.__events.on_esp_username_recv(self, username)
         self._send_username_confirmation(is_valid)
 
-    def _process_camera(self, data: bytes) -> None:
-        super(EspClient, self)._process_camera(data)
+    def _process_camera(self, image: bytes) -> None:
+        super(EspClient, self)._process_camera(image)
 
         while self.__esp_to_save_paths:
-            filename, alert_type = self.__esp_to_save_paths.popitem()
+            filename, (alert_type, alert_time) = self.__esp_to_save_paths.popitem()
             if alert_type is AlertType.Bell:
                 save_img = self.__config_bell_duration <= 0.0
             else:
                 save_img = self.__config_motion_duration <= 0.0
             if save_img:
-                self.save_picture(filename, data)
+                self.save_picture(filename, image)
 
-            self.__events.on_alert(self, alert_type, data, filename)
+            self.__events.on_alert(self.uuid, alert_type, {'path': filename, 'image': image, 'time': alert_time})
 
     def __prepare_and_notify(self, alert_type: AlertType, duration: float) -> None:
-        time = monotonic()
+        alert_time = time()
         if duration > 0.0:
-            filepath = path.join(self.__esp_files_path, secure_filename(f'{time}.mp4'))
-            filepath = self.start_record(filepath, time + duration)
+            filepath = path.join(self.__esp_files_path, secure_filename(f'{alert_time}.mp4'))
+            filepath = self.start_record(filepath, monotonic() + duration)
             if not filepath:
                 return
 
             filename = path.basename(filepath)
         else:
-            filename = secure_filename(f'{time}.jpeg')
+            filename = secure_filename(f'{alert_time}.jpeg')
 
-        self.__esp_to_save_paths[filename] = alert_type
+        self.__esp_to_save_paths[filename] = (alert_type, alert_time)
 
     def _process_bell_pressed(self) -> None:
         self.__prepare_and_notify(AlertType.Bell, self.__config_bell_duration)
@@ -123,7 +124,7 @@ class EspClient(ClientSocket, ClientRecord):
             return True
 
     def save_picture(self, filename: str = None, image: bytes = None) -> Tuple[bytes or None, str]:
-        filename = filename or secure_filename(f'{monotonic()}.jpeg')
+        filename = filename or secure_filename(f'{(time() * 1000)}.jpeg')
         image = image or self._camera
         if not image:
             return None, filename
