@@ -1,4 +1,4 @@
-from os import environ, path, makedirs
+from os import path, environ
 from selectors import BaseSelector
 from socket import socket
 from time import monotonic, time
@@ -24,9 +24,7 @@ class EspClient(ClientSocket, ClientRecord):
 
         self.__config_bell_duration = 0.0
         self.__config_motion_duration = 0.0
-        self.__esp_files_path = environ.get('ESP_FILES_PATH') or './esp_files'
-        if not path.exists(self.__esp_files_path):
-            makedirs(self.__esp_files_path)
+        self.__esp_files_path = environ.get('ESP_FILES_DIR')
         self.__esp_to_save_paths = {}
         self.__stream_requests = 0
 
@@ -72,7 +70,7 @@ class EspClient(ClientSocket, ClientRecord):
             if save_img:
                 self.save_picture(filename, image)
 
-            self.__events.on_alert(self.uuid, alert_type, {'path': filename, 'image': image, 'time': alert_time})
+            self.__events.on_alert(self.uuid, alert_type, {'filename': filename, 'image': image, 'time': alert_time})
 
     def __prepare_and_notify(self, alert_type: AlertType, duration: float) -> None:
         alert_time = time()
