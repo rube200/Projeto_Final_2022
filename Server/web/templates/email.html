@@ -14,7 +14,9 @@
     </div>
     <p class="my-3 text-wrap text-center" id="mail-message">{{ message }}</p>
     <p class="my-3 text-wrap text-center" id="mail-message">{{ time }}</p>
-    <img alt="Image taken from doorbell" id="mail-image" src="{{ image }}">
+    {% if image %}
+        <img alt="Image taken from doorbell" id="mail-image" src="{{ image }}">
+    {% endif %}
 </div>
 <style>
     body {

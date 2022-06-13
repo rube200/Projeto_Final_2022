@@ -3,8 +3,8 @@
 {% set nav_title='Doorbell' %}
 
 {% block e_bell_content %}
-    <div class="align-items-baseline d-flex flex-wrap justify-content-evenly py-2">
-        <div class="card doorbell-detail-container mx-2 mt-3">
+    <div class="align-items-baseline d-flex flex-wrap justify-content-evenly py-4">
+        <div class="card doorbell-detail-container mx-2 my-3">
             <div class="card-body doorbell-detail-title">
                 <h2 class="card-title text-center">Stream</h2>
             </div>
@@ -21,31 +21,34 @@
                         type='image/jpeg'>
                 </object>
             </div>
-            <div class="card-body d-flex justify-content-evenly text-center">
-                <button class="border-0 btn btn-cyan p-2 text-white w-35" onclick="takePic()" type="button">
+            <div class="card-body d-flex flex-wrap justify-content-evenly text-center">
+                <button class="border-0 btn btn-cyan px-4 py-2 text-nowrap text-white w-auto" onclick="takePic()"
+                        type="button">
                     Take Picture
                 </button>
-                <button class="border-0 btn btn-violet p-2 text-white w-35" onclick="openDoor()" type="button">
+                <button class="border-0 btn btn-violet px-4 py-2 text-nowrap text-white w-auto" onclick="openDoor()"
+                        type="button">
                     Open Door
                 </button>
             </div>
         </div>
-        <div class="card doorbell-detail-container mx-2 mt-3">
+        <div class="card doorbell-detail-container mx-2 my-3">
             <div class="card-body doorbell-detail-title">
                 <h2 class="card-title text-center">Details</h2>
             </div>
             <div class="card-body">
-                <form action="{{ url_for('doorbell', uuid=doorbell.id) }}" onsubmit="preventDefault()" method="POST">
+                <form id="update-form" onreset="return resetForms();" onsubmit="return sendForms();" method="POST">
                     <div class="form-group">
                         <label for="doorbell-name">Doorbell Name</label>
                         <input autocomplete="on" class="form-control" id="doorbell-name" name="doorbell-name"
-                               placeholder="{{ doorbell.name }}" value="{{ doorbell.name }}" type="text"/>
+                               value="{{ doorbell.name }}" type="text"/>
                     </div>
                     <div class="form-group">
                         <label for="alert-emails">Emails to alert</label>
-                        <textarea class="form-control"
+                        <textarea class="form-control text-nowrap"
                                   id="alert-emails"
-                                  name="alert-emails">{{ doorbell.emails }}</textarea>
+                                  name="alert-emails"
+                                  rows="3">{{ doorbell.emails }}</textarea>
                     </div>
                     <div class="form-group">
                         <label for="password">Password Confirmation</label>
@@ -54,9 +57,13 @@
                                name="password"
                                type="password">
                     </div>
-                    <div class="d-flex justify-content-evenly m-2 mt-4 text-center">
-                        <button class="border-0 btn btn-green p-2 text-white w-25" type="submit">Submit</button>
-                        <button class="border-0 btn btn-red p-2 text-white w-25" type="reset">Cancel</button>
+                    <div class="d-flex flex-wrap justify-content-evenly m-2 mt-4 text-center">
+                        <button class="border-0 btn btn-green px-4 py-2 text-nowrap text-white w-auto" type="submit">
+                            Submit
+                        </button>
+                        <button class="border-0 btn btn-red px-4 py-2 text-nowrap text-white w-auto" type="reset">
+                            Cancel
+                        </button>
                     </div>
                 </form>
             </div>
@@ -70,7 +77,7 @@
                             width="320"
                             height="240"
                             class="img-fluid"
-                            data="{{ file.image }}"
+                            data="{{ url_for('get-resource', uuid=doorbell.id, filename=file.filename) }}"
                             type='image/jpeg'>
 
                     </object>
@@ -89,6 +96,7 @@
 {% endblock %}
 
 {% block scripts %}
+    <!--suppress JSUnresolvedVariable -->
     <script>
         /*
                 const popup = document.getElementById('popup-container');
@@ -122,8 +130,88 @@
 
         const doorbellNameInput = document.getElementById('doorbell-name');
         const doorbellEmailsInput = document.getElementById('alert-emails');
+        const doorbellPasswordInput = document.getElementById('password');
+        const doorbellUpdateForm = document.getElementById('update-form');
+        const streamElement = document.getElementById('stream-view');
 
-        function checkDoorbellUpdateForm() {
+        const uuid = {{ doorbell.id }};
+        let emails = [
+            {% for email in doorbell.emails %}
+                '{{ email }}',
+            {% endfor %}
+        ];
+        let name = '{{ doorbell.name }}';
+
+        const inputTest = document.createElement('input');
+        inputTest.type = 'email';
+
+        function openDoor() {
+            fetch('{{ url_for('open_doorbell', uuid=doorbell.id) }}', {method: 'POST'})
+                .then(response => response.json())
+                .then(data => {
+                    if (!data || data.error) {
+                        console.error(`Error while opening doorbell: ${data.error}`);
+                        alert(`Error while opening doorbell. ${data.error}`);
+                        return;
+                    }
+
+                    console.debug(`Doorbell opened: ${data}`);
+                    //todo set message
+                })
+                .catch(error => {
+                    console.error(`Error while opening doorbell: ${error}`);
+                    alert(`Error while opening doorbell. ${error}`);
+                });
+        }
+
+        function resetForms() {
+            console.debug(emails);
+            doorbellNameInput.value = name;
+            doorbellEmailsInput.value = emails.join('\r\n');
+            doorbellPasswordInput.value = ''
+            return false;
+        }
+
+        function sendForms() {
+            if (!validateForm()) {
+                return false;
+            }
+
+            fetch('{{ url_for('doorbell', uuid=doorbell.id) }}', {
+                body: new FormData(doorbellUpdateForm),
+                method: 'POST'
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (!data || data.error) {
+                        console.error(`Error while updating doorbell: ${data.error}`);
+                        alert(`Error while updating doorbell. ${data.error}`);
+                        return;
+                    }
+
+                    emails = []
+                    for (let email of data.emails) {
+                        emails.push(email);
+                    }
+                    name = data.name;
+                    resetForms();
+                })
+                .catch(error => {
+                    resetForms();
+                    console.error(`Error while updating doorbell: ${error}`);
+                    alert(`Error while updating doorbell. ${error}`);
+                });
+
+            console.log("e");
+            return false;
+        }
+
+        function validateEmail(email) {
+            inputTest.value = email;
+            return inputTest.validity.typeMismatch === false;
+        }
+
+        function validateForm() {
             const name = doorbellNameInput.value;
             if (!name || !name.trim()) {
                 alert('Please enter a name for your doorbell');
@@ -140,7 +228,7 @@
             for (let i = 0; i < emailsList.length; i++) {
                 const email = emailsList[i];
                 if (!email || !email.trim()) {
-                    return;
+                    continue;
                 }
 
                 if (!validateEmail(email)) {
@@ -149,59 +237,37 @@
                 }
             }
 
+            if (!doorbellPasswordInput.value) {
+                alert('Please enter a password');
+                return false;
+            }
+
             return true;
         }
 
-
-        function openDoor() {
-            fetch('{{ url_for('open_doorbell', uuid=doorbell.id) }}', {method: 'POST'})
-                .then(data => {
-                    if (!data || data.error) {
-                        console.error(`Error while opening doorbell: ${data.error}`);
-                        return;
-                    }
-
-                    console.debug(`Doorbell opened: ${data}`);
-                })
-                .catch(error => console.error(`Error while opening doorbell ${uuid}: ${error}`));
-        }
-
-
         function takePic() {
             fetch('{{ url_for('take_picture', uuid=doorbell.id) }}', {method: 'POST'})
+                .then(response => response.json())
                 .then(data => {
                     if (!data || data.error) {
                         console.error(`Error while taking a picture: ${data.error}`);
+                        alert(`Error while taking a picture. ${data.error}`);
                         return;
                     }
 
                     console.debug(`Picture taken: ${data}`);
+                    //todo set message
                 })
-                .catch(error => console.error(`Error while taking a picture ${uuid}: ${error}`));
+                .catch(error => {
+                    console.error(`Error while taking a picture: ${error}`);
+                    alert(`Error while taking a picture. ${error}`);
+                });
         }
 
-
-        const inputTest = document.createElement('input');
-        inputTest.type = 'email';
-
-        function validateEmail(email) {
-            inputTest.value = email;
-            return inputTest.validity.typeMismatch === false;
-        }
-
-
-        const uuid = {{ doorbell.id }};
-        const emails = [
-            {% for email in doorbell.emails %}
-                '{{ email }}',
-            {% endfor %}
-        ];
-        const stream = document.getElementById('stream-view');
         window.addEventListener('load', () => {
-            console.debug(emails);
-            doorbellEmailsInput.value = emails.join('\r\n');
-            if (stream) {
-                stream.data = stream.getAttribute('url');
+            resetForms();
+            if (streamElement) {
+                streamElement.data = streamElement.getAttribute('url');
             }
         });
     </script>
