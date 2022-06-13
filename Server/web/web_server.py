@@ -3,7 +3,7 @@ import re
 from base64 import b64encode
 from collections import namedtuple
 from datetime import datetime
-from os import environ, path
+from os import environ, path, makedirs
 from sqlite3 import Row
 from time import monotonic, sleep, time
 
@@ -11,8 +11,10 @@ import bcrypt
 import jwt
 from email_validator import EmailNotValidError, validate_email
 from flask import Flask, redirect, url_for, current_app, session, render_template, request, flash, \
-    stream_with_context, jsonify
+    stream_with_context, jsonify, send_from_directory
 from flask_mail import Mail, Message
+from werkzeug.exceptions import NotFound
+from werkzeug.utils import secure_filename
 
 from common.alert_type import AlertType, get_alert_message
 from common.database_accessor import DatabaseAccessor
@@ -25,6 +27,25 @@ NAV_DICT = [
     {'id': 'alerts', 'title': 'Alerts', 'icon': 'bi-bell-fill', 'url': 'alerts'},
     {'id': 'statistics', 'title': 'Statistics', 'icon': 'bi-bar-chart-fill', 'url': 'doorbells'},
 ]
+
+
+def convert_alert(alert_data: Row or dict, load_image: bool = False):
+    col = alert_data.keys()
+    alert = namedtuple('DoorbellAlert', 'id, type, time')
+    alert.id = alert_data['id']
+    alert.type = AlertType(alert_data['type'])
+    alert.time = alert_data['time']
+    alert.filename = alert_data['filename'] if 'filename' in col else None
+
+    if load_image:
+        if not alert.filename:
+            return None
+
+    alert.uuid = alert_data['uuid'] if 'uuid' in col else None
+    alert.name = alert_data['name'] if 'name' in col else None
+    alert.checked = alert_data['checked'] if 'checked' in col else None
+    alert.notes = alert_data['notes'] if 'notes' in col else None
+    return alert
 
 
 def convert_image_to_base64(image: bytes) -> str or None:
@@ -56,6 +77,11 @@ class WebServer(DatabaseAccessor, Flask):
         self.__events.on_alert += self.__on_alert
         self.config.from_pyfile('flask.cfg')
 
+        esp_path = self.config['ESP_FILES_DIR']
+        environ['ESP_FILES_DIR'] = esp_path = path.join(self.root_path, esp_path)
+        if not path.exists(esp_path):
+            makedirs(esp_path)
+
         if self.config.get('RANDOM_SECRET_KEY'):
             import secrets
             self.config['JWT_SECRET_KEY'] = secrets.token_hex(32)
@@ -86,12 +112,13 @@ class WebServer(DatabaseAccessor, Flask):
         self.add_url_rule('/login', 'login', self.__endpoint_login, methods=['GET', 'POST'])
         self.add_url_rule('/register', 'register', self.__endpoint_register, methods=['GET', 'POST'])
         self.add_url_rule('/logout', 'logout', endpoint_logout)
+        self.add_url_rule('/alerts', 'alerts', self.__endpoint_alerts)
+        self.add_url_rule('/alerts-count', 'alerts-count', self.__endpoint_alerts_count)
         self.add_url_rule('/doorbells', 'doorbells', self.__endpoint_doorbells)
         self.add_url_rule('/doorbells/<int:uuid>', 'doorbell', self.__endpoint_doorbell, methods=['GET', 'POST'])
         self.add_url_rule('/streams', 'streams', self.__endpoint_streams)
         self.add_url_rule('/streams/<int:uuid>', 'stream', self.__endpoint_stream)
-        self.add_url_rule('/alerts', 'alerts', self.__endpoint_alerts)
-        self.add_url_rule('/alerts-api', 'alerts-api', self.__endpoint_alerts_api)
+        self.add_url_rule('/get-resource/<int:uuid>/<string:filename>', 'get-resource', self.__endpoint_get_resource)
         self.add_url_rule('/open_doorbell/<int:uuid>', 'open_doorbell', self.__endpoint_open_doorbell, methods=['POST'])
         self.add_url_rule('/take_picture/<int:uuid>', 'take_picture', self.__endpoint_take_picture, methods=['POST'])
         self.add_url_rule('/alerts2', 'alerts2', self.__endpoint_alerts2)
@@ -126,9 +153,9 @@ class WebServer(DatabaseAccessor, Flask):
         if not data:
             return []
 
-        return [self.__get_doorbell(bell_data) for bell_data in data]
+        return [self.__convert_doorbell(bell_data) for bell_data in data]
 
-    def __get_doorbell(self, bell_data: Row or dict):
+    def __convert_doorbell(self, bell_data: Row or dict):
         doorbell = namedtuple('Bell', 'id, name, image, online')
         doorbell.id = bell_data['id']
         doorbell.name = bell_data['name']
@@ -145,48 +172,6 @@ class WebServer(DatabaseAccessor, Flask):
             doorbell.state = 'Offline'
 
         return doorbell
-
-    def __get_alert(self, data: Row, load_images: bool = False):
-        filepath = data['path']
-        if not path.exists(filepath):
-            return None
-
-        doorbell_file = namedtuple('DoorbellFiles', 'id, name, time, image')
-        doorbell_file.id = data['id']
-        doorbell_file.type = data['type']
-        doorbell_file.time = data['time']
-
-        if 'name' in data:
-            doorbell_file.name = data['name']
-        else:
-            doorbell_file.name = 'Bell pressed' if doorbell_file.type is AlertType.Bell else 'Motion detected'
-
-        if load_images:
-            with self.open_resource(filepath) as f:
-                doorbell_file.image = f.read()
-        else:
-            doorbell_file.image = data['path']
-
-        if 'checked' in data:
-            doorbell_file.checked = data['checked']
-
-        return doorbell_file
-
-    def __get_alerts(self, exclude_checked: bool = True, load_images: bool = False):
-        username = self.__authenticate()
-        if not username:
-            return None
-
-        data = self._get_alerts(username, exclude_checked)
-        if not data:
-            return []
-
-        alerts = []
-        for alert_data in data:
-            alert = self.__get_alert(alert_data, load_images)
-            if alert:
-                alerts.append(alert)
-        return alerts
 
     def __generate_stream(self, uuid: int):
         esp = self.__clients.get_client(uuid)
@@ -220,7 +205,7 @@ class WebServer(DatabaseAccessor, Flask):
 
     def __on_alert(self, uuid: int, alert_type: AlertType, data: dict):
         try:
-            if alert_type is AlertType.Invalid or alert_type is AlertType.UserPicture or 'image' not in data:
+            if alert_type is AlertType.Invalid or alert_type is AlertType.UserPicture:
                 return
 
             doorbell_name = self._get_doorbell_name(uuid)
@@ -232,14 +217,21 @@ class WebServer(DatabaseAccessor, Flask):
             alert_time = data.get('time') or time()
             date = datetime.fromtimestamp(alert_time).strftime('%Y-%m-%d %H:%M')
 
-            message = f'{alert_message} at your doorbell({doorbell_name})'
+            image = convert_image_to_base64(data['image']) if 'image' in data else None
+            if alert_type is AlertType.Bell or alert_type is AlertType.Movement:
+                message = f'{alert_message} at your doorbell({doorbell_name})'
+            elif alert_type is AlertType.NewBell:
+                message = f'{alert_message}({doorbell_name}) to your account'
+            else:
+                message = f'{alert_message} - {doorbell_name}'
+
             with self.app_context():
                 self.__mail.send(Message(
                     subject=get_alert_message(alert_type),
                     bcc=emails,
                     html=render_template('email.html',
                                          icon=self.icon_base64,
-                                         image=convert_image_to_base64(data['image']),
+                                         image=image,
                                          message=message,
                                          time=f'Time: {date}')
                 ))
@@ -303,7 +295,7 @@ class WebServer(DatabaseAccessor, Flask):
 
     def __endpoint_doorbell(self, uuid: int):
         if request.method == 'POST':
-            return self.__doorbell_update(uuid)
+            return self.__update_doorbell(uuid)
 
         username = self.__authenticate()
         if not username:
@@ -313,23 +305,23 @@ class WebServer(DatabaseAccessor, Flask):
             return redirect(url_for('doorbells'))
 
         doorbell_data = self._get_doorbell(uuid)
-        doorbell = self.__get_doorbell({'id': uuid, 'name': doorbell_data[0]})
+        doorbell = self.__convert_doorbell({'id': uuid, 'name': doorbell_data[0]})
         doorbell.emails = doorbell_data[1]
 
-        alerts = self._get_doorbell_alerts(uuid)
-        print(alerts)
+        alerts = self._get_doorbell_alerts(uuid, [AlertType.Bell, AlertType.Movement, AlertType.UserPicture], False)
         if not alerts:
             return render_template('doorbell.html', doorbell=doorbell)
 
         doorbell_files = []
-        print("test")
         for alert in alerts:
-            data = self.__get_alert(alert, True)
-            print(data)
-            if data:
-                doorbell_files.append(data)
+            data = convert_alert(alert, True)
+            if not data:
+                continue
 
-        print(doorbell_files)
+            if not data.name:
+                data.name = get_alert_message(data.type)
+            doorbell_files.append(data)
+
         return render_template('doorbell.html', doorbell=doorbell, doorbell_files=doorbell_files)
 
     def __endpoint_streams(self):
@@ -347,47 +339,13 @@ class WebServer(DatabaseAccessor, Flask):
         stream_context = stream_with_context(self.__generate_stream(uuid))
         return self.response_class(stream_context, mimetype='multipart/x-mixed-replace; boundary=frame')
 
-    # todo recheck this one
-    def __endpoint_alerts(self):
+    def __endpoint_alerts_count(self):
         username = self.__authenticate()
         if not username:
-            return redirect(url_for('index'))
-
-        con = self._get_connection()
-        cursor = con.cursor()
-        try:
-            cursor.execute(
-                'SELECT d.id, d.name, n.time, n.path '
-                'FROM doorbell d '
-                'INNER JOIN alerts n '
-                'ON d.id = n.uuid '
-                'WHERE d.owner LIKE ? '
-                'AND n.type <> 0 '
-                'ORDER BY N.time DESC',
-                [username])
-            rows = cursor.fetchall()
-            # types = []
-            paths = []
-            names = []
-            dates = []
-            for row in rows:
-                # types.append(bell[0])
-                paths.append(row[1])
-                dates.append(row[2].split(".")[0])  # split to remove milliseconds
-                names.append(row[3])
-
-            # return render_template('imageGal.html', types = types, paths = paths, dates = dates, doorbells = names)
-            return render_template('notifications.html', paths=paths, dates=dates, doorbells=names)  # todo rename
-        finally:
-            cursor.close()
-            con.close()
-
-    def __endpoint_alerts_api(self):
-        alerts = self.__get_alerts(load_images=False)
-        if alerts is None:
             return {'error': 'Unauthorized request'}, 401
 
-        return jsonify(alerts), 200
+        alerts_count = self._get_alerts_count(username)
+        return jsonify(alerts_count), 200
 
     def __endpoint_open_doorbell(self, uuid: int):
         username = self.__authenticate()
@@ -397,28 +355,25 @@ class WebServer(DatabaseAccessor, Flask):
         if not self.__events.on_open_doorbell_requested(uuid):
             return {'error': 'Doorbell is offline'}, 404
 
-        return 'Doorbell opened', 200
+        return jsonify('Doorbell opened'), 200
 
     def __endpoint_take_picture(self, uuid: int):
         username = self.__authenticate()
         if not username or not self._check_owner(username, uuid):
-            return self.response_class('Unauthorized request', 401)
+            return {'error': 'Unauthorized request'}, 401
 
         esp = self.__clients.get_client(uuid)
         if not esp:
-            return self.response_class('Doorbell is offline', 404)
+            return {'error': 'Doorbell is offline'}, 404
 
         image, filename = esp.save_picture()
         if not image:
-            return self.response_class('Doorbell is offline', 404)
+            return {'error': 'Doorbell is offline'}, 404
 
-        self.__events.on_alert(uuid, AlertType.UserPicture, {'image': image, 'path': filename})
-        print(image)  # todo remove
-        img = convert_image_to_base64(image)
-        print(img)
-        return self.response_class(img, mimetype='image/jpeg')
+        self.__events.on_alert(uuid, AlertType.UserPicture, {'filename': filename, 'image': image})
+        return {'filename': filename, 'mimetype': 'image/jpeg'}, 200
 
-    def __doorbell_update(self, uuid: int):
+    def __update_doorbell(self, uuid: int):
         doorbell_name = request.form.get('doorbell-name')
         emails = request.form.get('alert-emails')
         password = request.form.get('password')
@@ -453,6 +408,52 @@ class WebServer(DatabaseAccessor, Flask):
                    'emails': alert_emails
                }, 200
 
+    def __endpoint_get_resource(self, uuid: int, filename: str):
+        filename = secure_filename(filename)
+        username = self.__authenticate()
+        if not username or not self._check_owner_file(username, uuid, filename):
+            return self.response_class('Unauthorized request', 401)
+
+        try:
+            return send_from_directory(self.config['ESP_FILES_DIR'], filename, mimetype='image/jpeg')
+        except NotFound:
+            return self.response_class('File not found', 404)
+
+    # todo recheck this one
+    def __endpoint_alerts(self):
+        username = self.__authenticate()
+        if not username:
+            return redirect(url_for('index'))
+
+        con = self._get_connection()
+        cursor = con.cursor()
+        try:
+            cursor.execute(
+                'SELECT d.id, d.name, n.time, n.filename '
+                'FROM doorbell d '
+                'INNER JOIN alerts n '
+                'ON d.id = n.uuid '
+                'WHERE d.owner LIKE ? '
+                'AND n.type <> 0 '
+                'ORDER BY N.time DESC',
+                [username])
+            rows = cursor.fetchall()
+            # types = []
+            paths = []
+            names = []
+            dates = []
+            for row in rows:
+                # types.append(bell[0])
+                paths.append(row[1])
+                dates.append(row[2].split(".")[0])  # split to remove milliseconds
+                names.append(row[3])
+
+            # return render_template('imageGal.html', types = types, paths = paths, dates = dates, doorbells = names)
+            return render_template('notifications.html', paths=paths, dates=dates, doorbells=names)  # todo rename
+        finally:
+            cursor.close()
+            con.close()
+
     # todo recheck this one
     def __endpoint_alerts2(self):
         username = self.__authenticate()
@@ -463,7 +464,7 @@ class WebServer(DatabaseAccessor, Flask):
         cursor = con.cursor()
         try:
             cursor.execute(
-                'SELECT d.id, d.name, n.time, n.path, n.checked, n.type  '
+                'SELECT d.id, d.name, n.time, n.filename, n.checked, n.type  '
                 'FROM doorbell d '
                 'INNER JOIN alerts n '
                 'ON d.id = n.uuid '
