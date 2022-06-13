@@ -3,7 +3,9 @@ from typing import List, Tuple
 
 import bcrypt
 
-alerts_columns = ['uuid', 'type', 'time', 'checked', 'path', 'notes']
+from common.alert_type import AlertType
+
+alerts_columns = ['uuid', 'type', 'time', 'checked', 'filename', 'notes']
 
 
 class DatabaseAccessor:
@@ -71,7 +73,7 @@ class DatabaseAccessor:
         cursor = con.cursor()
         try:
             # noinspection SqlInsertValues
-            cursor.execute(f'INSERT OR IGNORE INTO alerts({columns_placer}) VALUES ({values_placer})', values)
+            cursor.execute(f'INSERT INTO alerts({columns_placer}) VALUES ({values_placer})', values)
             con.commit()
         finally:
             cursor.close()
@@ -108,6 +110,24 @@ class DatabaseAccessor:
         cursor = con.cursor()
         try:
             cursor.execute('SELECT 1 FROM doorbell WHERE id = ? and owner = ? LIMIT 1', [uuid, username.upper()])
+            data = cursor.fetchone()
+            return data and data[0]
+        finally:
+            cursor.close()
+            con.close()
+
+    def _check_owner_file(self, username: str, uuid: int, filename: str) -> bool:
+        con = self._get_connection()
+        cursor = con.cursor()
+        try:
+            cursor.execute('SELECT 1 '
+                           'FROM alerts a '
+                           'INNER JOIN doorbell d '
+                           'ON a.uuid = d.id '
+                           'WHERE d.id = ? '
+                           'AND d.owner = ? '
+                           'AND a.filename = ?'
+                           'LIMIT 1', [uuid, username.upper(), filename.lower()])
             data = cursor.fetchone()
             return data and data[0]
         finally:
@@ -153,7 +173,6 @@ class DatabaseAccessor:
             cursor.execute('INSERT OR IGNORE INTO user (username, email, password, name) VALUES (?, ?, ?, ?)',
                            [username.upper(), email.lower(), password, username])
             con.commit()
-
             if cursor.rowcount < 1:
                 return None
 
@@ -174,33 +193,43 @@ class DatabaseAccessor:
             cursor.close()
             con.close()
 
-    def _get_alerts(self, username: str, exclude_checked: bool = True):
+    def _get_alerts_count(self, username: str, exclude_checked: bool = True):
         con = self._get_connection()
         cursor = con.cursor()
         try:
-            cursor.execute(
-                f'SELECT n.id, d.name, n.time, n.type, n.path{", n.checked " if not exclude_checked else " "}'
-                'FROM alerts n '
-                'INNER JOIN doorbell d '
-                f'ON {"NOT n.checked AND " if exclude_checked else ""}n.uuid = d.id '
-                f'WHERE d.owner = ?'
-                f'ORDER BY n.time DESC',
-                [username.upper()]),
-            return cursor.fetchall()
+            cmd = 'SELECT COUNT(*) ' \
+                  'FROM alerts a ' \
+                  'INNER JOIN doorbell d ' \
+                  'ON a.uuid = d.id ' \
+                  'WHERE d.owner = ?'
+            if exclude_checked:
+                cmd += ' AND NOT checked'
+
+            cursor.execute(cmd, [username])
+            return cursor.fetchone()[0]
         finally:
             cursor.close()
             con.close()
 
-    def _get_doorbell_alerts(self, uuid: int):
+    def _get_doorbell_alerts(self, uuid: int, types: List[AlertType], exclude_checked: bool = True):
+        t = [t.value for t in types]
         con = self._get_connection()
         cursor = con.cursor()
         try:
-            cursor.execute(
-                f'SELECT n.id, n.time, n.type, n.path '
-                'FROM alerts n '
-                f'WHERE n.uuid = ?'
-                f'ORDER BY n.time DESC',
-                [uuid]),
+            cmd = f'SELECT a.id, a.time, a.type, a.filename, a.notes ' \
+                  f'FROM alerts a ' \
+                  f'WHERE a.uuid = ?'
+
+            if exclude_checked:
+                cmd += ' AND NOT a.checked'
+
+            size = len(types)
+            if size > 0:
+                cmd += f' AND a.type IN ({", ".join(["?"] * size)})'
+            cmd += f' ORDER BY a.time DESC'
+
+            t.insert(0, uuid)
+            cursor.execute(cmd, t)
             return cursor.fetchall()
         finally:
             cursor.close()
@@ -233,7 +262,7 @@ class DatabaseAccessor:
             cursor.execute('UPDATE doorbell SET name = ? WHERE id = ?', [doorbell_name, uuid])
             cursor.execute('DELETE FROM doorbell_alerts WHERE uuid = ?', [uuid])
             if len(alert_emails):
-                cursor.executemany('INSERT OR IGNORE INTO doorbell_alerts VALUES (?, ?)',
+                cursor.executemany('INSERT INTO doorbell_alerts VALUES (?, ?)',
                                    zip([uuid] * len(alert_emails), alert_emails))
 
             con.commit()
