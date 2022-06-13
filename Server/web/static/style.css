@@ -56,24 +56,33 @@ body {
     border-color: #de4eeb;
 }
 
+
 .card-hover:active, .card-hover:hover {
     transform: scale(1.1);
 }
 
-.card-hover-cyan:hover {
+.card-hover-cyan:hover, .card-hover-purple:hover, .card-hover-red:hover, .card-hover-grey:hover, .card-hover-green:hover {
     background-color: rgb(140, 235, 230);
 }
 
 .card-hover-purple {
     background-color: rgba(174, 0, 255, 0.575);
+    width: 320px;
 }
 
 .card-hover-red {
     background-color: rgba(255, 0, 43, 0.603);
+    width: 320px;
 }
 
 .card-hover-grey {
     background-color: rgb(112, 112, 112);
+    width: 320px;
+}
+
+.card-hover-green {
+    background-color: rgb(27, 172, 47);
+    width: 320px;
 }
 
 
@@ -245,7 +254,7 @@ body {
 /**/
 .mark-btn {
     display: inline-block;
-    background-color: #3dd838ce;
+    background-color: #4338d8ce;
     border-radius: 10px;
     border: 4px double #cccccc;
     color: #eeeeee;
@@ -268,5 +277,6 @@ body {
 .boxy {
     height: 150px;
     position: relative;
+    margin-top: 10px;
 }
 
