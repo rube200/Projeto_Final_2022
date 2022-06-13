@@ -82,7 +82,10 @@ class ServerSocket(DatabaseAccessor):
         return not owner, 5000, 5000, 5000
 
     def __on_esp_username_recv(self, client: EspClient, username: str) -> bool:
-        return self._register_doorbell(username, client.uuid)
+        success = self._register_doorbell(username, client.uuid)
+        if success:
+            self.__events.on_alert(client.uuid, AlertType.NewBell, {})
+        return success
 
     def __on_alert(self, uuid: int, alert_type: AlertType, info: dict) -> None:
         data = {'uuid': uuid, 'type': alert_type.value}
@@ -90,8 +93,8 @@ class ServerSocket(DatabaseAccessor):
             data['time'] = datetime.fromtimestamp(info['time'])
         if 'checked' in info:
             data['checked'] = info['checked']
-        if 'path' in info:
-            data['path'] = info['path']
+        if 'filename' in info:
+            data['filename'] = info['filename'].lower()
         if 'notes' in info:
             data['notes'] = info['notes']
 
