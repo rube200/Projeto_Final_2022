@@ -101,6 +101,14 @@
 {% endblock %}
 
 {% block template_scripts %}
+{% block alert_count_script %}{% endblock %}
+{% if not self.alert_count_script() %}
+    <script>
+        function onAlertCount() {
+            return false;
+        }
+    </script>
+{% endif %}
     <script>
         function getAlerts(element) {
             fetch('{{ url_for('alerts-count') }}')
@@ -108,6 +116,10 @@
                 .then(data => {
                     if (!data || data.error) {
                         console.error(`Error getting alerts: ${data.error}`);
+                        return;
+                    }
+
+                    if (onAlertCount(data)) {
                         return;
                     }
 
