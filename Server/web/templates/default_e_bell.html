@@ -51,7 +51,7 @@
                                 <a class="dropdown-toggle nav-link"
                                    aria-expanded="false" data-bs-toggle="dropdown"
                                    href="{{ url_for('alerts') }}">
-                                    <span class="badge bg-danger badge-counter" id="alerts-count">3</span>
+                                    <span class="badge bg-danger badge-counter" id="alerts-count">0</span>
                                     <i class="bi bi-bell-fill icon-small"></i>
                                 </a>
                                 <div class="dropdown-menu dropdown-menu-dark dropdown-menu-end dropdown-list animated--grow-in">
@@ -103,7 +103,7 @@
 {% block template_scripts %}
     <script>
         function getAlerts(element) {
-            fetch('{{ url_for('alerts-api') }}')
+            fetch('{{ url_for('alerts-count') }}')
                 .then(response => response.json())
                 .then(data => {
                     if (!data || data.error) {
@@ -111,9 +111,9 @@
                         return;
                     }
 
-                    element.innerText = data.length;
+                    element.innerText = data;
                 })
-                .catch(error => console.error(`Error calling alerts-api: ${error}`));
+                .catch(error => console.error(`Error calling alerts-count: ${error}`));
         }
 
         window.addEventListener('load', function () {
