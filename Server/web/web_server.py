@@ -118,7 +118,7 @@ class WebServer(DatabaseAccessor, Flask):
         self.add_url_rule('/doorbells/<int:uuid>', 'doorbell', self.__endpoint_doorbell, methods=['GET', 'POST'])
         self.add_url_rule('/streams', 'streams', self.__endpoint_streams)
         self.add_url_rule('/streams/<int:uuid>', 'stream', self.__endpoint_stream)
-        self.add_url_rule('/get-resource/<int:uuid>/<string:filename>', 'get-resource', self.__endpoint_get_resource)
+        self.add_url_rule('/get-resource/<string:filename>', 'get-resource', self.__endpoint_get_resource)
         self.add_url_rule('/open_doorbell/<int:uuid>', 'open_doorbell', self.__endpoint_open_doorbell, methods=['POST'])
         self.add_url_rule('/take_picture/<int:uuid>', 'take_picture', self.__endpoint_take_picture, methods=['POST'])
         self.add_url_rule('/alerts2', 'alerts2', self.__endpoint_alerts2)
@@ -408,10 +408,10 @@ class WebServer(DatabaseAccessor, Flask):
                    'emails': alert_emails
                }, 200
 
-    def __endpoint_get_resource(self, uuid: int, filename: str):
+    def __endpoint_get_resource(self, filename: str):
         filename = secure_filename(filename)
         username = self.__authenticate()
-        if not username or not self._check_owner_file(username, uuid, filename):
+        if not username or not self._check_owner_file(username, filename):
             return self.response_class('Unauthorized request', 401)
 
         try:

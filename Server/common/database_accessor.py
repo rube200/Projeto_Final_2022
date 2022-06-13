@@ -116,7 +116,7 @@ class DatabaseAccessor:
             cursor.close()
             con.close()
 
-    def _check_owner_file(self, username: str, uuid: int, filename: str) -> bool:
+    def _check_owner_file(self, username: str, filename: str) -> bool:
         con = self._get_connection()
         cursor = con.cursor()
         try:
@@ -124,10 +124,9 @@ class DatabaseAccessor:
                            'FROM alerts a '
                            'INNER JOIN doorbell d '
                            'ON a.uuid = d.id '
-                           'WHERE d.id = ? '
-                           'AND d.owner = ? '
+                           'WHERE d.owner = ? '
                            'AND a.filename = ?'
-                           'LIMIT 1', [uuid, username.upper(), filename.lower()])
+                           'LIMIT 1', [username.upper(), filename.lower()])
             data = cursor.fetchone()
             return data and data[0]
         finally:
