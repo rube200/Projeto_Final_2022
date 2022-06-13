@@ -17,7 +17,6 @@ environ['ESP32_PORT'] = '2376'
 environ['FLASK_ENV'] = 'development' if environ.get('FLASK_DEBUG') else 'production'
 environ['FLASK_HOST'] = '0.0.0.0'
 environ['FLASK_PORT'] = '80'
-environ['ESP32_FILES_DIR'] = '../esp_files'
 
 logger = False
 socket_thread = None
