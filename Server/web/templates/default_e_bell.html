@@ -2,6 +2,10 @@
 
 {% set nav_title = nav_title or "Missing Nav Title" %}
 
+<span class="menu-title me-2">{{ nv.title }}</span>
+<span class="bi {{ nv.icon }}">
+</span>
+
 {% block main_nav %}
     <nav class="navbar navbar-dark align-items-start bg-dark sidebar sidebar-dark sidebar-width accordion p-0">
         <div class="container-fluid d-flex flex-column p-0">
@@ -101,6 +105,7 @@
 {% endblock %}
 
 {% block template_scripts %}
+    {% if nav_title  == 'Alerts' %}
     <script>
         function getAlerts(element) {
             fetch('{{ url_for('alerts-api') }}')
@@ -117,9 +122,39 @@
         }
 
         window.addEventListener('load', function () {
-            const alertsCount = document.getElementById('alerts-count');
-            setInterval(() => getAlerts(alertsCount), 5000);
-            getAlerts(alertsCount);
+            if(document.getElementsByName('notifications-count') > 0)
+            {
+                location.reload(true);//refresh page
+            }
         });
     </script>
+
+    {% else %}
+                                            
+        <script>
+            function getNotificationsCount(elements) {
+                fetch('{{ url_for('alerts-api') }}')
+                    .then(response => response.json())
+                    .then(data => {
+                        console.debug(data);
+                        if (!data || data.error) {
+                            console.error(`Error getting notifications: ${data.error}`);
+                            return;
+                        }
+
+                        elements.forEach(element => element.innerText = data.length);
+                    })
+                    .catch(error => console.error(`Error calling alerts-api: ${error}`));
+            }
+
+            window.addEventListener('load', function () {
+                const alertsCount = document.getElementById('alerts-count');
+                setInterval(() => getAlerts(alertsCount), 5000);
+                getAlerts(alertsCount);
+            });
+
+            
+        </script>
+
+    {% endif %}
 {% endblock %}
