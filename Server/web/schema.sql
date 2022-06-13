@@ -25,15 +25,15 @@ create index if not exists doorbell_nocase_owner ON doorbell (owner COLLATE NOCA
 
 create table if not exists alerts
 (
-    id      integer
+    id       integer
         constraint alerts_pk
             primary key autoincrement,
-    uuid    integer not null,
-    time    timestamp default current_timestamp not null,
-    type    integer not null,
-    checked boolean   default false not null,
-    path    text    not null,
-    note    text      default null
+    uuid     integer not null,
+    time     timestamp default current_timestamp not null,
+    type     integer not null,
+    checked  boolean   default false not null,
+    filename text      default null,
+    notes    text      default null
 );
 
 create table if not exists doorbell_alerts
