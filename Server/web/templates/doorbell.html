@@ -78,7 +78,7 @@
                             height="240"
                             class="img-fluid"
                             data="{{ url_for('get-resource', filename=file.filename) }}"
-                            type='image/jpeg'>
+                            type='{{ file.mimetype }}'>
 
                     </object>
                     <div class="card-body">

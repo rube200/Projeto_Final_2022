@@ -3,6 +3,7 @@ import re
 from base64 import b64encode
 from collections import namedtuple
 from datetime import datetime
+from mimetypes import guess_type
 from os import environ, path, makedirs
 from sqlite3 import Row
 from time import monotonic, sleep, time
@@ -13,7 +14,6 @@ from email_validator import EmailNotValidError, validate_email
 from flask import Flask, redirect, url_for, current_app, session, render_template, request, flash, \
     stream_with_context, jsonify, send_from_directory
 from flask_mail import Mail, Message
-from werkzeug.exceptions import NotFound
 from werkzeug.utils import secure_filename
 
 from common.alert_type import AlertType, get_alert_message
@@ -29,25 +29,6 @@ NAV_DICT = [
 ]
 
 
-def convert_alert(alert_data: Row or dict, load_image: bool = False):
-    col = alert_data.keys()
-    alert = namedtuple('DoorbellAlert', 'id, type, time')
-    alert.id = alert_data['id']
-    alert.type = AlertType(alert_data['type'])
-    alert.time = alert_data['time']
-    alert.filename = alert_data['filename'] if 'filename' in col else None
-
-    if load_image:
-        if not alert.filename:
-            return None
-
-    alert.uuid = alert_data['uuid'] if 'uuid' in col else None
-    alert.name = alert_data['name'] if 'name' in col else None
-    alert.checked = alert_data['checked'] if 'checked' in col else None
-    alert.notes = alert_data['notes'] if 'notes' in col else None
-    return alert
-
-
 def convert_image_to_base64(image: bytes) -> str or None:
     if not image:
         return None
@@ -60,11 +41,14 @@ def endpoint_logout():
     return redirect(url_for('index'))
 
 
-def redirect_after_auth(username: str, name: str):
-    session['token'] = jwt.encode({'username': username}, current_app.config['JWT_SECRET_KEY'], 'HS256')
-    session['username'] = username
-    session['name'] = name
-    return redirect(url_for('doorbells'))
+valid_files = ('jpg', 'jpeg', 'png', 'mp4')
+
+
+def is_valid_file(filename: str, filepath: str) -> bool:
+    if not filename.endswith(valid_files):
+        return False
+
+    return path.exists(filepath)
 
 
 class WebServer(DatabaseAccessor, Flask):
@@ -77,10 +61,9 @@ class WebServer(DatabaseAccessor, Flask):
         self.__events.on_alert += self.__on_alert
         self.config.from_pyfile('flask.cfg')
 
-        esp_path = self.config['ESP_FILES_DIR']
-        environ['ESP_FILES_DIR'] = esp_path = path.join(self.root_path, esp_path)
-        if not path.exists(esp_path):
-            makedirs(esp_path)
+        environ['ESP_FILES_DIR'] = self.__esp_full_path = path.join(self.root_path, self.config['ESP_FILES_DIR'])
+        if not path.exists(self.__esp_full_path):
+            makedirs(self.__esp_full_path)
 
         if self.config.get('RANDOM_SECRET_KEY'):
             import secrets
@@ -144,16 +127,26 @@ class WebServer(DatabaseAccessor, Flask):
         session['name'] = data[1]
         return username
 
-    def __get_doorbells(self):
-        username = self.__authenticate()
-        if not username:
-            return None
+    def __convert_alert(self, alert_data: Row or dict, need_file: bool = False):
+        col = alert_data.keys()
+        alert = namedtuple('DoorbellAlert', 'id, type, time')
+        alert.id = alert_data['id']
+        alert.type = AlertType(alert_data['type'])
+        alert.time = alert_data['time']
+        alert.filename = alert_data['filename'] if 'filename' in col else None
+        if alert.filename and path.exists(path.join(self.__esp_full_path, alert.filename)):
+            alert.mimetype = guess_type(alert.filename)[0]
+        else:
+            if need_file:
+                return None
 
-        data = self._get_doorbells(username)
-        if not data:
-            return []
+            alert.mimetype = 'image/jpeg'
 
-        return [self.__convert_doorbell(bell_data) for bell_data in data]
+        alert.uuid = alert_data['uuid'] if 'uuid' in col else None
+        alert.name = alert_data['name'] if 'name' in col else None
+        alert.checked = alert_data['checked'] if 'checked' in col else None
+        alert.notes = alert_data['notes'] if 'notes' in col else None
+        return alert
 
     def __convert_doorbell(self, bell_data: Row or dict):
         doorbell = namedtuple('Bell', 'id, name, image, online')
@@ -202,6 +195,23 @@ class WebServer(DatabaseAccessor, Flask):
         finally:
             self.__events.on_stop_stream_requested(uuid)
             return b'Content-Length: 0'
+
+    def __get_doorbells(self):
+        username = self.__authenticate()
+        if not username:
+            return None
+
+        data = self._get_doorbells(username)
+        if not data:
+            return []
+
+        return [self.__convert_doorbell(bell_data) for bell_data in data]
+
+    def __redirect_after_auth(self, username: str, name: str):
+        session['token'] = jwt.encode({'username': username}, self.config['JWT_SECRET_KEY'], 'HS256')
+        session['username'] = username
+        session['name'] = name
+        return redirect(url_for('doorbells'))
 
     def __on_alert(self, uuid: int, alert_type: AlertType, data: dict):
         try:
@@ -262,7 +272,7 @@ class WebServer(DatabaseAccessor, Flask):
             flash('Invalid username or password.', 'danger')
             return render_template('login.html')
 
-        return redirect_after_auth(data[0], data[1])
+        return self.__redirect_after_auth(data[0], data[1])
 
     def __endpoint_register(self):
         if self.__authenticate():
@@ -284,7 +294,7 @@ class WebServer(DatabaseAccessor, Flask):
             flash('Username or email already taken.', 'danger')
             return render_template('register.html')
 
-        return redirect_after_auth(data[0], data[1])
+        return self.__redirect_after_auth(data[0], data[1])
 
     def __endpoint_doorbells(self):
         bells = self.__get_doorbells()
@@ -314,7 +324,7 @@ class WebServer(DatabaseAccessor, Flask):
 
         doorbell_files = []
         for alert in alerts:
-            data = convert_alert(alert, True)
+            data = self.__convert_alert(alert, True)
             if not data:
                 continue
 
@@ -409,15 +419,16 @@ class WebServer(DatabaseAccessor, Flask):
                }, 200
 
     def __endpoint_get_resource(self, filename: str):
-        filename = secure_filename(filename)
+        filename = secure_filename(filename.lower())
+        filepath = path.join(self.__esp_full_path, filename)
+        if not is_valid_file(filename, filepath):
+            return send_from_directory(self.static_folder, 'default_profile.png'), 404
+
         username = self.__authenticate()
         if not username or not self._check_owner_file(username, filename):
             return self.response_class('Unauthorized request', 401)
 
-        try:
-            return send_from_directory(self.config['ESP_FILES_DIR'], filename, mimetype='image/jpeg')
-        except NotFound:
-            return self.response_class('File not found', 404)
+        return send_from_directory(self.config['ESP_FILES_DIR'], filename)
 
     # todo recheck this one
     def __endpoint_alerts(self):
