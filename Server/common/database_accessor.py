@@ -273,6 +273,27 @@ class DatabaseAccessor:
             cursor.close()
             con.close()
 
+    def _get_user_captures_after(self, username: str, after_capture_id: int):
+        con = self._get_connection()
+        cursor = con.cursor()
+        try:
+            cursor.execute(f'SELECT d.id, d.name, a.id, a.time, a.type, a.filename '
+                           f'FROM alerts a '
+                           f'INNER JOIN doorbell d '
+                           f'ON a.uuid = d.id '
+                           f'WHERE a.id > ? '
+                           f'AND a.filename IS NOT NULL '
+                           f'AND a.type IN (?, ?, ?) '
+                           f'AND d.owner = ? '
+                           f'ORDER BY a.id DESC',
+                           [after_capture_id, AlertType.Bell.value, AlertType.Movement.value,
+                            AlertType.UserPicture.value,
+                            username.upper()])
+            return cursor.fetchall()
+        finally:
+            cursor.close()
+            con.close()
+
     def _get_doorbell_alerts(self, uuid: int, types: List[AlertType] = None, exclude_checked: bool = True):
         if types:
             t = [t.value for t in types]

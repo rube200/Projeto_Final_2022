@@ -111,6 +111,7 @@
     <script>
         const doorbellCapturesElement = document.getElementById('doorbell-captures');
         let currentAlertsCount = {{ alerts_count }};
+        let getNewCapturesUrl = '{{ url_for('get-new-captures', current_capture_id=(doorbell_files|first).id) }}';
         let lastAlertId = {% if doorbell_files|length > 0 %}{{ (doorbell_files|first).id }}{% else %}0{% endif %};
 
         function onAlertCount(value) {
@@ -118,6 +119,17 @@
                 return false;
             }
 
+            fetch(getNewCapturesUrl)
+                .then(response => response.json())
+                .then(data => {
+                    if (!data || data.error) {
+                        console.error(`Error while getting new captures: {data.error}`);
+                        return;
+                    }
+
+                    console.debug(`New captures: ${data}`);
+                })
+                .catch(error => console.error(`Error while getting new captures:: ${error}`));
 
             return false;
         }

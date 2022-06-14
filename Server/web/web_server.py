@@ -1,5 +1,4 @@
 import logging as log
-from multiprocessing.connection import wait
 import re
 from base64 import b64encode
 from collections import namedtuple
@@ -103,6 +102,8 @@ class WebServer(DatabaseAccessor, Flask):
         self.add_url_rule('/doorbells/<int:uuid>', 'doorbell', self.__endpoint_doorbell, methods=['GET', 'POST'])
         self.add_url_rule('/streams', 'streams', self.__endpoint_streams)
         self.add_url_rule('/streams/<int:uuid>', 'stream', self.__endpoint_stream)
+        self.add_url_rule('/get-new-captures/<int:current_capture_id>', 'get-new-captures',
+                          self.__endpoint_get_new_captures)
         self.add_url_rule('/get-resource/<string:filename>', 'get-resource', self.__endpoint_get_resource)
         self.add_url_rule('/open_doorbell/<int:uuid>', 'open_doorbell', self.__endpoint_open_doorbell, methods=['POST'])
         self.add_url_rule('/take_picture/<int:uuid>', 'take_picture', self.__endpoint_take_picture, methods=['POST'])
@@ -312,6 +313,35 @@ class WebServer(DatabaseAccessor, Flask):
 
         return self.__redirect_after_auth(data[0], data[1])
 
+    def __endpoint_alerts_count(self):
+        username = self.__authenticate()
+        if not username:
+            return {'error': 'Unauthorized request'}, 401
+
+        alerts_count = self._get_alerts_count(username)
+        return jsonify(alerts_count), 200
+
+    def __endpoint_captures(self):
+        username = self.__authenticate()
+        if not username:
+            return redirect(url_for('index'))
+
+        captures = self._get_user_captures(username)
+        if not captures:
+            return render_template('captures.html')
+
+        doorbell_files = []
+        for alert in captures:
+            data = self.__convert_alert(alert)
+            if not data:
+                continue
+
+            if not data.name:
+                data.name = get_alert_type_message(data.type)
+            doorbell_files.append(data)
+
+        return render_template('captures.html', doorbell_files=doorbell_files)
+
     def __endpoint_doorbells(self):
         bells = self.__get_doorbells()
         if bells is None:
@@ -365,13 +395,38 @@ class WebServer(DatabaseAccessor, Flask):
         stream_context = stream_with_context(self.__generate_stream(uuid))
         return self.response_class(stream_context, mimetype='multipart/x-mixed-replace; boundary=frame')
 
-    def __endpoint_alerts_count(self):
+    def __endpoint_get_new_captures(self, current_capture_id: int):
         username = self.__authenticate()
         if not username:
             return {'error': 'Unauthorized request'}, 401
 
-        alerts_count = self._get_alerts_count(username)
-        return jsonify(alerts_count), 200
+        captures = self._get_user_captures_after(username, current_capture_id)
+        if not captures:
+            return {}, 200
+
+        doorbell_files = []
+        for alert in captures:
+            data = self.__convert_alert(alert)
+            if not data:
+                continue
+
+            if not data.name:
+                data.name = get_alert_type_message(data.type)
+            doorbell_files.append(data)
+
+        return jsonify(doorbell_files), 200
+
+    def __endpoint_get_resource(self, filename: str):
+        filename = secure_filename(filename.lower())
+        filepath = path.join(self.__esp_full_path, filename)
+        if not is_valid_file(filename, filepath):
+            return send_from_directory(self.static_folder, 'default_profile.png'), 404
+
+        username = self.__authenticate()
+        if not username or not self._check_owner_file(username, filename):
+            return self.response_class('Unauthorized request', 401)
+
+        return send_from_directory(self.config['ESP_FILES_DIR'], filename)
 
     def __endpoint_open_doorbell(self, uuid: int):
         username = self.__authenticate()
@@ -433,39 +488,6 @@ class WebServer(DatabaseAccessor, Flask):
                    'name': doorbell_name,
                    'emails': alert_emails
                }, 200
-
-    def __endpoint_get_resource(self, filename: str):
-        filename = secure_filename(filename.lower())
-        filepath = path.join(self.__esp_full_path, filename)
-        if not is_valid_file(filename, filepath):
-            return send_from_directory(self.static_folder, 'default_profile.png'), 404
-
-        username = self.__authenticate()
-        if not username or not self._check_owner_file(username, filename):
-            return self.response_class('Unauthorized request', 401)
-
-        return send_from_directory(self.config['ESP_FILES_DIR'], filename)
-
-    def __endpoint_captures(self):
-        username = self.__authenticate()
-        if not username:
-            return redirect(url_for('index'))
-
-        captures = self._get_user_captures(username)
-        if not captures:
-            pass
-
-        doorbell_files = []
-        for alert in captures:
-            data = self.__convert_alert(alert)
-            if not data:
-                continue
-
-            if not data.name:
-                data.name = get_alert_type_message(data.type)
-            doorbell_files.append(data)
-
-        return render_template('captures.html', doorbell_files=doorbell_files)
 
     # todo recheck this one
     def __endpoint_alerts(self):

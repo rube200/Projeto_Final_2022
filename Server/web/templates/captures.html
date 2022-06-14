@@ -1,12 +1,8 @@
 {% extends 'default_e_bell.html' %}
 
 {% set nav_title='Alerts' %}
-{% set no_bells=alerts_info|length <= 0 %}
 
 {% block e_bell_content %}
-    {% if alerts_info|length > 0 %}
-
-    {% endif %}
     <div class="row">
         <div class="col-sm-6 col-md-4 col-lg-3 image-container">
             {% for file in doorbell_files %}
