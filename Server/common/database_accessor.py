@@ -265,7 +265,7 @@ class DatabaseAccessor:
                            f'WHERE a.filename IS NOT NULL '
                            f'AND a.type IN (?, ?, ?) '
                            f'AND d.owner = ? '
-                           f'ORDER BY a.time DESC',
+                           f'ORDER BY a.id DESC',
                            [AlertType.Bell.value, AlertType.Movement.value, AlertType.UserPicture.value,
                             username.upper()])
             return cursor.fetchall()
@@ -290,8 +290,9 @@ class DatabaseAccessor:
 
             size = len(t)
             if size > 0:
-                cmd += f' AND a.type IN ({", ".join(["?"] * size)})'
-            cmd += f' ORDER BY a.time DESC'
+                t_inject = ', '.join(['?'] * size)
+                cmd += f' AND a.type IN ({t_inject})'
+            cmd += f' ORDER BY a.id DESC'
 
             t.insert(0, uuid)
             cursor.execute(cmd, t)

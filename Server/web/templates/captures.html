@@ -18,7 +18,7 @@
                                     height="240"
                                     class="img-fluid"
                                     data="{{ url_for('get-resource', filename=file.filename) }}"
-                                    type='{{ file.mimetype }}'>
+                                    type="{{ file.mimetype }}">
                             </object>
                         </div>
                         <figcaption>
@@ -34,11 +34,11 @@
 
         <div class="popup-pic" id="big1">
             <span id="span1">&times;</span>
-            <img src='{{ doorbell_files[0] }}' alt="">
+            <img src="{{ doorbell_files[0] }}" alt="">
         </div>
         <div class="popup-pic" id="big2">
             <span id="span2">&times;</span>
-            <video src='{{ doorbell_files[0] }}' alt="" controls></video>
+            <video src="{{ doorbell_files[0] }}" alt="" controls></video>
         </div>
     </div>
 {% endblock %}

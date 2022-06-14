@@ -12,16 +12,16 @@ class AlertType(Enum):
 
 def get_alert_type_message(alert: AlertType) -> str:
     if alert == AlertType.Invalid:
-        return "Invalid alert type"
+        return 'Invalid alert type'
     elif alert == AlertType.System:
-        return "System alert"
+        return 'System alert'
     elif alert == AlertType.NewBell:
-        return "New bell registered"
+        return 'New bell registered'
     elif alert == AlertType.Bell:
-        return "Doorbell pressed"
+        return 'Doorbell pressed'
     elif alert == AlertType.Movement:
-        return "Motion detected"
+        return 'Motion detected'
     elif alert == AlertType.UserPicture:
-        return "User requested picture"
+        return 'User requested picture'
     else:
-        return "Unknown alert type"
+        return 'Unknown alert type'

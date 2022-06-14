@@ -1,6 +1,6 @@
 {% extends 'default.html' %}
 
-{% set nav_title = nav_title or "Missing Nav Title" %}
+{% set nav_title = nav_title or 'Missing Nav Title' %}
 
 {% block main_nav %}
     <nav class="navbar navbar-dark align-items-start bg-dark sidebar sidebar-dark sidebar-width accordion p-0">
@@ -51,7 +51,7 @@
                                 <a class="dropdown-toggle nav-link"
                                    aria-expanded="false" data-bs-toggle="dropdown"
                                    href="{{ url_for('alerts') }}">
-                                    <span class="badge bg-danger badge-counter" id="alerts-count">0</span>
+                                    <span class="badge bg-danger badge-counter" id="alerts-count">{{ alerts_count }}</span>
                                     <i class="bi bi-bell-fill icon-small"></i>
                                 </a>
                                 <div class="dropdown-menu dropdown-menu-dark dropdown-menu-end dropdown-list animated--grow-in">
@@ -131,7 +131,6 @@
         window.addEventListener('load', function () {
             const alertsCount = document.getElementById('alerts-count');
             setInterval(() => getAlerts(alertsCount), 5000);
-            getAlerts(alertsCount);
         });
     </script>
 {% endblock %}

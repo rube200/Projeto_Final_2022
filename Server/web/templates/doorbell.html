@@ -69,30 +69,59 @@
             </div>
         </div>
     </div>
-    {% if doorbell_files|length > 0 %}
-        <div class="card-group mx-2">
+    <div {% if doorbell_files|length == 0 %} class="d-none" {% endif %}>
+        <br/>
+        <h1 class="h1 text-center text-dark w-100">Doorbell captures</h1>
+        <br/>
+        <div class="justify-content-evenly mb-5 row" id="doorbell-captures">
             {% for file in doorbell_files %}
-                <div class="card">
-                    <object
-                            width="320"
-                            height="240"
-                            class="img-fluid"
-                            data="{{ url_for('get-resource', filename=file.filename) }}"
-                            type='{{ file.mimetype }}'>
+                <div class="card border-2 border-primary col-sm-auto">
+                    <h4 class="card-title mt-3 text-center text-dark">{{ file.name }}</h4>
+                    <p class="mt-3 text-center text-dark">Time: {{ file.time }}</p>
+                    {% if file.mimetype == 'video/mp4' %}
+                        <video
+                                width="320"
+                                height="240"
+                                class="my-3"
+                                controls
+                                src="{{ url_for('get-resource', filename=file.filename) }}"
+                                type="{{ file.mimetype }}">
+                        </video>
+                    {% else %}
+                        <object
+                                width="320"
+                                height="240"
+                                class="img-fluid my-3"
+                                data="{{ url_for('get-resource', filename=file.filename) }}"
+                                type='{{ file.mimetype }}'>
 
-                    </object>
-                    <div class="card-body">
-                        <h2 class="card-title text-center">{{ file.name }}</h2>
-                        <p class="card-text">{{ file.time }}</p>
-                    </div>
+                        </object>
+                    {% endif %}
                 </div>
             {% endfor %}
         </div>
-    {% endif %}
+    </div>
     <div class="popup-pic" id="popup-container">
         <span id="popup-pic-close-button">&times;</span>
         <img alt="Bigger image selected by user" id="popup-image" src="{{ doorbell.image }}">
     </div>
+{% endblock %}
+
+{% block alert_count_script %}
+    <script>
+        const doorbellCapturesElement = document.getElementById('doorbell-captures');
+        let currentAlertsCount = {{ alerts_count }};
+        let lastAlertId = {% if doorbell_files|length > 0 %}{{ (doorbell_files|first).id }}{% else %}0{% endif %};
+
+        function onAlertCount(value) {
+            if (value === currentAlertsCount) {
+                return false;
+            }
+
+
+            return false;
+        }
+    </script>
 {% endblock %}
 
 {% block scripts %}

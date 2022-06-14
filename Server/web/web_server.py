@@ -107,7 +107,7 @@ class WebServer(DatabaseAccessor, Flask):
         self.add_url_rule('/take_picture/<int:uuid>', 'take_picture', self.__endpoint_take_picture, methods=['POST'])
         self.register_error_handler(400, lambda e: redirect(url_for('index')))
         self.register_error_handler(404, lambda e: redirect(url_for('index')))
-        self.template_context_processors[None].append(lambda: dict(debug=self.debug, nav=NAV_DICT))
+        self.template_context_processors[None].append(self.__inject_content)
 
     def __authenticate(self):
         token = session.get('token')
@@ -209,6 +209,18 @@ class WebServer(DatabaseAccessor, Flask):
             return []
 
         return [self.__convert_doorbell(bell_data) for bell_data in data]
+
+    def __inject_content(self):
+        data = {
+            'debug': self.debug,
+            'nav': NAV_DICT
+        }
+
+        username = self.__authenticate()
+        if username:
+            data['alerts_count'] = self._get_alerts_count(username)
+
+        return data
 
     def __redirect_after_auth(self, username: str, name: str):
         session['token'] = jwt.encode({'username': username}, self.config['JWT_SECRET_KEY'], 'HS256')
