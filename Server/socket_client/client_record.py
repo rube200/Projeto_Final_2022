@@ -5,7 +5,7 @@ from typing import Callable
 import numpy
 from cv2 import imdecode, IMREAD_COLOR, VideoWriter, VideoWriter_fourcc
 
-FOURCC = VideoWriter_fourcc(*'MP4V')
+FOURCC = VideoWriter_fourcc(*'AV10')
 
 
 class ClientRecord(Thread):
