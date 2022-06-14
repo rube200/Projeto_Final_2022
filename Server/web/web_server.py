@@ -2,7 +2,7 @@ import logging as log
 import re
 from base64 import b64encode
 from collections import namedtuple
-from datetime import datetime
+from datetime import date, datetime
 from os import environ, path, makedirs
 from sqlite3 import Row
 from time import monotonic, sleep, time
@@ -458,27 +458,37 @@ class WebServer(DatabaseAccessor, Flask):
 
     # todo recheck this one
     def __endpoint_alerts2(self):
-        #username = self.__authenticate()
-        #if not username:
-        #    return redirect(url_for('index'))
+        username = self.__authenticate()
+        if not username:
+            return redirect(url_for('index'))
         if request.method == 'POST':
-            print("in post")
             data = request.form.get('date')
-            print(data)
-            print("json is : " + data)
             #mark all alerts dated older than or equal to date as read
-            return render_template('alerts.html')
-
-        paths = []
-        names = []
-        dates = []
-        checked = []
-        types = []
-        """con = self._get_connection()
+            con = self._get_connection()
+            cursor = con.cursor()
+            try:
+                cursor.execute(
+                    'UPDATE alerts  '
+                    'SET checked = True '
+                    'WHERE time <= ? '
+                    [data])
+                con.commit()
+                return render_template('alerts.html')
+            finally:
+                cursor.close()
+                con.close()
+        
+        con = self._get_connection()
         cursor = con.cursor()
         try:
+            paths = []
+            names = []
+            dates = []
+            checked = []
+            types = []
+            notes = []
             cursor.execute(
-                'SELECT d.id, d.name, n.time, n.filename, n.checked, n.type  '
+                'SELECT d.id, d.name, n.time, n.filename, n.checked, n.type, n.notes  '
                 'FROM doorbell d '
                 'INNER JOIN alerts n '
                 'ON d.id = n.uuid '
@@ -494,156 +504,37 @@ class WebServer(DatabaseAccessor, Flask):
                 names.append(row[1])
                 checked.append(row[4])
                 types.append(row[5])
-"""
+                notes.append(row[6])
+
             # dummy data
-        paths.append(url_for('static', filename='ronaldo.mp4'))
-        dates.append('12.2.20')  # split to remove milliseconds
-        names.append('doorbell1')
-        checked.append(False)
-        types.append(4)
-        paths.append(url_for('static', filename='ronaldo.mp4'))
-        dates.append('12.2.20')  # split to remove milliseconds
-        names.append('doorbell1')
-        checked.append(False)
-        types.append(3)
-        paths.append(url_for('static', filename='default_profile.png'))
-        dates.append('12.2.20')  # split to remove milliseconds
-        names.append('doorbell1')
-        checked.append(False)
-        types.append(2)
-        paths.append(url_for('static', filename='default_profile.png'))
-        dates.append('12.2.20')  # split to remove milliseconds
-        names.append('doorbell1')
-        checked.append(False)
-        types.append(0)
-        paths.append(url_for('static', filename='default_profile.png'))
-        dates.append('12.2.21')  # split to remove milliseconds
-        names.append('doorbell2')
-        checked.append(False)
-        types.append(2)
-        paths.append(url_for('static', filename='default_profile.png'))
-        dates.append('12.2.23')  # split to remove milliseconds
-        names.append('doorbell3')
-        checked.append(False)
-        types.append(1)
-        paths.append(url_for('static', filename='default_profile.png'))
-        dates.append('12.2.23')  # split to remove milliseconds
-        names.append('doorbell3')
-        checked.append(False)
-        types.append(1)
-        paths.append(url_for('static', filename='default_profile.png'))
-        dates.append('12.2.20')  # split to remove milliseconds
-        names.append('doorbell1')
-        checked.append(True)
-        types.append(0)
-        paths.append(url_for('static', filename='default_profile.png'))
-        dates.append('12.2.21')  # split to remove milliseconds
-        names.append('doorbell2')
-        checked.append(True)
-        types.append(2)
-        paths.append(url_for('static', filename='default_profile.png'))
-        dates.append('12.2.23')  # split to remove milliseconds
-        names.append('doorbell3')
-        checked.append(True)
-        types.append(1)
-        paths.append(url_for('static', filename='default_profile.png'))
-        dates.append('12.2.23')  # split to remove milliseconds
-        names.append('doorbell3')
-        checked.append(True)
-        types.append(1)
-        paths.append(url_for('static', filename='default_profile.png'))
-        dates.append('12.2.20')  # split to remove milliseconds
-        names.append('doorbell1')
-        checked.append(True)
-        types.append(0)
-        paths.append(url_for('static', filename='default_profile.png'))
-        dates.append('12.2.21')  # split to remove milliseconds
-        names.append('doorbell2')
-        checked.append(True)
-        types.append(2)
-        paths.append(url_for('static', filename='default_profile.png'))
-        dates.append('12.2.23')  # split to remove milliseconds
-        names.append('doorbell3')
-        checked.append(True)
-        types.append(1)
-        paths.append(url_for('static', filename='default_profile.png'))
-        dates.append('12.2.23')  # split to remove milliseconds
-        names.append('doorbell3')
-        checked.append(True)
-        types.append(1)
-        paths.append(url_for('static', filename='ronaldo.mp4'))
-        dates.append('12.2.20')  # split to remove milliseconds
-        names.append('doorbell1')
-        checked.append(False)
-        types.append(3)
-        paths.append(url_for('static', filename='default_profile.png'))
-        dates.append('12.2.20')  # split to remove milliseconds
-        names.append('doorbell1')
-        checked.append(False)
-        types.append(2)
-        paths.append(url_for('static', filename='default_profile.png'))
-        dates.append('12.2.20')  # split to remove milliseconds
-        names.append('doorbell1')
-        checked.append(False)
-        types.append(0)
-        paths.append(url_for('static', filename='default_profile.png'))
-        dates.append('12.2.21')  # split to remove milliseconds
-        names.append('doorbell2')
-        checked.append(False)
-        types.append(2)
-        paths.append(url_for('static', filename='default_profile.png'))
-        dates.append('12.2.23')  # split to remove milliseconds
-        names.append('doorbell3')
-        checked.append(False)
-        types.append(1)
-        paths.append(url_for('static', filename='default_profile.png'))
-        dates.append('12.2.23')  # split to remove milliseconds
-        names.append('doorbell3')
-        checked.append(False)
-        types.append(1)
-        paths.append(url_for('static', filename='default_profile.png'))
-        dates.append('12.2.20')  # split to remove milliseconds
-        names.append('doorbell1')
-        checked.append(True)
-        types.append(0)
-        paths.append(url_for('static', filename='default_profile.png'))
-        dates.append('12.2.21')  # split to remove milliseconds
-        names.append('doorbell2')
-        checked.append(True)
-        types.append(2)
-        paths.append(url_for('static', filename='default_profile.png'))
-        dates.append('12.2.23')  # split to remove milliseconds
-        names.append('doorbell3')
-        checked.append(True)
-        types.append(1)
-        paths.append(url_for('static', filename='default_profile.png'))
-        dates.append('12.2.23')  # split to remove milliseconds
-        names.append('doorbell3')
-        checked.append(True)
-        types.append(1)
-        paths.append(url_for('static', filename='default_profile.png'))
-        dates.append('12.2.20')  # split to remove milliseconds
-        names.append('doorbell1')
-        checked.append(True)
-        types.append(0)
-        paths.append(url_for('static', filename='default_profile.png'))
-        dates.append('12.2.21')  # split to remove milliseconds
-        names.append('doorbell2')
-        checked.append(True)
-        types.append(2)
-        paths.append(url_for('static', filename='default_profile.png'))
-        dates.append('12.2.23')  # split to remove milliseconds
-        names.append('doorbell3')
-        checked.append(True)
-        types.append(1)
-        paths.append(url_for('static', filename='default_profile.png'))
-        dates.append('12.2.23')  # split to remove milliseconds
-        names.append('doorbell3')
-        checked.append(True)
-        types.append(1)
-        # return render_template('imageGal.html', types = types, paths = paths, dates = dates, doorbells = names)
-        return render_template('alerts.html', paths=paths, dates=dates, doorbells=names, checks=checked,
-                                types=types)
-        #finally:
-        #    cursor.close()
-        #    con.close()
+                paths.append(url_for('static', filename='ronaldo.mp4'))
+                dates.append('12.2.20')  # split to remove milliseconds
+                names.append('doorbell1')
+                checked.append(False)
+                types.append(4)
+                notes.append("ligma")
+                paths.append(url_for('static', filename='ronaldo.mp4'))
+                dates.append('12.2.20')  # split to remove milliseconds
+                names.append('doorbell1')
+                checked.append(False)
+                types.append(3)
+                notes.append("ligma")
+                paths.append(url_for('static', filename='default_profile.png'))
+                dates.append('12.2.20')  # split to remove milliseconds
+                names.append('doorbell1')
+                checked.append(False)
+                types.append(2)
+                notes.append("ligma")
+                paths.append(url_for('static', filename='default_profile.png'))
+                dates.append('12.2.20')  # split to remove milliseconds
+                names.append('doorbell1')
+                checked.append(False)
+                types.append(0)
+                notes.append("ligma")
+                
+                # return render_template('imageGal.html', types = types, paths = paths, dates = dates, doorbells = names)
+                return render_template('alerts.html', paths=paths, dates=dates, doorbells=names, checks=checked,
+                                        types=types, notes=notes)
+        finally:
+            cursor.close()
+            con.close()
