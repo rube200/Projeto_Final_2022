@@ -436,34 +436,23 @@ class WebServer(DatabaseAccessor, Flask):
         if not username:
             return redirect(url_for('index'))
 
-        con = self._get_connection()
-        cursor = con.cursor()
-        try:
-            cursor.execute(
-                'SELECT d.id, d.name, n.time, n.filename '
-                'FROM doorbell d '
-                'INNER JOIN alerts n '
-                'ON d.id = n.uuid '
-                'WHERE d.owner LIKE ? '
-                'AND n.type <> 0 '
-                'ORDER BY N.time DESC',
-                [username])
-            rows = cursor.fetchall()
-            # types = []
-            paths = []
-            names = []
-            dates = []
-            for row in rows:
-                # types.append(bell[0])
-                paths.append(row[1])
-                dates.append(row[2].split(".")[0])  # split to remove milliseconds
-                names.append(row[3])
+        alerts = self._get_user_alerts(username)
+        if not alerts:  # todo AQUI nada encontrado?
+            pass
 
-            # return render_template('imageGal.html', types = types, paths = paths, dates = dates, doorbells = names)
-            return render_template('notifications.html', paths=paths, dates=dates, doorbells=names)  # todo rename
-        finally:
-            cursor.close()
-            con.close()
+        # HERE VE o self.__convert_alert para veres o que tens acesso
+
+        alerts_info = []
+        for alert in alerts:
+            data = self.__convert_alert(alert)  # todo temos de falar sobre isto depois manda msg
+            if not data:
+                continue
+
+            if not data.name:
+                data.name = get_alert_message(data.type)
+            alerts_info.append(data)
+
+        return render_template('notifications.html', alerts_info=alerts_info)  # todo rename
 
     # todo recheck this one
     def __endpoint_alerts2(self):

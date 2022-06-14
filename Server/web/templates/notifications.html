@@ -1,68 +1,70 @@
 {% extends 'default_e_bell.html' %}
 
 {% set nav_title='Alerts' %}
-{% set no_bells=doorbells|length <= 0 %}
+{% set no_bells=alerts_info|length <= 0 %}
 
 {% block e_bell_content %}
-<div class="row">
-  <div class="col-sm-6 col-md-4 col-lg-3 image-container">
-    {% for path in paths %}
-      <div class="col-sm-6 col-md-4 col-lg-3 image-container">
-        <figure>
-          
-            {% if ".mp4" in path %}
-              <div class="pic image"><video src='{{ path }}' class="img-thumbnail"></div>
-            {% else %}
-              <div class="pic image"><img src='{{ path }}' class="img-thumbnail"></div>                
-            {% endif %}  
-            <figcaption>
-              {{ doorbells[loop.index0]}}</br>
-              {{ dates[loop.index0]}}
-            </figcaption>
-        </figure>
+    {% if alerts_info|length > 0 %}
+
+    {% endif %}
+    <div class="row">
+        <div class="col-sm-6 col-md-4 col-lg-3 image-container">
+            {% for alert in alerts_info %}
+                <div class="col-sm-6 col-md-4 col-lg-3 image-container">
+                    <figure>
+                        <div class="pic image">
+                            <object
+                                    width="320"
+                                    height="240"
+                                    class="img-fluid"
+                                    data="{{ url_for('get-resource', filename=alert.filename) }}"
+                                    type='{{ alert.mimetype }}'>
+                            </object>
+                        </div>
+                        <figcaption>
+                            {{ alert.name }}
+                            {{ alert.time }}
+                        </figcaption>
+                    </figure>
 
 
-      </div>
-    {% endfor %}
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="popup-pic" id="big1">
+            <span id="span1">&times;</span>
+            <img src='{{ alerts_info[0] }}' alt="">
+        </div>
+        <div class="popup-pic" id="big2">
+            <span id="span2">&times;</span>
+            <video src='{{ alerts_info[0] }}' alt="" controls></video>
+        </div>
     </div>
+{% endblock %}
 
-    <div class="popup-pic" id = "big1">
-      <span id="span1">&times;</span>
-      <img src='{{ paths[0] }}' alt="">
-    </div>
-    <div class="popup-pic" id = "big2">
-        <span id="span2">&times;</span>
-        <video src='{{ paths[0] }}' alt="" controls>
-    </div>
-
-      <script>
-          
-          document.querySelectorAll('.image-container img').forEach(image =>{
-            image.onclick = () =>{
-              document.getElementById('big1').style.display = 'block';
-              document.querySelector('.popup-pic img').src = image.getAttribute('src');
-            }             
-          });
-      
-
-          document.querySelectorAll('.image-container video').forEach(vid =>{
-            vid.onclick = () =>{
-            document.getElementById('big2').style.display = 'block';
-            document.querySelector('.popup-pic video').src = vid.getAttribute('src');
-            }      
+{% block scripts %}
+    <script>
+        document.querySelectorAll('.image-container img').forEach(image => {
+            image.onclick = () => {
+                document.getElementById('big1').style.display = 'block';
+                document.querySelector('.popup-pic img').src = image.getAttribute('src');
+            }
         });
 
-          document.getElementById('span1').onclick = () =>{
+
+        document.querySelectorAll('.image-container video').forEach(vid => {
+            vid.onclick = () => {
+                document.getElementById('big2').style.display = 'block';
+                document.querySelector('.popup-pic video').src = vid.getAttribute('src');
+            }
+        });
+
+        document.getElementById('span1').onclick = () => {
             document.getElementById('big1').style.display = 'none';
-          };
-          document.getElementById('span2').onclick = () =>{
+        };
+        document.getElementById('span2').onclick = () => {
             document.getElementById('big2').style.display = 'none';
-          };
-
- 
-
-      
-      
-      </script>
-
+        };
+    </script>
 {% endblock %}
