@@ -24,7 +24,11 @@ class DatabaseAccessor:
         con = self._get_connection()
         cursor = con.cursor()
         try:
-            cursor.execute('SELECT owner FROM doorbell WHERE id = ? LIMIT 1', [uuid])
+            cursor.execute('SELECT owner '
+                           'FROM doorbell '
+                           'WHERE id = ? '
+                           'LIMIT 1',
+                           [uuid])
             data = cursor.fetchone()
             return data['owner'] if data else None
         finally:
@@ -32,23 +36,36 @@ class DatabaseAccessor:
             con.close()
 
     def _register_doorbell(self, username: str, uuid: int) -> bool:
+        username = username.upper()
         con = self._get_connection()
         cursor = con.cursor()
         try:
-            cursor.execute('SELECT 1 FROM user WHERE username = ? LIMIT 1', [username.upper()])
+            cursor.execute('SELECT 1 '
+                           'FROM user '
+                           'WHERE username = ? '
+                           'LIMIT 1',
+                           [username])
             data = cursor.fetchone()
             if not data or not data[0]:
                 return False
 
-            cursor.execute('INSERT OR IGNORE INTO doorbell(id, name, owner) VALUES (?, ?, ?)',
-                           [uuid, uuid, username.upper()])
+            cursor.execute('INSERT OR IGNORE INTO doorbell(id, name, owner) '
+                           'VALUES (?, ?, ?)',
+                           [uuid, uuid, username])
             cursor.execute('INSERT OR IGNORE INTO doorbell_alerts '
-                           'SELECT ?, email FROM user WHERE username = ?', [uuid, username.upper()])
+                           'SELECT ?, email '
+                           'FROM user '
+                           'WHERE username = ?',
+                           [uuid, username])
             con.commit()
             if cursor.rowcount > 0:
                 return True
 
-            cursor.execute('SELECT 1 FROM doorbell WHERE id = ? LIMIT 1', [uuid])
+            cursor.execute('SELECT 1 '
+                           'FROM doorbell '
+                           'WHERE id = ? '
+                           'LIMIT 1',
+                           [uuid])
             data = cursor.fetchone()
             return data and data[0]
         finally:
@@ -73,7 +90,9 @@ class DatabaseAccessor:
         cursor = con.cursor()
         try:
             # noinspection SqlInsertValues
-            cursor.execute(f'INSERT INTO alerts({columns_placer}) VALUES ({values_placer})', values)
+            cursor.execute(f'INSERT INTO alerts({columns_placer}) '
+                           f'VALUES ({values_placer})',
+                           values)
             con.commit()
         finally:
             cursor.close()
@@ -84,7 +103,10 @@ class DatabaseAccessor:
         cursor = con.cursor()
         try:
             cursor.execute(
-                'SELECT name FROM doorbell WHERE id = ? LIMIT 1',
+                'SELECT name '
+                'FROM doorbell '
+                'WHERE id = ? '
+                'LIMIT 1',
                 [uuid])
             data = cursor.fetchone()
             return data['name'] if data else None
@@ -97,7 +119,9 @@ class DatabaseAccessor:
         cursor = con.cursor()
         try:
             cursor.execute(
-                'SELECT e.email FROM doorbell_alerts e WHERE e.uuid = ?',
+                'SELECT email '
+                'FROM doorbell_alerts '
+                'WHERE uuid = ?',
                 [uuid])
             data = cursor.fetchall()
             return [d['email'] for d in data] if data else []
@@ -109,7 +133,12 @@ class DatabaseAccessor:
         con = self._get_connection()
         cursor = con.cursor()
         try:
-            cursor.execute('SELECT 1 FROM doorbell WHERE id = ? and owner = ? LIMIT 1', [uuid, username.upper()])
+            cursor.execute('SELECT 1 '
+                           'FROM doorbell '
+                           'WHERE id = ? '
+                           'AND owner = ? '
+                           'LIMIT 1',
+                           [uuid, username.upper()])
             data = cursor.fetchone()
             return data and data[0]
         finally:
@@ -124,9 +153,10 @@ class DatabaseAccessor:
                            'FROM alerts a '
                            'INNER JOIN doorbell d '
                            'ON a.uuid = d.id '
-                           'WHERE d.owner = ? '
-                           'AND a.filename = ?'
-                           'LIMIT 1', [username.upper(), filename.lower()])
+                           'WHERE a.filename = ? '
+                           'AND d.owner = ? '
+                           'LIMIT 1',
+                           [filename.lower(), username.upper()])
             data = cursor.fetchone()
             return data and data[0]
         finally:
@@ -137,7 +167,11 @@ class DatabaseAccessor:
         con = self._get_connection()
         cursor = con.cursor()
         try:
-            cursor.execute('SELECT username, name FROM user WHERE username = ? LIMIT 1', [username.upper()])
+            cursor.execute('SELECT username, name '
+                           'FROM user '
+                           'WHERE username = ? '
+                           'LIMIT 1',
+                           [username.upper()])
             data = cursor.fetchone()
             return data['username'], data['name'] if data else None
         finally:
@@ -148,7 +182,11 @@ class DatabaseAccessor:
         con = self._get_connection()
         cursor = con.cursor()
         try:
-            cursor.execute('SELECT username, name, password FROM user WHERE username = ? LIMIT 1', [username.upper()])
+            cursor.execute('SELECT username, name, password '
+                           'FROM user '
+                           'WHERE username = ? '
+                           'LIMIT 1',
+                           [username.upper()])
             data = cursor.fetchone()
         finally:
             cursor.close()
@@ -166,16 +204,21 @@ class DatabaseAccessor:
         return usr, name
 
     def _try_register(self, username: str, email: str, password: bytes) -> Tuple[str, str] or None:
+        username = username.upper()
         con = self._get_connection()
         cursor = con.cursor()
         try:
-            cursor.execute('INSERT OR IGNORE INTO user (username, email, password, name) VALUES (?, ?, ?, ?)',
-                           [username.upper(), email.lower(), password, username])
+            cursor.execute('INSERT OR IGNORE INTO user (username, email, password, name) '
+                           'VALUES (?, ?, ?, ?)',
+                           [username, email.lower(), password, username])
             con.commit()
             if cursor.rowcount < 1:
                 return None
 
-            cursor.execute('SELECT username, name FROM user WHERE username = ?', [username.upper()])
+            cursor.execute('SELECT username, name '
+                           'FROM user '
+                           'WHERE username = ?',
+                           [username])
             data = cursor.fetchone()
             return data['username'], data['name'] if data else None
         finally:
@@ -186,54 +229,45 @@ class DatabaseAccessor:
         con = self._get_connection()
         cursor = con.cursor()
         try:
-            cursor.execute('SELECT id, name FROM doorbell WHERE owner = ?', [username.upper()]),
+            cursor.execute('SELECT id, name '
+                           'FROM doorbell '
+                           'WHERE owner = ?',
+                           [username.upper()]),
             return cursor.fetchall()
         finally:
             cursor.close()
             con.close()
 
-    def _get_alerts_count(self, username: str, exclude_checked: bool = True):
+    def _get_alerts_count(self, username: str):
         con = self._get_connection()
         cursor = con.cursor()
         try:
-            cmd = 'SELECT COUNT(*) ' \
-                  'FROM alerts a ' \
-                  'INNER JOIN doorbell d ' \
-                  'ON a.uuid = d.id ' \
-                  'WHERE d.owner = ?'
-            if exclude_checked:
-                cmd += ' AND NOT checked'
-
-            cursor.execute(cmd, [username])
+            cursor.execute('SELECT COUNT(*) '
+                           'FROM alerts a '
+                           'INNER JOIN doorbell d '
+                           'ON a.uuid = d.id '
+                           'WHERE NOT a.checked '
+                           'AND d.owner = ?',
+                           [username.upper()])
             return cursor.fetchone()[0]
         finally:
             cursor.close()
             con.close()
 
-    def _get_user_alerts(self, username: str, types: List[AlertType] = None, exclude_checked: bool = False):
-        if types:
-            t = [t.value for t in types]
-        else:
-            t = []
+    def _get_user_captures(self, username: str):
         con = self._get_connection()
         cursor = con.cursor()
         try:
-            cmd = f'SELECT d.id, d.name, a.id, a.time, a.type, a.filename, a.notes ' \
-                  f'FROM alerts a ' \
-                  f'INNER JOIN doorbell d ' \
-                  f'ON a.uuid = d.id ' \
-                  f'WHERE d.owner = ?' \
-
-            if exclude_checked:
-                cmd += ' AND NOT a.checked'
-
-            size = len(t)
-            if size > 0:
-                cmd += f' AND a.type IN ({", ".join(["?"] * size)})'
-            cmd += f' ORDER BY a.time DESC'
-
-            t.insert(0, username.upper())
-            cursor.execute(cmd, t)
+            cursor.execute(f'SELECT d.id, d.name, a.id, a.time, a.type, a.filename '
+                           f'FROM alerts a '
+                           f'INNER JOIN doorbell d '
+                           f'ON a.uuid = d.id '
+                           f'WHERE a.filename IS NOT NULL '
+                           f'AND a.type IN (?, ?, ?) '
+                           f'AND d.owner = ? '
+                           f'ORDER BY a.time DESC',
+                           [AlertType.Bell.value, AlertType.Movement.value, AlertType.UserPicture.value,
+                            username.upper()])
             return cursor.fetchall()
         finally:
             cursor.close()
@@ -270,11 +304,17 @@ class DatabaseAccessor:
         con = self._get_connection()
         cursor = con.cursor()
         try:
-            cursor.execute('SELECT name FROM doorbell WHERE id = ?', [uuid]),
+            cursor.execute('SELECT name '
+                           'FROM doorbell '
+                           'WHERE id = ?',
+                           [uuid]),
             data = cursor.fetchone()
             name = data['name'] if data else uuid
 
-            cursor.execute('SELECT email FROM doorbell_alerts WHERE uuid = ?', [uuid]),
+            cursor.execute('SELECT email '
+                           'FROM doorbell_alerts '
+                           'WHERE uuid = ?',
+                           [uuid]),
             data = cursor.fetchall()
             emails = [d['email'] for d in data] if data else []
             return name, emails
@@ -290,10 +330,16 @@ class DatabaseAccessor:
         con = self._get_connection()
         cursor = con.cursor()
         try:
-            cursor.execute('UPDATE doorbell SET name = ? WHERE id = ?', [doorbell_name, uuid])
-            cursor.execute('DELETE FROM doorbell_alerts WHERE uuid = ?', [uuid])
+            cursor.execute('UPDATE doorbell '
+                           'SET name = ? '
+                           'WHERE id = ?',
+                           [doorbell_name, uuid])
+            cursor.execute('DELETE FROM doorbell_alerts '
+                           'WHERE uuid = ?',
+                           [uuid])
             if len(alert_emails):
-                cursor.executemany('INSERT INTO doorbell_alerts VALUES (?, ?)',
+                cursor.executemany('INSERT INTO doorbell_alerts '
+                                   'VALUES (?, ?)',
                                    zip([uuid] * len(alert_emails), alert_emails))
 
             con.commit()
