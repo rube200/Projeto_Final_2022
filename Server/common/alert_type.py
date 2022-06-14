@@ -10,7 +10,7 @@ class AlertType(Enum):
     UserPicture = 5
 
 
-def get_alert_message(alert: AlertType) -> str:
+def get_alert_type_message(alert: AlertType) -> str:
     if alert == AlertType.Invalid:
         return "Invalid alert type"
     elif alert == AlertType.System:

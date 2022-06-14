@@ -143,17 +143,17 @@
             };
 
             function markRead(){
-              var dates = []
-              document.querySelectorAll(".date").forEach(element => {
-                dates.push(element.textContent)
-              });
+                var dates = []
+                document.querySelectorAll(".date").forEach(element => {
+                    dates.push(element.textContent)
+                });
 
-              var date = dates.reduce((a, b) => a > b ? a : b); //reduce list to just the most recent date
+                var date = dates.reduce((a, b) => a > b ? a : b); //reduce list to just the most recent date
                 //needs a post here to tell server to mark all notifications up to older than (and as old as) "date"
-              
+
 
                 var xhr = new XMLHttpRequest();
-                xhr.open('POST', '{{ url_for("alerts2") }}', true);
+                xhr.open('POST', '{{ url_for("alerts") }}', true);
                 var data = new FormData();
                 data.append('date', date);
                 xhr.onload = function () {
@@ -161,7 +161,7 @@
                     location.reload(true);
                 };
                 xhr.send(data);
-              }
+            }
         </script>
       {% endblock %}
     

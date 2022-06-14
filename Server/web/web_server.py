@@ -16,7 +16,7 @@ from flask import Flask, redirect, url_for, current_app, session, render_templat
 from flask_mail import Mail, Message
 from werkzeug.utils import secure_filename
 
-from common.alert_type import AlertType, get_alert_message
+from common.alert_type import AlertType, get_alert_type_message
 from common.database_accessor import DatabaseAccessor
 from common.esp_clients import EspClients
 from common.esp_events import EspEvents
@@ -24,8 +24,8 @@ from common.esp_events import EspEvents
 NAV_DICT = [
     {'id': 'doorbells', 'title': 'Manage Doorbells', 'icon': 'bi-book-fill', 'url': 'doorbells'},
     {'id': 'streams', 'title': 'All Streams', 'icon': 'bi-cast', 'url': 'streams'},
-    {'id': 'alerts', 'title': 'Alerts', 'icon': 'bi-bell-fill', 'url': 'alerts'},
-    {'id': 'statistics', 'title': 'Statistics', 'icon': 'bi-bar-chart-fill', 'url': 'doorbells'},
+    {'id': 'captures', 'title': 'Captures', 'icon': 'bi-camera-video-fill', 'url': 'captures'},
+    {'id': 'alerts', 'title': 'Alerts', 'icon': 'bi-bell-fill', 'url': 'alerts'}
 ]
 
 
@@ -95,8 +95,9 @@ class WebServer(DatabaseAccessor, Flask):
         self.add_url_rule('/login', 'login', self.__endpoint_login, methods=['GET', 'POST'])
         self.add_url_rule('/register', 'register', self.__endpoint_register, methods=['GET', 'POST'])
         self.add_url_rule('/logout', 'logout', endpoint_logout)
-        self.add_url_rule('/alerts', 'alerts', self.__endpoint_alerts)
+        self.add_url_rule('/alerts', 'alerts', self.__endpoint_alerts, methods=['GET', 'POST'])
         self.add_url_rule('/alerts-count', 'alerts-count', self.__endpoint_alerts_count)
+        self.add_url_rule('/captures', 'captures', self.__endpoint_captures)
         self.add_url_rule('/doorbells', 'doorbells', self.__endpoint_doorbells)
         self.add_url_rule('/doorbells/<int:uuid>', 'doorbell', self.__endpoint_doorbell, methods=['GET', 'POST'])
         self.add_url_rule('/streams', 'streams', self.__endpoint_streams)
@@ -104,7 +105,6 @@ class WebServer(DatabaseAccessor, Flask):
         self.add_url_rule('/get-resource/<string:filename>', 'get-resource', self.__endpoint_get_resource)
         self.add_url_rule('/open_doorbell/<int:uuid>', 'open_doorbell', self.__endpoint_open_doorbell, methods=['POST'])
         self.add_url_rule('/take_picture/<int:uuid>', 'take_picture', self.__endpoint_take_picture, methods=['POST'])
-        self.add_url_rule('/alerts2', 'alerts2', self.__endpoint_alerts2, methods=['GET', 'POST'])
         self.register_error_handler(400, lambda e: redirect(url_for('index')))
         self.register_error_handler(404, lambda e: redirect(url_for('index')))
         self.template_context_processors[None].append(lambda: dict(debug=self.debug, nav=NAV_DICT))
@@ -147,6 +147,9 @@ class WebServer(DatabaseAccessor, Flask):
         alert.checked = alert_data['checked'] if 'checked' in col else None
         alert.notes = alert_data['notes'] if 'notes' in col else None
         return alert
+
+    def __convert_capture(self, alert_data: Row or dict):
+        return self.__convert_alert(alert_data, True)
 
     def __convert_doorbell(self, bell_data: Row or dict):
         doorbell = namedtuple('Bell', 'id, name, image, online')
@@ -223,7 +226,7 @@ class WebServer(DatabaseAccessor, Flask):
             if not doorbell_name or not emails:
                 return
 
-            alert_message = get_alert_message(alert_type)
+            alert_message = get_alert_type_message(alert_type)
             alert_time = data.get('time') or time()
             date = datetime.fromtimestamp(alert_time).strftime('%Y-%m-%d %H:%M')
 
@@ -237,7 +240,7 @@ class WebServer(DatabaseAccessor, Flask):
 
             with self.app_context():
                 self.__mail.send(Message(
-                    subject=get_alert_message(alert_type),
+                    subject=get_alert_type_message(alert_type),
                     bcc=emails,
                     html=render_template('email.html',
                                          icon=self.icon_base64,
@@ -324,12 +327,12 @@ class WebServer(DatabaseAccessor, Flask):
 
         doorbell_files = []
         for alert in alerts:
-            data = self.__convert_alert(alert, True)
+            data = self.__convert_capture(alert)
             if not data:
                 continue
 
             if not data.name:
-                data.name = get_alert_message(data.type)
+                data.name = get_alert_type_message(data.type)
             doorbell_files.append(data)
 
         return render_template('doorbell.html', doorbell=doorbell, doorbell_files=doorbell_files)
@@ -430,32 +433,29 @@ class WebServer(DatabaseAccessor, Flask):
 
         return send_from_directory(self.config['ESP_FILES_DIR'], filename)
 
-    # todo recheck this one
-    def __endpoint_alerts(self):
+    def __endpoint_captures(self):
         username = self.__authenticate()
         if not username:
             return redirect(url_for('index'))
 
-        alerts = self._get_user_alerts(username)
-        if not alerts:  # todo AQUI nada encontrado?
+        captures = self._get_user_captures(username)
+        if not captures:
             pass
 
-        # HERE VE o self.__convert_alert para veres o que tens acesso
-
-        alerts_info = []
-        for alert in alerts:
-            data = self.__convert_alert(alert)  # todo temos de falar sobre isto depois manda msg
+        doorbell_files = []
+        for alert in captures:
+            data = self.__convert_alert(alert)
             if not data:
                 continue
 
             if not data.name:
-                data.name = get_alert_message(data.type)
-            alerts_info.append(data)
+                data.name = get_alert_type_message(data.type)
+            doorbell_files.append(data)
 
-        return render_template('notifications.html', alerts_info=alerts_info)  # todo rename
+        return render_template('captures.html', doorbell_files=doorbell_files)
 
     # todo recheck this one
-    def __endpoint_alerts2(self):
+    def __endpoint_alerts(self):
         username = self.__authenticate()
         if not username:
             return redirect(url_for('index'))

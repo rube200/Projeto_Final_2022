@@ -9,7 +9,7 @@
     {% endif %}
     <div class="row">
         <div class="col-sm-6 col-md-4 col-lg-3 image-container">
-            {% for alert in alerts_info %}
+            {% for file in doorbell_files %}
                 <div class="col-sm-6 col-md-4 col-lg-3 image-container">
                     <figure>
                         <div class="pic image">
@@ -17,13 +17,13 @@
                                     width="320"
                                     height="240"
                                     class="img-fluid"
-                                    data="{{ url_for('get-resource', filename=alert.filename) }}"
-                                    type='{{ alert.mimetype }}'>
+                                    data="{{ url_for('get-resource', filename=file.filename) }}"
+                                    type='{{ file.mimetype }}'>
                             </object>
                         </div>
                         <figcaption>
-                            {{ alert.name }}
-                            {{ alert.time }}
+                            {{ file.name }}
+                            {{ file.time }}
                         </figcaption>
                     </figure>
 
@@ -34,11 +34,11 @@
 
         <div class="popup-pic" id="big1">
             <span id="span1">&times;</span>
-            <img src='{{ alerts_info[0] }}' alt="">
+            <img src='{{ doorbell_files[0] }}' alt="">
         </div>
         <div class="popup-pic" id="big2">
             <span id="span2">&times;</span>
-            <video src='{{ alerts_info[0] }}' alt="" controls></video>
+            <video src='{{ doorbell_files[0] }}' alt="" controls></video>
         </div>
     </div>
 {% endblock %}
