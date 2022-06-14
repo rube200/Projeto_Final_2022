@@ -478,15 +478,16 @@ class WebServer(DatabaseAccessor, Flask):
                 cursor.close()
                 con.close()
         
-        con = self._get_connection()
-        cursor = con.cursor()
-        try:
-            paths = []
-            names = []
-            dates = []
-            checked = []
-            types = []
-            notes = []
+        #con = self._get_connection()
+        #cursor = con.cursor()
+        paths = []
+        names = []
+        dates = []
+        checked = []
+        types = []
+        notes = []
+        """try:
+            
             cursor.execute(
                 'SELECT d.id, d.name, n.time, n.filename, n.checked, n.type, n.notes  '
                 'FROM doorbell d '
@@ -505,36 +506,48 @@ class WebServer(DatabaseAccessor, Flask):
                 checked.append(row[4])
                 types.append(row[5])
                 notes.append(row[6])
-
+            """
             # dummy data
-                paths.append(url_for('static', filename='ronaldo.mp4'))
-                dates.append('12.2.20')  # split to remove milliseconds
-                names.append('doorbell1')
-                checked.append(False)
-                types.append(4)
-                notes.append("ligma")
-                paths.append(url_for('static', filename='ronaldo.mp4'))
-                dates.append('12.2.20')  # split to remove milliseconds
-                names.append('doorbell1')
-                checked.append(False)
-                types.append(3)
-                notes.append("ligma")
-                paths.append(url_for('static', filename='default_profile.png'))
-                dates.append('12.2.20')  # split to remove milliseconds
-                names.append('doorbell1')
-                checked.append(False)
-                types.append(2)
-                notes.append("ligma")
-                paths.append(url_for('static', filename='default_profile.png'))
-                dates.append('12.2.20')  # split to remove milliseconds
-                names.append('doorbell1')
-                checked.append(False)
-                types.append(0)
-                notes.append("ligma")
-                
-                # return render_template('imageGal.html', types = types, paths = paths, dates = dates, doorbells = names)
-                return render_template('alerts.html', paths=paths, dates=dates, doorbells=names, checks=checked,
+        paths.append(url_for('static', filename='ronaldo.mp4'))
+        dates.append('12.2.20')  # split to remove milliseconds
+        names.append('doorbell1')
+        checked.append(False)
+        types.append(4)
+        notes.append("ligma")
+        paths.append(url_for('static', filename='ronaldo.mp4'))
+        dates.append('12.2.20')  # split to remove milliseconds
+        names.append('doorbell1')
+        checked.append(False)
+        types.append(3)
+        notes.append("ligma")
+        paths.append(url_for('static', filename='default_profile.png'))
+        dates.append('12.2.20')  # split to remove milliseconds
+        names.append('doorbell1')
+        checked.append(False)
+        types.append(2)
+        notes.append("ligma")
+        paths.append(url_for('static', filename='default_profile.png'))
+        dates.append('12.2.20')  # split to remove milliseconds
+        names.append('doorbell1')
+        checked.append(False)
+        types.append(3)
+        notes.append("ligma")
+        paths.append(url_for('static', filename='default_profile.png'))
+        dates.append('12.2.20')  # split to remove milliseconds
+        names.append('doorbell1')
+        checked.append(False)
+        types.append(1)
+        notes.append("ligma")
+        paths.append(url_for('static', filename='default_profile.png'))
+        dates.append('12.2.20')  # split to remove milliseconds
+        names.append('doorbell1')
+        checked.append(False)
+        types.append(2)
+        notes.append("ligma")
+        
+        # return render_template('imageGal.html', types = types, paths = paths, dates = dates, doorbells = names)
+        return render_template('alerts.html', paths=paths, dates=dates, doorbells=names, checks=checked,
                                         types=types, notes=notes)
-        finally:
-            cursor.close()
-            con.close()
+        #finally:
+        #    cursor.close()
+        #    con.close()

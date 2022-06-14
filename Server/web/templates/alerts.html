@@ -11,12 +11,13 @@
             {% if 1 == type %}
                 <!--system alert-->
                 <div class="card m-2" class = "card">
-                    <button type="button" onclick="bigPic(this)" class="card-body card-hover card-hover-grey">
+                    <button type="button" onclick="bigMsg(this)" class="card-body card-hover card-hover-grey">
                       {% if checks[loop.index0] == false %}
                       <img style="width: 50px; float: right;" src="{{ url_for('static', filename='alert.png') }}">
                       {% endif %}
                       <h2 class="card-title">Announcement</h2>
-                      <h4>Message</h4>
+                      <h4>System Message</h4>
+                      <p hidden> {{ notes [loop.index0]}}</p>
                       <h3 class="card-subtitle text-muted date">{{ dates[loop.index0] }}</h3> 
                       <img class = "target" style="width: 50px; float: right;" src="{{ url_for('static', filename='announcement.png') }}">                  
                        
@@ -26,12 +27,13 @@
             {% elif 2 == type %}
                   <!--system alert-->
                 <div class="card m-2" class = "card">
-                    <button type="button" onclick="bigPic(this)" class="card-body card-hover card-hover-green">
+                    <button type="button" onclick="bigMsg(this)" class="card-body card-hover card-hover-green">
                       {% if checks[loop.index0] == false %}
                       <img style="width: 50px; float: right;" src="{{ url_for('static', filename='alert.png') }}">
                       {% endif %}
                       <h2 class="card-title">Doorbell Added</h2>
-                      <h4>{{ doorbells[loop.index0] }}</h4>
+                      <h4>{{ doorbells[loop.index0] }} was Added</h4>
+                      <p hidden> {{ notes [loop.index0]}}</p>
                       <h3 class="card-subtitle text-muted date">{{ dates[loop.index0] }}</h3> 
                       <img class = "target" style="width: 50px; float: right;" src="{{ url_for('static', filename='camera.png') }}">                  
                        
@@ -89,6 +91,11 @@
           <span id="span2">&times;</span>
           <video src='{{ paths[0] }}' alt="" controls>
       </div>
+      <div class="popup-pic" id = "big3">
+        <span id="span3">&times;</span>
+        <div id="msg-Board">
+        </div>
+    </div>
   
 
       {% block alert_count_script %}
@@ -118,12 +125,21 @@
               }
             }
 
+            function bigMsg(elem){
+                var msg = elem.querySelector("p").textContent;
+                console.log(msg)
+                document.getElementById('big3').style.display = 'block';
+                document.querySelector('#msg-Board').textContent = msg;
+            }
   
             document.getElementById('span1').onclick = () =>{
               document.getElementById('big1').style.display = 'none';
             };
             document.getElementById('span2').onclick = () =>{
               document.getElementById('big2').style.display = 'none';
+            };
+            document.getElementById('span3').onclick = () =>{
+              document.getElementById('big3').style.display = 'none';
             };
 
             function markRead(){
