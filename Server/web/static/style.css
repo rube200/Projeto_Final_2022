@@ -280,3 +280,6 @@ body {
     margin-top: 10px;
 }
 
+.btn-clic:active {
+    background-color: #1406d6ce;
+}

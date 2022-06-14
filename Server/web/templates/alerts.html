@@ -4,9 +4,9 @@
 
 {% block e_bell_content %}
 <div class="boxy">
-    <button type="button" class="mark-btn vertical-center" onclick="markRead()">Mark all as Read</button>
+    <button type="button" class="mark-btn vertical-center btn-clic" onclick="markRead()">Mark all as Read</button>
 </div>
-    <div class="d-flex flex-wrap justify-content-around">
+    <div class="d-flex flex-wrap justify-content-around" style="padding-bottom: 5px;">
         {% for type in types %}
             {% if 1 == type %}
                 <!--system alert-->
@@ -90,7 +90,22 @@
           <video src='{{ paths[0] }}' alt="" controls>
       </div>
   
+
+      {% block alert_count_script %}
         <script>
+          function onAlertCount(data) {
+            if (data > 0){
+              location.reload(true);//refresh page
+            }
+              //metes aqui o teu codigo
+              //isto aqui e chamado sempre que a pagina vai buscar os alerts
+              //data -> numero de alerts (ex: 0,3,etc)
+              
+              //se deres 'return false' o contador de notificacoes vai mudar
+              //se deres 'return true' ele vai ser ignora enao vai ser alterado
+              return false;
+          }
+        //podes acrescentar aqui mais codigo ou funcoes
 
             function bigPic(elem){
               var path = elem.querySelector(".target").src;
@@ -115,15 +130,23 @@
               var dates = []
               document.querySelectorAll(".date").forEach(element => {
                 dates.push(element.textContent)
-                console.log(element.textContent)
               });
-              console.log(dates)
+
               var date = dates.reduce((a, b) => a > b ? a : b); //reduce list to just the most recent date
                 //needs a post here to tell server to mark all notifications up to older than (and as old as) "date"
-              console.log(date)
-              }
-        
+              
 
-    </script>
+                var xhr = new XMLHttpRequest();
+                xhr.open('POST', '{{ url_for("alerts2") }}', true);
+                var data = new FormData();
+                data.append('date', date);
+                xhr.onload = function () {
+                    // do something to response
+                    location.reload(true);
+                };
+                xhr.send(data);
+              }
+        </script>
+      {% endblock %}
     
 {% endblock %}
