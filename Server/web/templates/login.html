@@ -5,7 +5,7 @@
         <h4>Hello! let's get started</h4>
         <h6 class="mb-0 text-secondary">Sign in to continue.</h6>
     </div>
-    <form action="{{ url_for('login') }}" method="POST">
+    <form action="{{ url_for('login', page_to_redirect=page_to_redirect) }}" method="POST">
         <div class="mb-2">
             <!--suppress HtmlFormInputWithoutLabel -->
             <input autocomplete="username" class="form-control form-control-lg" placeholder="Username" name="username"

@@ -5,7 +5,8 @@
         <h4>New to E-Bells?</h4>
         <h6 class="mb-0 text-secondary">Signing up only takes a few steps</h6>
     </div>
-    <form action="{{ url_for('register') }}" method="POST">
+    <form action="{{ url_for('register', page_to_redirect=page_to_redirect
+    ) }}" method="POST">
         <div class="mb-2">
             <!--suppress HtmlFormInputWithoutLabel -->
             <input autocomplete="username" class="form-control form-control-lg" placeholder="Username" name="username"

@@ -17,6 +17,7 @@
     {% if image %}
         <img alt="Image taken from doorbell" id="mail-image" src="{{ image }}">
     {% endif %}
+    <a class="link-primary" href="{{ url_for_alerts }}">Check Here</a>
 </div>
 <style>
     body {
@@ -34,10 +35,6 @@
 
     .d-flex {
         display: flex;
-    }
-
-    .flex-nowrap {
-        flex-wrap: nowrap;
     }
 
     .mt-4 {

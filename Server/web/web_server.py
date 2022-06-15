@@ -92,8 +92,12 @@ class WebServer(DatabaseAccessor, Flask):
         icon_path = path.join(self.static_folder, 'favicon.png')
         self.icon_base64 = convert_image_to_base64(self.open_resource(icon_path).read())
         self.add_url_rule('/', 'index', self.__endpoint_index)
-        self.add_url_rule('/login', 'login', self.__endpoint_login, methods=['GET', 'POST'])
+        self.add_url_rule('/login', 'login', self.__endpoint_login, defaults={'page_to_redirect': None},
+                          methods=['GET', 'POST'])
+        self.add_url_rule('/login/<string:page_to_redirect>', 'login', self.__endpoint_login, methods=['GET', 'POST'])
         self.add_url_rule('/register', 'register', self.__endpoint_register, methods=['GET', 'POST'])
+        self.add_url_rule('/register/<string:page_to_redirect>', 'register', self.__endpoint_register,
+                          defaults={'page_to_redirect': None}, methods=['GET', 'POST'])
         self.add_url_rule('/logout', 'logout', endpoint_logout)
         self.add_url_rule('/alerts', 'alerts', self.__endpoint_alerts, methods=['GET', 'POST'])
         self.add_url_rule('/alerts-count', 'alerts-count', self.__endpoint_alerts_count)
@@ -224,11 +228,11 @@ class WebServer(DatabaseAccessor, Flask):
 
         return data
 
-    def __redirect_after_auth(self, username: str, name: str):
+    def __redirect_after_auth(self, username: str, name: str, page_to_redirect: str):
         session['token'] = jwt.encode({'username': username}, self.config['JWT_SECRET_KEY'], 'HS256')
         session['username'] = username
         session['name'] = name
-        return redirect(url_for('doorbells'))
+        return redirect(url_for(page_to_redirect if page_to_redirect else 'doorbells'))
 
     def __on_alert(self, uuid: int, alert_type: AlertType, data: dict):
         try:
@@ -260,6 +264,7 @@ class WebServer(DatabaseAccessor, Flask):
                                          icon=self.icon_base64,
                                          image=image,
                                          message=message,
+                                         url_for_alerts=url_for('alerts'),
                                          time=f'Time: {date}')
                 ))
         except Exception as ex:
@@ -271,47 +276,47 @@ class WebServer(DatabaseAccessor, Flask):
 
         return redirect(url_for('login'))
 
-    def __endpoint_login(self):
+    def __endpoint_login(self, page_to_redirect: str):
         if self.__authenticate():
-            return redirect(url_for('doorbells'))
+            return redirect(url_for(page_to_redirect if page_to_redirect else 'doorbells'))
 
         if request.method == 'GET':
-            return render_template('login.html')
+            return render_template('login.html', page_to_redirect=page_to_redirect)
 
         username = request.form.get('username')
         password = request.form.get('password')
         if not username or not password:
             flash('Username and/or password are required.', 'danger')
-            return render_template('login.html')
+            return render_template('login.html', page_to_redirect=page_to_redirect)
 
         data = self._try_login(username, password)
         if not data:
             flash('Invalid username or password.', 'danger')
-            return render_template('login.html')
+            return render_template('login.html', page_to_redirect=page_to_redirect)
 
-        return self.__redirect_after_auth(data[0], data[1])
+        return self.__redirect_after_auth(data[0], data[1], page_to_redirect)
 
-    def __endpoint_register(self):
+    def __endpoint_register(self, page_to_redirect: str):
         if self.__authenticate():
-            return redirect(url_for('doorbells'))
+            return redirect(url_for(page_to_redirect if page_to_redirect else 'doorbells'))
 
         if request.method == 'GET':
-            return render_template('register.html')
+            return render_template('register.html', page_to_redirect=page_to_redirect)
 
         username = request.form.get('username')
         email = request.form.get('email')
         password = request.form.get('password')
         if not username or not email or not password:
             flash('Username, email and/or password are required.', 'danger')
-            return render_template('register.html')
+            return render_template('register.html', page_to_redirect=page_to_redirect)
 
         password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
         data = self._try_register(username, email, password)
         if not data:
             flash('Username or email already taken.', 'danger')
-            return render_template('register.html')
+            return render_template('register.html', page_to_redirect=page_to_redirect)
 
-        return self.__redirect_after_auth(data[0], data[1])
+        return self.__redirect_after_auth(data[0], data[1], page_to_redirect)
 
     def __endpoint_alerts_count(self):
         username = self.__authenticate()
