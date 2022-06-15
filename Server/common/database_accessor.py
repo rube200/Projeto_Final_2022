@@ -258,7 +258,7 @@ class DatabaseAccessor:
         con = self._get_connection()
         cursor = con.cursor()
         try:
-            cursor.execute(f'SELECT d.id, d.name, a.id, a.time, a.type, a.filename '
+            cursor.execute(f'SELECT d.id as uuid, d.name, a.id, a.time, a.type, a.filename '
                            f'FROM alerts a '
                            f'INNER JOIN doorbell d '
                            f'ON a.uuid = d.id '
@@ -277,7 +277,7 @@ class DatabaseAccessor:
         con = self._get_connection()
         cursor = con.cursor()
         try:
-            cursor.execute(f'SELECT d.id, d.name, a.id, a.time, a.type, a.filename '
+            cursor.execute(f'SELECT d.id as uuid, d.name, a.id, a.time, a.type, a.filename '
                            f'FROM alerts a '
                            f'INNER JOIN doorbell d '
                            f'ON a.uuid = d.id '
@@ -294,29 +294,18 @@ class DatabaseAccessor:
             cursor.close()
             con.close()
 
-    def _get_doorbell_alerts(self, uuid: int, types: List[AlertType] = None, exclude_checked: bool = True):
-        if types:
-            t = [t.value for t in types]
-        else:
-            t = []
+    def _get_doorbell_captures(self, uuid: int):
         con = self._get_connection()
         cursor = con.cursor()
         try:
-            cmd = f'SELECT a.id, a.time, a.type, a.filename, a.notes ' \
-                  f'FROM alerts a ' \
-                  f'WHERE a.uuid = ?'
-
-            if exclude_checked:
-                cmd += ' AND NOT a.checked'
-
-            size = len(t)
-            if size > 0:
-                t_inject = ', '.join(['?'] * size)
-                cmd += f' AND a.type IN ({t_inject})'
-            cmd += f' ORDER BY a.id DESC'
-
-            t.insert(0, uuid)
-            cursor.execute(cmd, t)
+            cursor.execute(f'SELECT id, time, type, filename '
+                           f'FROM alerts  '
+                           f'WHERE uuid = ? '
+                           f'AND filename IS NOT NULL '
+                           f'AND type IN (?, ?, ?) '
+                           f'ORDER BY id DESC',
+                           [uuid, AlertType.Bell.value, AlertType.Movement.value,
+                            AlertType.UserPicture.value])
             return cursor.fetchall()
         finally:
             cursor.close()

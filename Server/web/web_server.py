@@ -136,27 +136,40 @@ class WebServer(DatabaseAccessor, Flask):
 
     def __convert_alert(self, alert_data: Row or dict, need_file: bool = False):
         col = alert_data.keys()
-        alert = namedtuple('DoorbellAlert', 'id, alert_type, time')
-        alert.id = alert_data['id']
-        alert.alert_type = AlertType(alert_data['type'])
-        alert.time = alert_data['time']
-        alert.filename = alert_data['filename'] if 'filename' in col else None
-        if alert.filename and path.exists(path.join(self.__esp_full_path, alert.filename)):
-            alert.mimetype = guess_type(alert.filename)[0]
+        alert = {
+            'id': alert_data['id'],
+            'type': alert_data['type'],
+            'time': alert_data['time'],
+        }
+
+        alert['filename'] = filename = alert_data['filename'] if 'filename' in col else None
+        if filename and path.exists(path.join(self.__esp_full_path, filename)):
+            alert['mimetype'] = guess_type(filename)[0]
         else:
             if need_file:
                 return None
 
-            alert.mimetype = 'image/jpeg'
+            alert['mimetype'] = 'image/jpeg'
 
-        alert.uuid = alert_data['uuid'] if 'uuid' in col else None
-        alert.name = alert_data['name'] if 'name' in col else None
-        alert.checked = alert_data['checked'] if 'checked' in col else None
-        alert.notes = alert_data['notes'] if 'notes' in col else None
+        alert['uuid'] = alert_data['uuid'] if 'uuid' in col else None
+        alert['name'] = alert_data['name'] if 'name' in col else None
+        alert['checked'] = alert_data['checked'] if 'checked' in col else None
+        alert['notes'] = alert_data['notes'] if 'notes' in col else None
         return alert
 
-    def __convert_capture(self, alert_data: Row or dict):
-        return self.__convert_alert(alert_data, True)
+    def __convert_captures(self, captures_data):
+        doorbell_files = []
+        for capture in captures_data:
+            data = self.__convert_alert(capture, True)
+            if not data:
+                continue
+
+            name = data.get('name')
+            if not name:
+                data['name'] = get_alert_type_message(data['type'])
+            doorbell_files.append(data)
+
+        return doorbell_files
 
     def __convert_doorbell(self, bell_data: Row or dict):
         doorbell = namedtuple('Bell', 'id, name, image, online')
@@ -333,21 +346,12 @@ class WebServer(DatabaseAccessor, Flask):
         if not username:
             return redirect(url_for('login', page_to_redirect='captures'))
 
-        captures = self._get_user_captures(username)
-        if not captures:
+        captures_data = self._get_user_captures(username)
+        if not captures_data:
             return render_template('captures.html')
 
-        doorbell_files = []
-        for alert in captures:
-            data = self.__convert_alert(alert)
-            if not data:
-                continue
-
-            if not data.name:
-                data.name = get_alert_type_message(data.alert_type)
-            doorbell_files.append(data)
-
-        return render_template('captures.html', doorbell_files=doorbell_files)
+        captures = self.__convert_captures(captures_data)
+        return render_template('captures.html', doorbell_files=captures)
 
     def __endpoint_doorbells(self):
         bells = self.__get_doorbells()
@@ -371,21 +375,12 @@ class WebServer(DatabaseAccessor, Flask):
         doorbell = self.__convert_doorbell({'id': uuid, 'name': doorbell_data[0]})
         doorbell.emails = doorbell_data[1]
 
-        alerts = self._get_doorbell_alerts(uuid, [AlertType.Bell, AlertType.Movement, AlertType.UserPicture], False)
-        if not alerts:
+        captures_data = self._get_doorbell_captures(uuid)
+        if not captures_data:
             return render_template('doorbell.html', doorbell=doorbell)
 
-        doorbell_files = []
-        for alert in alerts:
-            data = self.__convert_capture(alert)
-            if not data:
-                continue
-
-            if not data.name:
-                data.name = get_alert_type_message(data.alert_type)
-            doorbell_files.append(data)
-
-        return render_template('doorbell.html', doorbell=doorbell, doorbell_files=doorbell_files)
+        captures = self.__convert_captures(captures_data)
+        return render_template('doorbell.html', doorbell=doorbell, doorbell_files=captures)
 
     def __endpoint_streams(self):
         bells = self.__get_doorbells()
@@ -407,23 +402,12 @@ class WebServer(DatabaseAccessor, Flask):
         if not username:
             return {'error': 'Unauthorized request'}, 401
 
-        captures = self._get_user_captures_after(username, current_capture_id)
-        if not captures:
+        captures_data = self._get_user_captures_after(username, current_capture_id)
+        if not captures_data:
             return {}, 200
 
-        doorbell_files = []
-        for alert in captures:
-            data = self.__convert_alert(alert)
-            if not data:
-                continue
-
-            if not data.name:
-                data.name = get_alert_type_message(data.alert_type)
-            print(type(data))
-            doorbell_files.append(data)
-
-        print(type(doorbell_files))
-        return jsonify(doorbell_files), 200
+        captures = self.__convert_captures(captures_data)
+        return {'captures': captures, 'lastAlertId': captures[0]['id']}, 200
 
     def __endpoint_get_resource(self, filename: str):
         filename = secure_filename(filename.lower())

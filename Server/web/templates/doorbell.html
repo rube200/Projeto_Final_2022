@@ -69,13 +69,13 @@
             </div>
         </div>
     </div>
-    <div {% if doorbell_files|length == 0 %} class="d-none" {% endif %}>
+    <div {% if doorbell_files|length == 0 %} class="d-none" {% endif %} id="captures-page-container">
         <br/>
         <h1 class="h1 text-center text-dark w-100">Doorbell captures</h1>
         <br/>
         <div class="justify-content-evenly mb-5 row" id="doorbell-captures">
             {% for file in doorbell_files %}
-                <div class="card border-2 border-primary col-sm-auto">
+                <div class="card border-2 border-primary col-sm-auto mb-3">
                     <h4 class="card-title mt-3 text-center text-dark">{{ file.name }}</h4>
                     <p class="mt-3 text-center text-dark">Time: {{ file.time }}</p>
                     {% if file.mimetype == 'video/mp4' %}
@@ -108,18 +108,25 @@
 {% endblock %}
 
 {% block alert_count_script %}
+    <!--suppress JSUnresolvedVariable -->
     <script>
+        const capturesPageContainer = document.getElementById('captures-page-container');
         const doorbellCapturesElement = document.getElementById('doorbell-captures');
+        const baseNewCapturesUrl = '{{ url_for('get-new-captures', current_capture_id='-1') }}';
+
         let currentAlertsCount = {{ alerts_count }};
-        let getNewCapturesUrl = '{{ url_for('get-new-captures', current_capture_id=(doorbell_files|first).id) }}';
         let lastAlertId = {% if doorbell_files|length > 0 %}{{ (doorbell_files|first).id }}{% else %}0{% endif %};
+
+        function addNewCaptures(capture) {
+
+        }
 
         function onAlertCount(value) {
             if (value === currentAlertsCount) {
                 return false;
             }
 
-            fetch(getNewCapturesUrl)
+            fetch(baseNewCapturesUrl.replace('-1', lastAlertId))
                 .then(response => response.json())
                 .then(data => {
                     if (!data || data.error) {
@@ -127,7 +134,13 @@
                         return;
                     }
 
-                    console.debug(`New captures: ${data}`);
+                    data.captures.forEach(capture => addNewCaptures(capture));
+                    if (lastAlertId === 0) {
+                        capturesPageContainer.style.display = 'block';
+                    }
+
+                    currentAlertsCount = value;
+                    lastAlertId = data.lastAlertId;
                 })
                 .catch(error => console.error(`Error while getting new captures:: ${error}`));
 
