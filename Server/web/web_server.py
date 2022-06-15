@@ -7,12 +7,13 @@ from mimetypes import guess_type
 from os import environ, path, makedirs
 from sqlite3 import Row
 from time import monotonic, sleep, time
+from traceback import format_exc
 
 import bcrypt
 import jwt
 from email_validator import EmailNotValidError, validate_email
 from flask import Flask, redirect, url_for, current_app, session, render_template, request, flash, \
-    stream_with_context, jsonify, send_from_directory
+    stream_with_context, jsonify, send_from_directory, has_request_context
 from flask_mail import Mail, Message
 from werkzeug.utils import secure_filename
 
@@ -135,9 +136,9 @@ class WebServer(DatabaseAccessor, Flask):
 
     def __convert_alert(self, alert_data: Row or dict, need_file: bool = False):
         col = alert_data.keys()
-        alert = namedtuple('DoorbellAlert', 'id, type, time')
+        alert = namedtuple('DoorbellAlert', 'id, alert_type, time')
         alert.id = alert_data['id']
-        alert.type = AlertType(alert_data['type'])
+        alert.alert_type = AlertType(alert_data['type'])
         alert.time = alert_data['time']
         alert.filename = alert_data['filename'] if 'filename' in col else None
         if alert.filename and path.exists(path.join(self.__esp_full_path, alert.filename)):
@@ -222,6 +223,9 @@ class WebServer(DatabaseAccessor, Flask):
             'nav': NAV_DICT
         }
 
+        if not has_request_context():
+            return data
+
         username = self.__authenticate()
         if username:
             data['alerts_count'] = self._get_alerts_count(username)
@@ -269,12 +273,10 @@ class WebServer(DatabaseAccessor, Flask):
                 ))
         except Exception as ex:
             log.error(f'Exception while getting email for uuid {uuid}: {ex!r}')
+            log.error(format_exc())
 
     def __endpoint_index(self):
-        if self.__authenticate():
-            return redirect(url_for('doorbells'))
-
-        return redirect(url_for('login'))
+        return redirect(url_for('doorbells' if self.__authenticate() else 'login'))
 
     def __endpoint_login(self, page_to_redirect: str):
         if self.__authenticate():
@@ -329,7 +331,7 @@ class WebServer(DatabaseAccessor, Flask):
     def __endpoint_captures(self):
         username = self.__authenticate()
         if not username:
-            return redirect(url_for('index'))
+            return redirect(url_for('login', page_to_redirect='captures'))
 
         captures = self._get_user_captures(username)
         if not captures:
@@ -342,7 +344,7 @@ class WebServer(DatabaseAccessor, Flask):
                 continue
 
             if not data.name:
-                data.name = get_alert_type_message(data.type)
+                data.name = get_alert_type_message(data.alert_type)
             doorbell_files.append(data)
 
         return render_template('captures.html', doorbell_files=doorbell_files)
@@ -350,7 +352,7 @@ class WebServer(DatabaseAccessor, Flask):
     def __endpoint_doorbells(self):
         bells = self.__get_doorbells()
         if bells is None:
-            return redirect(url_for('index'))
+            return redirect(url_for('login', page_to_redirect='doorbells'))
 
         return render_template('doorbells.html', doorbells=bells)
 
@@ -360,7 +362,7 @@ class WebServer(DatabaseAccessor, Flask):
 
         username = self.__authenticate()
         if not username:
-            return redirect(url_for('index'))
+            return redirect(url_for('login', page_to_redirect='doorbells'))
 
         if not self._check_owner(username, uuid):
             return redirect(url_for('doorbells'))
@@ -380,7 +382,7 @@ class WebServer(DatabaseAccessor, Flask):
                 continue
 
             if not data.name:
-                data.name = get_alert_type_message(data.type)
+                data.name = get_alert_type_message(data.alert_type)
             doorbell_files.append(data)
 
         return render_template('doorbell.html', doorbell=doorbell, doorbell_files=doorbell_files)
@@ -388,7 +390,7 @@ class WebServer(DatabaseAccessor, Flask):
     def __endpoint_streams(self):
         bells = self.__get_doorbells()
         if bells is None:
-            return redirect(url_for('index'))
+            return redirect(url_for('login', page_to_redirect='streams'))
 
         return render_template('streams.html', doorbells=bells)
 
@@ -416,9 +418,11 @@ class WebServer(DatabaseAccessor, Flask):
                 continue
 
             if not data.name:
-                data.name = get_alert_type_message(data.type)
+                data.name = get_alert_type_message(data.alert_type)
+            print(type(data))
             doorbell_files.append(data)
 
+        print(type(doorbell_files))
         return jsonify(doorbell_files), 200
 
     def __endpoint_get_resource(self, filename: str):
@@ -498,7 +502,8 @@ class WebServer(DatabaseAccessor, Flask):
     def __endpoint_alerts(self):
         username = self.__authenticate()
         if not username:
-            return redirect(url_for('index'))
+            return redirect(url_for('login', page_to_redirect='alerts'))
+
         if request.method == 'POST':
             data = request.form.get('date')
             print(data)
