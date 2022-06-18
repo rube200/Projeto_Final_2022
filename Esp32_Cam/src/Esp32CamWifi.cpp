@@ -34,13 +34,14 @@ void Esp32CamWifi::begin() {
     auto * mac = getMac();
     char tmpMacStr[13] = {0};
     sprintf(tmpMacStr, "%02X%02X%02X%02X%02X%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-    free(mac);
-    char macStr[28] = ACCESS_POINT_PREFIX_NAME;
+
+    auto * macStr = espRealloc(mac, 28);
+    memcpy(macStr, ACCESS_POINT_PREFIX_NAME, 16);
     for (int i = 0; i < 13; ++i) {
         auto index = 15 + i;
         macStr[index] = tmpMacStr[i];
     }
-    access_point_name = macStr;
+    access_point_name = (char *)macStr;
 
 #if DEBUG
     loadCostumeParameters();

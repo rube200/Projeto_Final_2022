@@ -51,7 +51,7 @@ private:
 
     void saveCostumeParameters() const;
 
-    const char *access_point_name = nullptr;
+    char *access_point_name = nullptr;
     bool isPortalSaved = false;
     byte isUsernameMode = 0;//0 not usernameMode, 1 first time usernameMode, 2 and above not first time in usernameMode(Used to show that last username inserted does not exist)
     WifiManagerParam socket_host_parameter = WifiManagerParam("Host", "Socket host", REMOTE_HOST, 50);
