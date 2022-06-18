@@ -5,10 +5,10 @@
 #include "Esp32Utils.h"
 #include "WiFiManager.h"
 
-#define ACCESS_POINT_NAME "Video-Doorbell"
+#define ACCESS_POINT_PREFIX_NAME "Video-Doorbell_"
 
 //work around for private stuff in WifiManager
-//consider using libs from martong in github
+//consider using libs from martong in GitHub
 class WifiManagerParam : public WiFiManagerParameter {
 public:
     WifiManagerParam(const char *id, const char *label, const char *defaultValue, int length) : WiFiManagerParameter(id, label, defaultValue, length) {}
@@ -51,7 +51,7 @@ private:
 
     void saveCostumeParameters() const;
 
-
+    const char *access_point_name = nullptr;
     bool isPortalSaved = false;
     byte isUsernameMode = 0;//0 not usernameMode, 1 first time usernameMode, 2 and above not first time in usernameMode(Used to show that last username inserted does not exist)
     WifiManagerParam socket_host_parameter = WifiManagerParam("Host", "Socket host", REMOTE_HOST, 50);

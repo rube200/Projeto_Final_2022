@@ -258,12 +258,11 @@ bool Esp32CamSocket::needUsernamePortal() const {
 
 
 bool Esp32CamSocket::sendUuid() {
-    uint8_t *baseMac = espMalloc(MAC_SIZE);
+    auto *baseMac = getMac();
     if (!baseMac) {
         return false;
     }
 
-    esp_read_mac(baseMac, ESP_MAC_WIFI_STA);
     const auto packet = Esp32CamPacket(Uuid, baseMac, MAC_SIZE);
     const auto state = sendPacket(packet, "Uuid");
     free(baseMac);

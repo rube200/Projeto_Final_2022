@@ -12,6 +12,7 @@
 #define REMOTE_PORT_STR "2376"
 #define REMOTE_PORT 2376
 
+#define MAC_SIZE 6
 /*
  * Delays explanation
  * ms -> milliseconds
@@ -95,4 +96,16 @@ static inline void restartEsp() {
     assert(0);
 }
 
+static uint8_t *getMac() {
+    auto *macPointer = espMalloc(MAC_SIZE);
+    if (!macPointer) {
+        return nullptr;
+    }
+
+    if (esp_read_mac(macPointer, ESP_MAC_WIFI_STA) != ESP_OK) {
+        return nullptr;
+    }
+
+    return macPointer;
+}
 #endif

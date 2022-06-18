@@ -8,7 +8,6 @@
 #define CONNECT_TRY 5
 #define CONFIG_RECV_SIZE 13
 #define USERNAME_RECV_SIZE 1
-#define MAC_SIZE 6
 #define STREAM_TIMEOUT 30500000//30.5s -> Py try to communicate every 10s
 
 enum socketState {

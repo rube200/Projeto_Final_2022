@@ -59,40 +59,54 @@ void Esp32CamGpio::changeRelay(const bool newState) {
 
 uint32_t bellDebounceTime = 0;
 bool Esp32CamGpio::peekBellState() {
-    const auto currentTime = esp_timer_get_time();
-    if (gpio_get_level(BELL_PIN)) {
-        if (bellDebounceTime < currentTime) {
-            bellDebounceTime = currentTime + DEBOUNCE_DELAY;
-#if DEBUG
-            Serial.println("Bell pressed");
-#endif
-            return true;
+    const auto isOn = gpio_get_level(BELL_PIN);
+    if (!bellDebounceTime) {
+        if (!isOn) {
+            bellDebounceTime = esp_timer_get_time() + DEBOUNCE_DELAY;
         }
-
-        bellDebounceTime = currentTime + DEBOUNCE_DELAY;
+        return false;
     }
 
-    return false;
+    if (!isOn) {
+        return false;
+    }
+
+    const auto currentTime = esp_timer_get_time();
+    if (bellDebounceTime >= currentTime) {
+        bellDebounceTime = currentTime + DEBOUNCE_DELAY;
+        return false;
+    }
+
+    bellDebounceTime = currentTime + DEBOUNCE_DELAY;
+#if DEBUG
+    Serial.println("Bell pressed");
+#endif
+    return true;
 }
 
 uint32_t pirDebounceTime = 0;
 bool Esp32CamGpio::peekPirState() {
-    if (gpio_get_level(PIR_PIN)) {
-        if (!pirDebounceTime) {
-            return false;
+    const auto isOn = gpio_get_level(PIR_PIN);
+    if (!pirDebounceTime) {
+        if (!isOn) {
+            pirDebounceTime = esp_timer_get_time() + DEBOUNCE_DELAY;
         }
-
-        const auto currentTime = esp_timer_get_time();
-        if (bellDebounceTime < currentTime) {
-            bellDebounceTime = currentTime + DEBOUNCE_DELAY;
-#if DEBUG
-            Serial.println("Movement detected");
-#endif
-            return true;
-        }
-
-        bellDebounceTime = currentTime + DEBOUNCE_DELAY;
+        return false;
     }
 
-    return false;
+    if (!isOn) {
+        return false;
+    }
+
+    const auto currentTime = esp_timer_get_time();
+    if (pirDebounceTime >= currentTime) {
+        pirDebounceTime = currentTime + DEBOUNCE_DELAY;
+        return false;
+    }
+
+    pirDebounceTime = currentTime + DEBOUNCE_DELAY;
+#if DEBUG
+    Serial.println("Movement detected");
+#endif
+    return true;
 }

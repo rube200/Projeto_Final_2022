@@ -31,6 +31,17 @@ Esp32CamWifi::Esp32CamWifi() {
 void Esp32CamWifi::begin() {
     Serial.println("Starting WiFiManager...");
 
+    auto * mac = getMac();
+    char tmpMacStr[13] = {0};
+    sprintf(tmpMacStr, "%02X%02X%02X%02X%02X%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    free(mac);
+    char macStr[28] = ACCESS_POINT_PREFIX_NAME;
+    for (int i = 0; i < 13; ++i) {
+        auto index = 15 + i;
+        macStr[index] = tmpMacStr[i];
+    }
+    access_point_name = macStr;
+
 #if DEBUG
     loadCostumeParameters();
 #endif
@@ -52,7 +63,7 @@ void Esp32CamWifi::begin() {
         }
     }
 
-    while (!autoConnect(ACCESS_POINT_NAME)) {
+    while (!autoConnect(access_point_name)) {
         Serial.println("Failed to connect to WiFi.");
     }
 
@@ -89,7 +100,6 @@ void Esp32CamWifi::loadCostumeParameters() {
 
     const auto port = String(EEPROM.readUShort(50));
     socket_port_parameter.setValue(port.c_str(), 5);
-
     EEPROM.end();
 }
 
@@ -97,7 +107,7 @@ boolean Esp32CamWifi::requestSocketConfig() {
     isPortalSaved = false;
     setParamsMode();
 
-    if (WiFiManager::startConfigPortal(ACCESS_POINT_NAME))
+    if (WiFiManager::startConfigPortal(access_point_name))
         return true;
 
     return isPortalSaved;
@@ -109,7 +119,7 @@ const char *Esp32CamWifi::requestUsername() {
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "ConstantConditionsOC"
-    if (WiFiManager::startConfigPortal(ACCESS_POINT_NAME) || isPortalSaved)
+    if (WiFiManager::startConfigPortal(access_point_name) || isPortalSaved)
         return username_parameter.getValue();
 #pragma clang diagnostic pop
 
