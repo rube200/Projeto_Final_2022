@@ -444,7 +444,7 @@ class WebServer(DatabaseAccessor, Flask):
         if not image:
             return {'error': 'Doorbell is offline'}, 404
 
-        self.__events.on_alert(uuid, AlertType.UserPicture, {'filename': filename, 'image': image})
+        self.__events.on_alert(uuid, AlertType.UserPicture, {'filename': filename, 'image': image, 'checked': True})
         return {'filename': filename, 'mimetype': 'image/jpeg'}, 200
 
     def __update_doorbell(self, uuid: int):

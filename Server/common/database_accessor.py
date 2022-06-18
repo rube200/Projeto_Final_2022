@@ -204,13 +204,13 @@ class DatabaseAccessor:
         return usr, name
 
     def _try_register(self, username: str, email: str, password: bytes) -> Tuple[str, str] or None:
-        username = username.upper()
+        upper_username = username.upper()
         con = self._get_connection()
         cursor = con.cursor()
         try:
             cursor.execute('INSERT OR IGNORE INTO user (username, email, password, name) '
                            'VALUES (?, ?, ?, ?)',
-                           [username, email.lower(), password, username])
+                           [upper_username, email.lower(), password, username])
             con.commit()
             if cursor.rowcount < 1:
                 return None
@@ -218,7 +218,7 @@ class DatabaseAccessor:
             cursor.execute('SELECT username, name '
                            'FROM user '
                            'WHERE username = ?',
-                           [username])
+                           [upper_username])
             data = cursor.fetchone()
             return data['username'], data['name'] if data else None
         finally:
