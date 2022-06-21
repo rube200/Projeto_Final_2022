@@ -4,6 +4,8 @@ from multiprocessing import Event
 from os import environ
 from selectors import DefaultSelector, EVENT_READ
 from socket import socket, AF_INET, SHUT_RDWR, SOCK_STREAM, SOL_SOCKET, SO_KEEPALIVE
+from socketserver import TCPServer
+from time import monotonic
 from traceback import format_exc
 from typing import Tuple
 
@@ -119,11 +121,13 @@ class ServerSocket(DatabaseAccessor):
                 log.error(format_exc())
             else:
                 log.info(f'Client disconnect/timeout from {client.address!r}: {ex!r}')
+            client.close()
             del self.__clients[client.uuid]
 
         except Exception as ex:
             log.error(f'Exception while processing tcp: {ex!r}')
             log.error(format_exc())
+            client.close()
             del self.__clients[client.uuid]
 
     def run_forever(self) -> None:
@@ -135,12 +139,13 @@ class ServerSocket(DatabaseAccessor):
         self.__wait_shutdown.clear()
         try:
             while not self.__shutdown_request:
-                ready = self.__selector.select(0.5)
+                ready = self.__selector.select(0.1)
                 if self.__shutdown_request:
                     break
 
                 for key, events in ready:
                     self.__process_tcp(key, events)
+
         finally:
             self.__wait_shutdown.set()
 

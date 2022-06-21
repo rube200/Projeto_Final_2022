@@ -2,6 +2,7 @@ import logging as log
 from selectors import BaseSelector, EVENT_READ, EVENT_WRITE
 from socket import socket, SHUT_RDWR
 from struct import pack
+from threading import Thread
 from typing import Tuple
 
 from socket_client.client_data import ClientData
@@ -25,20 +26,29 @@ class ClientSocket(ClientData):
 
     def __del__(self):
         super(ClientSocket, self).__del__()
-        self.__selector.unregister(self.__tcp_socket)
-        self.__selector = None
-        self.__tcp_socket.shutdown(SHUT_RDWR)
-        self.__tcp_socket.close()
+        self.close()
         del self.__address
         del self.__packet_read
         del self.__tcp_socket
         del self.__wait_username
         del self.__write_buffer
 
+    def close(self) -> None:
+        if not self.__selector:
+            return
+        self.__selector.unregister(self.__tcp_socket)
+        self.__selector = None
+        self.__tcp_socket.shutdown(SHUT_RDWR)
+        self.__tcp_socket.close()
+
     def __set_mode(self, mode: int):
         self.__selector.modify(self.__tcp_socket, mode, self)
 
     def process_socket(self, events: int) -> None:
+        t = Thread(target=self._process_socket, args=[events])
+        t.start()
+
+    def _process_socket(self, events: int) -> None:
         if events & EVENT_READ:
             self.__read_socket()
 
@@ -96,8 +106,11 @@ class ClientSocket(ClientData):
         raise NotImplementedError(f'{self.__name__} does not implement __process_bell_pressed')
 
     def __read_socket(self) -> None:
+        if not self.__tcp_socket:
+            return
+
         try:
-            data = self.__tcp_socket.recv(2048)
+            data = self.__tcp_socket.recv(1024)
             if not data:
                 raise ConnectionResetError(104, 'Connection reset by peer.')
 
@@ -145,6 +158,9 @@ class ClientSocket(ClientData):
         self.__write_buffer += data
 
     def __write_socket(self) -> None:
+        if not self.__tcp_socket:
+            return
+
         if not len(self.__write_buffer):
             self.__set_mode(EVENT_READ)
             return

@@ -14,8 +14,8 @@ def main():
         esp32server.run_servers()
         WSGIServer(esp32server.web).run()
     except Exception as ex:
-        log.exception(f'Exception while executing wsgi server: {ex!r}')
-        log.exception(format_exc())
+        log.error(f'Exception while executing wsgi server: {ex!r}')
+        log.error(format_exc())
 
 
 if __name__ == '__main__':
