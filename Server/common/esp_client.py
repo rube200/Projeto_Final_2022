@@ -40,6 +40,11 @@ class EspClient(ClientSocket, ClientRecord):
         del self.__esp_to_save_paths
         del self.__stream_requests
 
+    def request_close(self):
+        if self.__events.on_esp_disconnect(self):
+            return
+        self.close()
+
     def _process_uuid(self, data: bytes) -> None:
         super(EspClient, self)._process_uuid(data)
         config = self.__events.on_esp_uuid_recv(self)

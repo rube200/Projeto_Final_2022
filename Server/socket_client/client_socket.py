@@ -32,6 +32,7 @@ class ClientSocket(ClientData):
 
         self.__selector.unregister(self.__tcp_socket)
         self.__selector = None
+
         super(ClientSocket, self).close()
         self.__tcp_socket.shutdown(SHUT_RDWR)
         self.__tcp_socket.close()
@@ -48,11 +49,14 @@ class ClientSocket(ClientData):
         t = Thread(daemon=True, target=self.__process_socket_loop)
         t.start()
 
+    def request_close(self):
+        raise NotImplementedError('request_close not implemented')
+
     def __process_socket_loop(self) -> None:
         try:
-            while self.__tcp_socket:
+            while self.__selector:
                 ready = self.__selector.select(0.5)
-                if not self.__tcp_socket:
+                if not self.__selector:
                     break
 
                 for _, events in ready:
@@ -61,6 +65,7 @@ class ClientSocket(ClientData):
         except Exception as ex:
             log.error(f'Exception while looping client socket: {ex!r}')
             log.error(format_exc())
+            self.request_close()
 
     def __process_socket(self, events: int) -> None:
         try:
@@ -76,9 +81,11 @@ class ClientSocket(ClientData):
             else:
                 log.info(f'Client disconnect/timeout from {self.__address!r}: {ex!r}')
 
+            self.request_close()
         except Exception as ex:
             log.error(f'Exception while processing client {self.__address!r}: {ex!r}')
             log.error(format_exc())
+            self.request_close()
 
     def __process_packet(self) -> None:
         pkt_type = self.__packet_read.pkt_type

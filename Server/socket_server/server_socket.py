@@ -103,11 +103,9 @@ class ServerSocket(DatabaseAccessor):
                     log.error(format_exc())
                     continue
 
-                if self.__shutdown_request:
-                    break
-
                 try:
                     connection.setsockopt(SOL_SOCKET, SO_KEEPALIVE, True)
+                    connection.settimeout(1)
                     esp_client = EspClient(address, connection, self.__events)
                     esp_client.send_uuid_request()
                     log.info(f'Accepted a connection from {address!r}')
