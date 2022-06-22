@@ -57,7 +57,7 @@ class Esp32Server:
         if 'WERKZEUG_RUN_MAIN' in environ or self.__fcgi:
             log.info('Running Servers...')
             self.__socket_server = ServerSocket(self.__clients, self.__events)
-            self.__socket_thread = Thread(daemon=True, target=self.__socket_server.run_forever)
+            self.__socket_thread = Thread(target=self.__socket_server.run_forever)
             self.__socket_thread.start()
 
         if not self.__fcgi:
