@@ -4,8 +4,6 @@ from multiprocessing import Event
 from os import environ
 from selectors import DefaultSelector, EVENT_READ
 from socket import socket, AF_INET, SHUT_RDWR, SOCK_STREAM, SOL_SOCKET, SO_KEEPALIVE
-from socketserver import TCPServer
-from time import monotonic
 from traceback import format_exc
 from typing import Tuple
 

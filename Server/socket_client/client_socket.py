@@ -45,7 +45,7 @@ class ClientSocket(ClientData):
         self.__selector.modify(self.__tcp_socket, mode, self)
 
     def process_socket(self, events: int) -> None:
-        t = Thread(target=self._process_socket, args=[events])
+        t = Thread(daemon=True, target=self._process_socket, args=[events])
         t.start()
 
     def _process_socket(self, events: int) -> None:
