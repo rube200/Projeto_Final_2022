@@ -407,6 +407,9 @@ class WebServer(DatabaseAccessor, Flask):
             return {}, 200
 
         captures = self.__convert_captures(captures_data)
+        if not captures:
+            return {}, 200
+
         return {'captures': captures, 'lastAlertId': captures[0]['id']}, 200
 
     def __endpoint_get_resource(self, filename: str):

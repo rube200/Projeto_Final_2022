@@ -1,3 +1,4 @@
+import errno
 import logging as log
 from selectors import EVENT_READ, EVENT_WRITE, DefaultSelector
 from socket import socket, SHUT_RDWR
@@ -34,7 +35,11 @@ class ClientSocket(ClientData):
         self.__selector = None
 
         super(ClientSocket, self).close()
-        self.__tcp_socket.shutdown(SHUT_RDWR)
+        try:
+            self.__tcp_socket.shutdown(SHUT_RDWR)
+        except OSError as ex:
+            if ex.errno != errno.ENOTCONN:
+                raise
         self.__tcp_socket.close()
         del self.__address
         del self.__packet_read
@@ -61,6 +66,14 @@ class ClientSocket(ClientData):
 
                 for _, events in ready:
                     self.__process_socket(events)
+        except OSError as ex:
+            log.debug(ex.args)
+            log.debug(ex.errno)
+            log.debug(ex.winerror)
+            log.debug(ex.strerror)
+            log.debug(ex.filename)
+            # timeout error 110
+            # os error 107
 
         except Exception as ex:
             log.error(f'Exception while looping client socket: {ex!r}')
@@ -74,8 +87,14 @@ class ClientSocket(ClientData):
 
             if events & EVENT_WRITE:
                 self.__write_socket()
+
+        except ValueError as ex:
+            log.debug(ex.args)
+            log.debug(ex)
+            self.request_close()
+
         except ConnectionResetError as ex:
-            if ex.errno != 10054:
+            if ex.errno != errno.ECONNRESET:
                 log.error(f'Exception while processing client {self.__address!r}: {ex!r}')
                 log.error(format_exc())
             else:
