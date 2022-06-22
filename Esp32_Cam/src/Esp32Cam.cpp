@@ -64,6 +64,7 @@ void Esp32Cam::loop() {
         }
 
         socket.setUsername(username);
+        Serial.printf("Sending username %s\n", username);
         espDelayUs(5000);
         return;
     }
