@@ -3,7 +3,7 @@ class ClientData:
         self._uuid = 0
         self._camera = b''
 
-    def __del__(self):
+    def close(self):
         del self._uuid
         del self._camera
 

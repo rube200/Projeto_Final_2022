@@ -20,11 +20,6 @@ def get_address() -> Tuple[str, int]:
     return ip, port
 
 
-def socket_opt(sock: socket):
-    sock.setblocking(False)
-    sock.setsockopt(SOL_SOCKET, SO_KEEPALIVE, True)
-
-
 class ServerSocket(DatabaseAccessor):
     def __init__(self, clients: EspClients, events: EspEvents):
         super(ServerSocket, self).__init__(environ.get('DATABASE') or 'esp32cam.sqlite')
@@ -32,6 +27,7 @@ class ServerSocket(DatabaseAccessor):
         self.__events = events
         self.__events.on_esp_uuid_recv += self.__on_esp_uuid_recv
         self.__events.on_esp_username_recv += self.__on_esp_username_recv
+        self.__events.on_esp_disconnect += self.__on_esp_disconnect
         self.__events.on_alert += self.__on_alert
 
         self.__selector = DefaultSelector()
@@ -40,37 +36,16 @@ class ServerSocket(DatabaseAccessor):
         self.__wait_shutdown = Event()
         self.__tcp_socket = socket(AF_INET, SOCK_STREAM)
         self.__tcp_socket.bind(self.__server_address)
-        socket_opt(self.__tcp_socket)
-        self.__selector.register(self.__tcp_socket, EVENT_READ)
+        self.__tcp_socket.setsockopt(SOL_SOCKET, SO_KEEPALIVE, True)
 
     def __del__(self):
         pass  # todo
-
-    def __accept_new_client(self, _) -> None:
-        connection = None
-        try:
-            connection, address = self.__tcp_socket.accept()
-            socket_opt(connection)
-            esp_client = EspClient(address, self.__selector, connection, self.__events)
-            esp_client.send_uuid_request()
-            log.info(f'Accepted a connection from {address!r}')
-
-        except OSError as ex:
-            log.debug(f'OS error while accepting: {ex!r}')
-            connection.shutdown(SHUT_RDWR)
-            connection.close()
-
-        except Exception as ex:
-            log.error(f'Exception while accepting client: {ex!r}')
-            log.error(format_exc())
-            connection.shutdown(SHUT_RDWR)
-            connection.close()
 
     def __on_esp_uuid_recv(self, client: EspClient) -> Tuple[bool, int, int, int] or None:
         uuid = client.uuid
         if not uuid:
             log.warning(f'Closing client with invalid uuid: {client.address}')
-            del client
+            client.close()
             return None
 
         del self.__clients[uuid]
@@ -87,6 +62,10 @@ class ServerSocket(DatabaseAccessor):
             self.__events.on_alert(client.uuid, AlertType.NewBell, {})
         return success
 
+    def __on_esp_disconnect(self, client: EspClient) -> bool:
+        self.__clients.close_client(client)
+        return True
+
     def __on_alert(self, uuid: int, alert_type: AlertType, info: dict) -> None:
         data = {'uuid': uuid, 'type': alert_type.value}
         if 'time' in info:
@@ -100,35 +79,8 @@ class ServerSocket(DatabaseAccessor):
 
         self._add_alert(data)
 
-    def __process_tcp(self, key, events: int) -> None:
-        if not key.data:
-            self.__accept_new_client(key)
-            return
-
-        client = key.data
-        if not hasattr(client, 'process_socket'):
-            self.__selector.unregister(key)
-            log.warning(f'Selector have invalid data: {key!r}')
-            return
-
-        try:
-            client.process_socket(events)
-        except ConnectionResetError as ex:
-            if ex.errno != 10054:
-                log.error(f'Exception while processing client {client.address}: {ex!r}')
-                log.error(format_exc())
-            else:
-                log.info(f'Client disconnect/timeout from {client.address!r}: {ex!r}')
-            client.close()
-            del self.__clients[client.uuid]
-
-        except Exception as ex:
-            log.error(f'Exception while processing tcp: {ex!r}')
-            log.error(format_exc())
-            client.close()
-            del self.__clients[client.uuid]
-
     def run_forever(self) -> None:
+        self.__selector.register(self.__tcp_socket, EVENT_READ)
         self.__tcp_socket.listen()
         log.info(f'Socket ready! Tcp: {self.__tcp_socket.getsockname()!r}')
         log.info('Waiting connections...')
@@ -137,12 +89,34 @@ class ServerSocket(DatabaseAccessor):
         self.__wait_shutdown.clear()
         try:
             while not self.__shutdown_request:
-                ready = self.__selector.select(0.1)
+                ready = self.__selector.select(0.5)
                 if self.__shutdown_request:
                     break
 
-                for key, events in ready:
-                    self.__process_tcp(key, events)
+                if not ready:
+                    continue
+
+                try:
+                    connection, address = self.__tcp_socket.accept()
+                except Exception as ex:
+                    log.error(f'Exception while accepting client: {ex!r}')
+                    log.error(format_exc())
+                    continue
+
+                if self.__shutdown_request:
+                    break
+
+                try:
+                    connection.setsockopt(SOL_SOCKET, SO_KEEPALIVE, True)
+                    esp_client = EspClient(address, connection, self.__events)
+                    esp_client.send_uuid_request()
+                    log.info(f'Accepted a connection from {address!r}')
+
+                except Exception as ex:
+                    log.error(f'Exception while config client: {ex!r}')
+                    log.error(format_exc())
+                    connection.shutdown(SHUT_RDWR)
+                    connection.close()
 
         finally:
             self.__wait_shutdown.set()

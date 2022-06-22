@@ -1,5 +1,4 @@
 from os import path, environ
-from selectors import BaseSelector
 from socket import socket
 from time import monotonic, time
 from typing import Tuple
@@ -13,8 +12,8 @@ from socket_client.client_socket import ClientSocket
 
 
 class EspClient(ClientSocket, ClientRecord):
-    def __init__(self, address: Tuple[str, int], selector: BaseSelector, tcp_socket: socket, events: EspEvents):
-        ClientSocket.__init__(self, address, selector, tcp_socket)
+    def __init__(self, address: Tuple[str, int], tcp_socket: socket, events: EspEvents):
+        ClientSocket.__init__(self, address, tcp_socket)
         ClientRecord.__init__(self, lambda: self._camera)
 
         self.__events = events
@@ -28,10 +27,9 @@ class EspClient(ClientSocket, ClientRecord):
         self.__esp_to_save_paths = {}
         self.__stream_requests = 0
 
-    def __del__(self):
-        print("esp_client del")  # todo remove
-        ClientSocket.__del__(self)
-        ClientRecord.__del__(self)
+    def close(self):
+        ClientSocket.close(self)
+        ClientRecord.close(self)
         self.__events.on_stop_stream_requested -= self.on_stop_stream_requested
         self.__events.on_start_stream_requested -= self.on_start_stream_requested
         self.__events.on_open_doorbell_requested -= self.__on_open_doorbell_requested

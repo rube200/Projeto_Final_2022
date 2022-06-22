@@ -1,8 +1,9 @@
 import logging as log
-from selectors import BaseSelector, EVENT_READ, EVENT_WRITE
+from selectors import EVENT_READ, EVENT_WRITE, DefaultSelector
 from socket import socket, SHUT_RDWR
 from struct import pack
 from threading import Thread
+from traceback import format_exc
 from typing import Tuple
 
 from socket_client.client_data import ClientData
@@ -14,48 +15,72 @@ WRITE = EVENT_READ | EVENT_WRITE
 
 
 class ClientSocket(ClientData):
-    def __init__(self, address: Tuple[str, int], selector: BaseSelector, tcp_socket: socket):
+    def __init__(self, address: Tuple[str, int], tcp_socket: socket):
         super(ClientSocket, self).__init__()
         self.__address = address
         self.__packet_read = Packet()
-        self.__selector = selector
-        self.__selector.register(tcp_socket, EVENT_READ, self)
+        self.__selector = DefaultSelector()
+        self.__selector.register(tcp_socket, EVENT_READ)
         self.__tcp_socket = tcp_socket
         self.__wait_username = False
         self.__write_buffer = b''
+        self.__create_read_thread()
 
-    def __del__(self):
-        super(ClientSocket, self).__del__()
-        self.close()
+    def close(self) -> None:
+        if not self.__selector:
+            return
+
+        self.__selector.unregister(self.__tcp_socket)
+        self.__selector = None
+        super(ClientSocket, self).close()
+        self.__tcp_socket.shutdown(SHUT_RDWR)
+        self.__tcp_socket.close()
         del self.__address
         del self.__packet_read
         del self.__tcp_socket
         del self.__wait_username
         del self.__write_buffer
 
-    def close(self) -> None:
-        if not self.__selector:
-            return
-        self.__selector.unregister(self.__tcp_socket)
-        self.__selector = None
-        self.__tcp_socket.shutdown(SHUT_RDWR)
-        self.__tcp_socket.close()
-
     def __set_mode(self, mode: int):
-        self.__selector.modify(self.__tcp_socket, mode, self)
+        self.__selector.modify(self.__tcp_socket, mode)
 
-    def process_socket(self, events: int) -> None:
-        t = Thread(daemon=True, target=self._process_socket, args=[events])
+    def __create_read_thread(self):
+        t = Thread(daemon=True, target=self.__process_socket_loop)
         t.start()
 
-    def _process_socket(self, events: int) -> None:
-        if events & EVENT_READ:
-            self.__read_socket()
+    def __process_socket_loop(self) -> None:
+        try:
+            while self.__tcp_socket:
+                ready = self.__selector.select(0.5)
+                if not self.__tcp_socket:
+                    break
 
-        if events & EVENT_WRITE:
-            self.__write_socket()
+                for _, events in ready:
+                    self.__process_socket(events)
 
-    def _process_packet(self) -> None:
+        except Exception as ex:
+            log.error(f'Exception while looping client socket: {ex!r}')
+            log.error(format_exc())
+
+    def __process_socket(self, events: int) -> None:
+        try:
+            if events & EVENT_READ:
+                self.__read_socket()
+
+            if events & EVENT_WRITE:
+                self.__write_socket()
+        except ConnectionResetError as ex:
+            if ex.errno != 10054:
+                log.error(f'Exception while processing client {self.__address!r}: {ex!r}')
+                log.error(format_exc())
+            else:
+                log.info(f'Client disconnect/timeout from {self.__address!r}: {ex!r}')
+
+        except Exception as ex:
+            log.error(f'Exception while processing client {self.__address!r}: {ex!r}')
+            log.error(format_exc())
+
+    def __process_packet(self) -> None:
         pkt_type = self.__packet_read.pkt_type
         pkt_data = self.__packet_read.pkt_data
         if pkt_type is PacketType.Uuid:
@@ -124,7 +149,7 @@ class ClientSocket(ClientData):
             return
 
         try:
-            self._process_packet()
+            self.__process_packet()
         finally:
             self.__packet_read.reset_packet()
 

@@ -13,7 +13,7 @@ def main():
         esp32server = Esp32Server()
         esp32server.run_servers()
         WSGIServer(esp32server.web).run()
-        del esp32server
+        esp32server.close()
     except Exception as ex:
         log.error(f'Exception while executing wsgi server: {ex!r}')
         log.error(format_exc())

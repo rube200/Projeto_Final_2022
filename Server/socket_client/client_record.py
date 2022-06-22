@@ -21,7 +21,7 @@ class ClientRecord(Thread):
         self.__waiter = Event()
         self.__working = False
 
-    def __del__(self):
+    def close(self):
         self.stop()
         sleep(0.01)
         del self.__get_camera

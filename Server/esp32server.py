@@ -1,4 +1,5 @@
 import logging as log
+from logging.handlers import RotatingFileHandler
 from os import environ
 from threading import Thread
 from traceback import format_exc
@@ -24,8 +25,10 @@ def config_logger(filename: str = 'esp32server.py.log'):
         return
 
     logger = True
-    log.basicConfig(filename=filename, level=log.DEBUG if environ.get('ESP32_DEBUG') else log.INFO)
-    log.getLogger().addHandler(log.StreamHandler())
+    lg = log.getLogger()
+    lg.addHandler(RotatingFileHandler(filename, maxBytes=65536, backupCount=5))
+    lg.addHandler(log.StreamHandler())
+    lg.setLevel(log.DEBUG if environ.get('ESP32_DEBUG') else log.INFO)
 
 
 class Esp32Server:
@@ -37,7 +40,7 @@ class Esp32Server:
         self.__socket_thread = None
         self.__web_server = WebServer(self.__clients, self.__events)
 
-    def __del__(self):
+    def close(self):
         if 'WERKZEUG_RUN_MAIN' in environ or self.__fcgi:
             log.info('Stopping Servers...')
 
@@ -72,6 +75,7 @@ def main():
     try:
         esp32server = Esp32Server(False)
         esp32server.run_servers()
+        esp32server.close()
     except Exception as ex:
         log.error(f'Exception while initializing Esp32Server: {ex!r}')
         log.error(format_exc())
