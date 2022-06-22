@@ -63,7 +63,7 @@ private:
 
     void processUsername(const uint8_t *, size_t);
 
-    bool sendPacket(const Esp32CamPacket &, const String & = String());
+    bool sendPacket(Esp32CamPacket &, const String & = String());
 
 
     const char *host = REMOTE_HOST;

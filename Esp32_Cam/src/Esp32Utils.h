@@ -63,7 +63,7 @@ static inline bool espDelayUs(const size_t timeoutUs, const T &&blocked, const u
 #define MALLOC_CAPS (MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT)
 
 static inline uint8_t *espMalloc(const size_t size) {
-    auto prt = (uint8_t *) malloc(size);
+    const auto prt = (uint8_t *) malloc(size);
     if (prt) {
         return prt;
     }
@@ -99,10 +99,12 @@ static inline void restartEsp() {
 static uint8_t *getMac() {
     auto *macPointer = espMalloc(MAC_SIZE);
     if (!macPointer) {
+        Serial.println("Fail to malloc mac");
         return nullptr;
     }
 
     if (esp_read_mac(macPointer, ESP_MAC_WIFI_STA) != ESP_OK) {
+        Serial.println("Fail to read mac");
         return nullptr;
     }
 

@@ -89,6 +89,7 @@ void Esp32CamPacket::allocPacket(const size_t data_size) {
 
     pkt = espRealloc(pkt, len);
     if (!pkt) {
+        Serial.println("Fail to alloc packet");
         pkt_len = 0;
         return;
     }

@@ -94,10 +94,11 @@ void Esp32CamSocket::processSocket() {
             return;
         }
 
-        uint8_t *data = espMalloc(toRead);
+        auto * data = espMalloc(toRead);
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "DanglingPointer"
         if (!data) {
+            Serial.println("ProcessSocket fail to malloc");
             return;
         }
 
@@ -126,13 +127,14 @@ size_t Esp32CamSocket::receiveHeader(int av) {
         return 0;
     }
 
-    uint8_t *header = espMalloc(5);
+    auto * header = espMalloc(5);
     if (!header) {
+        Serial.println("Fail to malloc header");
         return 0;
     }
 
-    const auto headerLen = readBytes(header, 5);
-    if (headerLen != 5) {
+    const auto headerLen = readBytes(header, HEADER_SIZE);
+    if (headerLen != HEADER_SIZE) {
         Serial.printf("FATAL ERROR!! Fail to get header - %d\n", headerLen);
         restartEsp();
         return 0;
@@ -263,14 +265,14 @@ bool Esp32CamSocket::sendUuid() {
         return false;
     }
 
-    const auto packet = Esp32CamPacket(Uuid, baseMac, MAC_SIZE);
+    auto packet = Esp32CamPacket(Uuid, baseMac, MAC_SIZE);
     const auto state = sendPacket(packet, "Uuid");
     free(baseMac);
     return state;
 }
 
 bool Esp32CamSocket::sendUsername() {
-    const auto packet = Esp32CamPacket(Username, (const uint8_t *) username, strlen(username));
+    auto packet = Esp32CamPacket(Username, (const uint8_t *) username, strlen(username));
     return sendPacket(packet, "Username");
 }
 
@@ -313,20 +315,23 @@ void Esp32CamSocket::processUsername(const uint8_t *data, const size_t data_len)
     usernamePortal = true;
 }
 
-bool Esp32CamSocket::sendPacket(const Esp32CamPacket &packet, const String &name) {
+bool Esp32CamSocket::sendPacket(Esp32CamPacket &packet, const String &name) {
     const auto nm = name.length() ? name.c_str() : getTypeToString(packet.getPacketType());
     const auto len = packet.packetLen();
     if (!len) {
+        packet.resetPacket();
         Serial.printf("Fail to send %s! Invalid packet.\n", nm);
         return false;
     }
 
     const auto written = write(packet.packet(), len);
     if (len != written) {
+        packet.resetPacket();
         Serial.printf("Fail to send %s! Sent: %zu of %zu\n", nm, len, written);
         return false;
     }
 
+    packet.resetPacket();
     return true;
 }
 
@@ -336,7 +341,7 @@ void Esp32CamSocket::sendBellPressed() {
         return;
     }
 
-    const auto packet = Esp32CamPacket(BellPressed, nullptr, 0);
+    auto packet = Esp32CamPacket(BellPressed, nullptr, 0);
     sendPacket(packet, "BellPressed");
     if (bellCaptureDuration > 0) {
         streamUntil = std::max(streamUntil, (uint64_t) esp_timer_get_time() + bellCaptureDuration);
@@ -350,7 +355,7 @@ void Esp32CamSocket::sendMotionDetected() {
         return;
     }
 
-    const auto packet = Esp32CamPacket(MotionDetected, nullptr, 0);
+    auto packet = Esp32CamPacket(MotionDetected, nullptr, 0);
     sendPacket(packet, "MotionDetected");
     if (motionCaptureDuration > 0) {
         streamUntil = std::max(streamUntil, (uint64_t) esp_timer_get_time() + motionCaptureDuration);
@@ -361,10 +366,11 @@ void Esp32CamSocket::sendMotionDetected() {
 
 void Esp32CamSocket::sendFrame(uint8_t *image, const size_t image_len) {
     if (!isReady()) {
+        free(image);
         return;
     }
 
-    const auto packet = Esp32CamPacket(Image, image, image_len);
+    auto packet = Esp32CamPacket(Image, image, image_len);
     free(image);
     sendPacket(packet, "SendFrame");
 }

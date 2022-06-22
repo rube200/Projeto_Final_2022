@@ -35,8 +35,7 @@ void Esp32CamWifi::begin() {
     char tmpMacStr[13] = {0};
     sprintf(tmpMacStr, "%02X%02X%02X%02X%02X%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 
-    auto * macStr = espRealloc(mac, 28);
-    memcpy(macStr, ACCESS_POINT_PREFIX_NAME, 16);
+    char macStr[28] = ACCESS_POINT_PREFIX_NAME;
     for (int i = 0; i < 13; ++i) {
         auto index = 15 + i;
         macStr[index] = tmpMacStr[i];
