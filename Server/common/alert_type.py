@@ -8,6 +8,7 @@ class AlertType(Enum):
     Bell = 3
     Movement = 4
     UserPicture = 5
+    OpenDoor = 6
 
 
 def get_alert_type_message(alert: AlertType) -> str:
@@ -23,5 +24,7 @@ def get_alert_type_message(alert: AlertType) -> str:
         return 'Motion detected'
     elif alert == AlertType.UserPicture:
         return 'User requested picture'
+    elif alert == AlertType.OpenDoor:
+        return 'User requested open door'
     else:
         return 'Unknown alert type'
