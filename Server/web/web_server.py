@@ -1,24 +1,25 @@
 import logging as log
 import re
 from base64 import b64encode
-from collections import namedtuple
 from datetime import datetime
 from mimetypes import guess_type
 from os import environ, path, makedirs
 from sqlite3 import Row
 from time import monotonic, sleep, time
 from traceback import format_exc
+from typing import Callable, Tuple
 
 import bcrypt
 import jwt
 from email_validator import EmailNotValidError, validate_email
 from flask import Flask, redirect, url_for, current_app, session, render_template, request, flash, \
-    stream_with_context, jsonify, send_from_directory, has_request_context
+    stream_with_context, send_from_directory, has_request_context
 from flask_mail import Mail, Message
 from werkzeug.utils import secure_filename
 
 from common.alert_type import AlertType, get_alert_type_message
 from common.database_accessor import DatabaseAccessor
+from common.esp_client import EspClient
 from common.esp_clients import EspClients
 from common.esp_events import EspEvents
 
@@ -101,12 +102,13 @@ class WebServer(DatabaseAccessor, Flask):
                           defaults={'page_to_redirect': None}, methods=['GET', 'POST'])
         self.add_url_rule('/logout', 'logout', endpoint_logout)
         self.add_url_rule('/alerts', 'alerts', self.__endpoint_alerts, methods=['GET', 'POST'])
-        self.add_url_rule('/alerts-count', 'alerts-count', self.__endpoint_alerts_count)
         self.add_url_rule('/captures', 'captures', self.__endpoint_captures)
         self.add_url_rule('/doorbells', 'doorbells', self.__endpoint_doorbells)
         self.add_url_rule('/doorbells/<int:uuid>', 'doorbell', self.__endpoint_doorbell, methods=['GET', 'POST'])
         self.add_url_rule('/streams', 'streams', self.__endpoint_streams)
         self.add_url_rule('/streams/<int:uuid>', 'stream', self.__endpoint_stream)
+        self.add_url_rule('/get-doorbells-info', 'get-doorbells-info', self.__endpoint_get_doorbells_info)
+        self.add_url_rule('/get-new-alerts/<int:current_alert_id>', 'get-new-alerts', self.__endpoint_get_new_alerts)
         self.add_url_rule('/get-new-captures/<int:current_capture_id>', 'get-new-captures',
                           self.__endpoint_get_new_captures)
         self.add_url_rule('/get-resource/<string:filename>', 'get-resource', self.__endpoint_get_resource)
@@ -136,56 +138,65 @@ class WebServer(DatabaseAccessor, Flask):
 
     def __convert_alert(self, alert_data: Row or dict, need_file: bool = False):
         col = alert_data.keys()
-        alert = {
+        if need_file:
+            if 'filename' not in col:
+                return None
+
+            filename = alert_data['filename']
+            if not filename or not path.exists(path.join(self.__esp_full_path, filename)):
+                return None
+
+            mimetype = guess_type(filename)[0]
+        else:
+            filename = alert_data['filename'] if 'filename' in col else None
+            mimetype = 'image/jpeg'
+
+        return {
             'id': alert_data['id'],
             'type': alert_data['type'],
             'time': alert_data['time'],
+            'filename': filename,
+            'mimetype': mimetype,
+            'uuid': alert_data['uuid'] if 'uuid' in col else None,
+            'name': alert_data['name'] if 'name' in col else None,
+            'checked': alert_data['checked'] if 'checked' in col else None,
+            'notes': alert_data['notes'] if 'notes' in col else None
         }
 
-        alert['filename'] = filename = alert_data['filename'] if 'filename' in col else None
-        if filename and path.exists(path.join(self.__esp_full_path, filename)):
-            alert['mimetype'] = guess_type(filename)[0]
-        else:
-            if need_file:
-                return None
-
-            alert['mimetype'] = 'image/jpeg'
-
-        alert['uuid'] = alert_data['uuid'] if 'uuid' in col else None
-        alert['name'] = alert_data['name'] if 'name' in col else None
-        alert['checked'] = alert_data['checked'] if 'checked' in col else None
-        alert['notes'] = alert_data['notes'] if 'notes' in col else None
-        return alert
-
-    def __convert_captures(self, captures_data):
+    def __convert_captures(self, captures_data: Row or dict):
         doorbell_files = []
         for capture in captures_data:
             data = self.__convert_alert(capture, True)
             if not data:
                 continue
 
-            name = data.get('name')
-            if not name:
-                data['name'] = get_alert_type_message(data['type'])
+            message = data.get('message')
+            if not message:
+                data['message'] = get_alert_type_message(data['type'])
             doorbell_files.append(data)
 
         return doorbell_files
 
-    def __convert_doorbell(self, bell_data: Row or dict):
-        doorbell = namedtuple('Bell', 'id, name, image, online')
-        doorbell.id = bell_data['id']
-        doorbell.name = bell_data['name']
+    def __convert_doorbell(self, bell_data: Row or dict, get_camera: bool):
+        uuid = bell_data['id']
+        doorbell = {
+            'uuid': uuid,
+            'name': bell_data['name'],
+        }
 
-        esp = self.__clients.get_client(doorbell.id)
+        default_image = url_for('static', filename='default_profile.png')
+        esp = self.__clients.get_client(uuid)
         if esp:
-            camera = esp.camera
-            doorbell.image = convert_image_to_base64(camera) or url_for('static', filename='default_profile.png')
-            doorbell.online = True
-            doorbell.state = 'Online'
+            if get_camera:
+                doorbell['image'] = convert_image_to_base64(esp.camera) or default_image
+            else:
+                doorbell['image'] = default_image
+            doorbell['online'] = True
+            doorbell['state'] = 'Online'
         else:
-            doorbell.image = url_for('static', filename='default_profile.png')
-            doorbell.online = False
-            doorbell.state = 'Offline'
+            doorbell['image'] = default_image
+            doorbell['online'] = False
+            doorbell['state'] = 'Offline'
 
         return doorbell
 
@@ -195,7 +206,7 @@ class WebServer(DatabaseAccessor, Flask):
             return b'Content-Length: 0'
 
         start_at = monotonic() + 10
-        self.__events.on_start_stream_requested(uuid, False)
+        esp.start_stream(False)
         try:
             while True:
                 sleep(.05)
@@ -206,7 +217,7 @@ class WebServer(DatabaseAccessor, Flask):
                 # noinspection PyUnboundLocalVariable
                 if start_at <= monotonic():
                     start_at = monotonic() + 10
-                    self.__events.on_start_stream_requested(uuid, True)
+                    esp.start_stream(True)
 
                 camera = esp.camera
                 if not camera:
@@ -216,10 +227,13 @@ class WebServer(DatabaseAccessor, Flask):
                 yield b'--frame\r\nContent-Length: ' + bytes(len(camera)) + \
                       b'\r\nContent-Type: image/jpeg\r\nTransfer-Encoding: chunked\r\n\r\n' + camera + b'\r\n'
         finally:
-            self.__events.on_stop_stream_requested(uuid)
+            esp.stop_stream()
             return b'Content-Length: 0'
 
-    def __get_doorbells(self):
+    def __get_new_alerts(self, username: str):
+        pass
+
+    def __get_doorbells(self, need_camera: bool):
         username = self.__authenticate()
         if not username:
             return None
@@ -228,7 +242,7 @@ class WebServer(DatabaseAccessor, Flask):
         if not data:
             return []
 
-        return [self.__convert_doorbell(bell_data) for bell_data in data]
+        return [self.__convert_doorbell(bell_data, need_camera) for bell_data in data]
 
     def __inject_content(self):
         data = {
@@ -238,10 +252,6 @@ class WebServer(DatabaseAccessor, Flask):
 
         if not has_request_context():
             return data
-
-        username = self.__authenticate()
-        if username:
-            data['alerts_count'] = self._get_alerts_count(username)
 
         return data
 
@@ -333,14 +343,6 @@ class WebServer(DatabaseAccessor, Flask):
 
         return self.__redirect_after_auth(data[0], data[1], page_to_redirect)
 
-    def __endpoint_alerts_count(self):
-        username = self.__authenticate()
-        if not username:
-            return {'error': 'Unauthorized request'}, 401
-
-        alerts_count = self._get_alerts_count(username)
-        return jsonify(alerts_count), 200
-
     def __endpoint_captures(self):
         username = self.__authenticate()
         if not username:
@@ -354,12 +356,13 @@ class WebServer(DatabaseAccessor, Flask):
         return render_template('captures.html', doorbell_files=captures)
 
     def __endpoint_doorbells(self):
-        bells = self.__get_doorbells()
+        bells = self.__get_doorbells(True)
         if bells is None:
             return redirect(url_for('login', page_to_redirect='doorbells'))
 
         return render_template('doorbells.html', doorbells=bells)
 
+    # todo adding support to relay
     def __endpoint_doorbell(self, uuid: int):
         if request.method == 'POST':
             return self.__update_doorbell(uuid)
@@ -372,18 +375,12 @@ class WebServer(DatabaseAccessor, Flask):
             return redirect(url_for('doorbells'))
 
         doorbell_data = self._get_doorbell(uuid)
-        doorbell = self.__convert_doorbell({'id': uuid, 'name': doorbell_data[0]})
+        doorbell = self.__convert_doorbell({'id': uuid, 'name': doorbell_data[0]}, True)
         doorbell.emails = doorbell_data[1]
-
-        captures_data = self._get_doorbell_captures(uuid)
-        if not captures_data:
-            return render_template('doorbell.html', doorbell=doorbell)
-
-        captures = self.__convert_captures(captures_data)
-        return render_template('doorbell.html', doorbell=doorbell, doorbell_files=captures)
+        return render_template('doorbell.html', doorbell=doorbell)
 
     def __endpoint_streams(self):
-        bells = self.__get_doorbells()
+        bells = self.__get_doorbells(True)
         if bells is None:
             return redirect(url_for('login', page_to_redirect='streams'))
 
@@ -396,6 +393,28 @@ class WebServer(DatabaseAccessor, Flask):
 
         stream_context = stream_with_context(self.__generate_stream(uuid))
         return self.response_class(stream_context, mimetype='multipart/x-mixed-replace; boundary=frame')
+
+    def __endpoint_get_doorbells_info(self):
+        doorbells = self.__get_doorbells(False)
+        if doorbells is None:
+            return {'error': 'Unauthorized request'}, 401
+
+        return {'doorbells': doorbells}, 200
+
+    def __endpoint_get_new_alerts(self, current_alert_id: int):
+        username = self.__authenticate()
+        if not username:
+            return {'error': 'Unauthorized request'}, 401
+
+        alerts_data = self._get_user_alerts_after(username, current_alert_id)
+        if not alerts_data:
+            return {'alerts': [], 'lastAlertId': 0}, 200
+
+        alerts = self.__convert_captures(alerts_data)
+        if not alerts:
+            return {'alerts': [], 'lastAlertId': 0}, 200
+
+        return {'alerts': alerts, 'lastAlertId': alerts[0]['id']}, 200
 
     def __endpoint_get_new_captures(self, current_capture_id: int):
         username = self.__authenticate()
@@ -410,7 +429,7 @@ class WebServer(DatabaseAccessor, Flask):
         if not captures:
             return {}, 200
 
-        return {'captures': captures, 'lastAlertId': captures[0]['id']}, 200
+        return {'captures': captures, 'lastCaptureId': captures[0]['id']}, 200
 
     def __endpoint_get_resource(self, filename: str):
         filename = secure_filename(filename.lower())
@@ -424,17 +443,8 @@ class WebServer(DatabaseAccessor, Flask):
 
         return send_from_directory(self.config['ESP_FILES_DIR'], filename)
 
-    def __endpoint_open_doorbell(self, uuid: int):
-        username = self.__authenticate()
-        if not username or not self._check_owner(username, uuid):
-            return {'error': 'Unauthorized request'}, 401
-
-        if not self.__events.on_open_doorbell_requested(uuid):
-            return {'error': 'Doorbell is offline'}, 404
-
-        return jsonify('Doorbell opened'), 200
-
-    def __endpoint_take_picture(self, uuid: int):
+    def __open_door_take_picture(self, uuid: int, alert_type: AlertType,
+                                 esp_func: Callable[[EspClient], Tuple[bytes or None, str]]):
         username = self.__authenticate()
         if not username or not self._check_owner(username, uuid):
             return {'error': 'Unauthorized request'}, 401
@@ -443,12 +453,18 @@ class WebServer(DatabaseAccessor, Flask):
         if not esp:
             return {'error': 'Doorbell is offline'}, 404
 
-        image, filename = esp.save_picture()
+        image, filename = esp_func(esp)
         if not image:
             return {'error': 'Doorbell is offline'}, 404
 
-        self.__events.on_alert(uuid, AlertType.UserPicture, {'filename': filename, 'image': image, 'checked': True})
+        self.__events.on_alert(uuid, alert_type, {'filename': filename, 'image': image, 'checked': True})
         return {'filename': filename, 'mimetype': 'image/jpeg'}, 200
+
+    def __endpoint_open_doorbell(self, uuid: int):
+        return self.__open_door_take_picture(uuid, AlertType.UserPicture, lambda esp: esp.open_doorbell)
+
+    def __endpoint_take_picture(self, uuid: int):
+        return self.__open_door_take_picture(uuid, AlertType.UserPicture, lambda esp: esp.save_picture)
 
     def __update_doorbell(self, uuid: int):
         doorbell_name = request.form.get('doorbell-name')
@@ -498,24 +514,24 @@ class WebServer(DatabaseAccessor, Flask):
             con = self._get_connection()
             cursor = con.cursor()
             try:
-                cursor.execute('UPDATE alerts SET checked = ? WHERE time <= ? ',(True,data))
+                cursor.execute('UPDATE alerts SET checked = ? WHERE time <= ? ', (True, data))
                 con.commit()
                 return render_template('alerts.html')
             finally:
                 cursor.close()
                 con.close()
 
-        #con = self._get_connection()
-        #cursor = con.cursor()
-        #cursor.execute("INSERT INTO doorbell VALUES (1, 'doorbell_name', 'joao', '12.2.2020') ")
-        #con.commit()
-        #cursor.execute("INSERT INTO alerts VALUES ('1', '1', ?, '3', False, ?, 'sup sup') ", (datetime.now(), url_for('static', filename='ronaldo.mp4')))       
-        #con.commit()
-        #cursor.execute("INSERT INTO alerts VALUES ('2', '2', ?, '3', False, ?, 'sup sup') ", (datetime.now(), url_for('static', filename='ronaldo.mp4')))       
-        #con.commit()
-        #cursor.close()
-        #con.close()
-   
+        # con = self._get_connection()
+        # cursor = con.cursor()
+        # cursor.execute("INSERT INTO doorbell VALUES (1, 'doorbell_name', 'joao', '12.2.2020') ")
+        # con.commit()
+        # cursor.execute("INSERT INTO alerts VALUES ('1', '1', ?, '3', False, ?, 'sup sup') ", (datetime.now(), url_for('static', filename='ronaldo.mp4')))
+        # con.commit()
+        # cursor.execute("INSERT INTO alerts VALUES ('2', '2', ?, '3', False, ?, 'sup sup') ", (datetime.now(), url_for('static', filename='ronaldo.mp4')))
+        # con.commit()
+        # cursor.close()
+        # con.close()
+
         try:
             con = self._get_connection()
             cursor = con.cursor()
@@ -534,17 +550,17 @@ class WebServer(DatabaseAccessor, Flask):
                 'ORDER BY N.time DESC',
                 [username])
             rows = cursor.fetchall()
-            
+
             for row in rows:
                 # types.append(bell[0])
                 paths.append(row[3])
-                dates.append(row[2])#.split(".")[0])  # split to remove milliseconds
+                dates.append(row[2])  # .split(".")[0])  # split to remove milliseconds
                 names.append(row[1])
                 checked.append(row[4])
                 types.append(row[5])
                 notes.append(row[6])
 
-        # dummy data
+            # dummy data
             """
             paths.append(url_for('static', filename='ronaldo.mp4'))
             dates.append('12.2.20')  # split to remove milliseconds
@@ -583,9 +599,9 @@ class WebServer(DatabaseAccessor, Flask):
             types.append(2)
             notes.append("ligma")"""
 
-        # return render_template('imageGal.html', types = types, paths = paths, dates = dates, doorbells = names)
+            # return render_template('imageGal.html', types = types, paths = paths, dates = dates, doorbells = names)
             return render_template('alerts.html', paths=paths, dates=dates, doorbells=names, checks=checked,
-                               types=types, notes=notes)
+                                   types=types, notes=notes)
         finally:
             cursor.close()
             con.close()

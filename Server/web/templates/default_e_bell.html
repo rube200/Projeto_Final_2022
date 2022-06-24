@@ -52,21 +52,11 @@
                                    aria-expanded="false" data-bs-toggle="dropdown"
                                    href="{{ url_for('alerts') }}">
                                     <span class="badge bg-danger badge-counter"
-                                          id="alerts-count">{{ alerts_count }}</span>
+                                          id="alerts-count">0</span>
                                     <i class="bi bi-bell-fill icon-small"></i>
                                 </a>
-                                <div class="dropdown-menu dropdown-menu-dark dropdown-menu-end dropdown-list animated--grow-in">
-                                    <a class="border-dark dropdown-item d-flex align-items-center" href="#">
-                                        <div class="me-3">
-                                            <div class="bg-primary icon-circle">
-                                                <i class="fas fa-file-alt text-white"></i>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <span class="small">December 12, 2019</span>
-                                            <p>A new monthly report is ready to download!</p>
-                                        </div>
-                                    </a>
+                                <div class="dropdown-menu dropdown-menu-dark dropdown-menu-end dropdown-list animated--grow-in"
+                                     id="alerts-count-dropdown">
                                     <a class="border-dark dropdown-item small text-center"
                                        href="{{ url_for('alerts') }}">Show All Alerts</a>
                                 </div>
@@ -110,9 +100,39 @@
             }
         </script>
     {% endif %}
+
+    <!--suppress JSDuplicatedDeclaration, JSUnresolvedVariable -->
     <script>
-        function getAlerts(element) {
-            fetch('{{ url_for('alerts-count') }}')
+        const alertsDropdownContainer = document.getElementById('alerts-count-dropdown');
+
+        function createAlertDropdown(alert) {
+            const spanMsg = document.createElement('span');
+            spanMsg.className = 'small';
+            spanMsg.innerText = alert.date;
+
+            const pMsg = document.createElement('p');
+            pMsg.innerText = alert.message;
+
+            const msgDiv = document.createElement('div');
+            msgDiv.appendChild(spanMsg);
+            msgDiv.appendChild(pMsg);
+
+            const mainContainer = document.createElement('a');
+            mainContainer.className = 'border-dark dropdown-item d-flex align-items-center';
+            mainContainer.href = '{{ url_for('alerts') }}';
+            mainContainer.id = alert.id;
+            mainContainer.appendChild(msgDiv);
+
+            alertsDropdownContainer.insertBefore(mainContainer, alertsDropdownContainer.lastChild);
+        }
+
+        const alertsCount = document.getElementById('alerts-count');
+        const alertsIds = [];
+        const baseNewAlertsUrl = '{{ url_for('get-new-alerts', current_alert_id='0') }}';
+        let lastAlertId = 0;
+
+        function getAlerts() {
+            fetch(baseNewAlertsUrl.replace('0', lastAlertId))
                 .then(response => response.json())
                 .then(data => {
                     if (!data || data.error) {
@@ -124,14 +144,24 @@
                         return;
                     }
 
-                    element.innerText = data;
+                    data.alerts.forEach((alert) => {
+                        if (alertsIds.includes(alert.id)) {
+                            return;
+                        }
+
+                        alertsIds.push(alert.id);
+                        createAlertDropdown(alert);
+                    });
+
+                    lastAlertId = data.lastAlertId;
+                    alertsCount.innerText = data.alerts.length;
                 })
-                .catch(error => console.error(`Error calling alerts-count: ${error}`));
+                .catch(error => console.error(`Error calling get-new-alerts: ${error}`));
         }
 
-        window.addEventListener('load', function () {
-            const alertsCount = document.getElementById('alerts-count');
-            setInterval(() => getAlerts(alertsCount), 5000);
+        window.addEventListener('load', () => {
+            getAlerts();
+            setInterval(getAlerts, 5000);
         });
     </script>
 {% endblock %}

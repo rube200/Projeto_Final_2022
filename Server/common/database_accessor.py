@@ -238,18 +238,22 @@ class DatabaseAccessor:
             cursor.close()
             con.close()
 
-    def _get_alerts_count(self, username: str):
+    def _get_user_alerts_after(self, username: str, after_alerts_id: int):
         con = self._get_connection()
         cursor = con.cursor()
         try:
-            cursor.execute('SELECT COUNT(*) '
-                           'FROM alerts a '
-                           'INNER JOIN doorbell d '
-                           'ON a.uuid = d.id '
-                           'WHERE NOT a.checked '
-                           'AND d.owner = ?',
-                           [username.upper()])
-            return cursor.fetchone()[0]
+            cursor.execute(f'SELECT d.id as uuid, d.name, a.id, a.time, a.type '
+                           f'FROM alerts a '
+                           f'INNER JOIN doorbell d '
+                           f'ON a.uuid = d.id '
+                           f'WHERE a.id > ? '
+                           f'AND a.type IN (?, ?, ?, ?) '
+                           f'AND d.owner = ? '
+                           f'ORDER BY a.id DESC',
+                           [after_alerts_id, AlertType.Bell.value, AlertType.Movement.value,
+                            AlertType.UserPicture.value, AlertType.OpenDoor.value,
+                            username.upper()])
+            return cursor.fetchall()
         finally:
             cursor.close()
             con.close()
@@ -267,6 +271,7 @@ class DatabaseAccessor:
                            f'AND d.owner = ? '
                            f'ORDER BY a.id DESC',
                            [AlertType.Bell.value, AlertType.Movement.value, AlertType.UserPicture.value,
+                            AlertType.OpenDoor.value,
                             username.upper()])
             return cursor.fetchall()
         finally:

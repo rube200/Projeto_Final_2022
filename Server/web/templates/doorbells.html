@@ -4,9 +4,10 @@
 {% set no_bells=doorbells|length <= 0 %}
 
 {% block e_bell_content %}
-    <div class="d-flex flex-wrap justify-content-evenly">
+    <div class="d-flex flex-wrap justify-content-evenly" id="doorbells-container">
         {% for doorbell in doorbells %}
-            <div class="card card-hover card-hover-cyan m-5" onclick="redirectToDoorbell({{ doorbell.id }})">
+            <div class="card card-hover card-hover-cyan m-5" id="doorbell-{{ doorbell.uuid }}"
+                 onclick="redirectToDoorbell({{ doorbell.uuid }})">
                 <img alt="Last image from stream for {{ doorbell.name }}"
                      class="figure-img img-fluid"
                      src="{{ doorbell.image }}"
@@ -23,13 +24,92 @@
 {% endblock %}
 
 {% block scripts %}
+    <!--suppress JSUnresolvedVariable -->
     <script>
-        const elements = {}
-        {% for doorbell in doorbells %}
-            elements[{{ doorbell.id }}] = "{{ url_for('doorbell', uuid=doorbell.id) }}";
-        {% endfor %}
+        const doorbellsRedirectUrl = '{{ url_for('doorbell', uuid='0') }}';
+
         function redirectToDoorbell(uuid) {
-            location.href = elements[uuid];
+            location.href = doorbellsRedirectUrl.replace('0', uuid);
         }
+
+        const doorbells = {}
+        {% for doorbell in doorbells %}
+            doorbells[{{ doorbell.uuid }}] = document.getElementById('doorbell-{{ doorbell.uuid }}')
+        {% endfor %}
+
+        const doorbellsContainer = document.getElementById('doorbells-container')
+
+        function createDoorbellContainer(doorbell) {
+            const dName = document.createElement('h2');
+            dName.className = 'card-title';
+            dName.innerText = doorbell.name;
+
+            const dStateLabel = document.createElement('p');
+            dStateLabel.className = 'card-text';
+            dStateLabel.innerText = 'Current State:';
+
+            const dState = document.createElement('h3');
+            dState.className = 'card-subtitle text-muted';
+            dState.innerText = doorbell.state;
+
+            const dInfoDiv = document.createElement('div');
+            dInfoDiv.className = 'card-body'
+            dInfoDiv.appendChild(dName);
+            dInfoDiv.appendChild(dStateLabel);
+            dInfoDiv.appendChild(dState);
+
+            const dImg = document.createElement('img');
+            dImg.alt = `Last image from stream for ${doorbell.name}`;
+            dImg.className = 'figure-img img-fluid';
+            dImg.id = 'Doorbell Image';
+            dImg.src = doorbell.image;
+            dImg.width = 320;
+            dImg.height = 240;
+
+            const dContainer = document.createElement('div');
+            dContainer.className = 'card card-hover card-hover-cyan m-5';
+            dContainer.id = `doorbell-${doorbell.uuid}`;
+            dContainer.appendChild(dImg);
+            dContainer.appendChild(dInfoDiv);
+
+            doorbellsContainer.appendChild(dContainer);
+            doorbells[doorbell.uuid] = dContainer;
+        }
+
+        function editDoorbellContainer(doorbell, doorbellContainer) {
+            const dImg = doorbellContainer.getElementsByTagName('img')[0];
+            dImg.alt = `Last image from stream for ${doorbell.name}`;
+
+            const dInfoDiv = doorbellContainer.getElementsByTagName('div')[0];
+            const dName = dInfoDiv.getElementsByTagName('h2')[0];
+            dName.innerText = doorbell.name;
+
+            const dState = dInfoDiv.getElementsByTagName('h3')[0];
+            dState.innerText = doorbell.state;
+        }
+
+        function getDoorbellStat() {
+            fetch('{{ url_for('get-doorbells-info') }}')
+                .then(response => response.json())
+                .then(data => {
+                    if (!data || data.error) {
+                        console.error(`Error getting doorbells: ${data.error}`);
+                        return;
+                    }
+
+                    data.doorbells.forEach((doorbell) => {
+                        const doorbellContainer = doorbells[doorbell.uuid];
+                        if (doorbellsContainer !== undefined) {
+                            editDoorbellContainer(doorbell, doorbellContainer);
+                            return;
+                        }
+
+                        createDoorbellContainer(doorbell);
+                    });
+                })
+                .catch(error => console.error(`Error calling get-doorbells-info: ${error}`));
+        }
+
+        window.addEventListener('load', () => setInterval(getDoorbellStat, 5000));
     </script>
 {% endblock %}
