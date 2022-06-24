@@ -15,12 +15,7 @@ class EspClient(ClientSocket, ClientRecord):
     def __init__(self, address: Tuple[str, int], tcp_socket: socket, events: EspEvents):
         ClientSocket.__init__(self, address, tcp_socket)
         ClientRecord.__init__(self, lambda: self._camera)
-
         self.__events = events
-        self.__events.on_open_doorbell_requested += self.__on_open_doorbell_requested
-        self.__events.on_start_stream_requested += self.on_start_stream_requested
-        self.__events.on_stop_stream_requested += self.on_stop_stream_requested
-
         self.__config_bell_duration = 0.0
         self.__config_motion_duration = 0.0
         self.__esp_files_path = environ.get('ESP_FILES_DIR')
@@ -30,9 +25,6 @@ class EspClient(ClientSocket, ClientRecord):
     def close(self):
         ClientSocket.close(self)
         ClientRecord.close(self)
-        self.__events.on_stop_stream_requested -= self.on_stop_stream_requested
-        self.__events.on_start_stream_requested -= self.on_start_stream_requested
-        self.__events.on_open_doorbell_requested -= self.__on_open_doorbell_requested
         self.__events = None
         del self.__config_bell_duration
         del self.__config_motion_duration
@@ -95,34 +87,23 @@ class EspClient(ClientSocket, ClientRecord):
     def _process_motion_detected(self) -> None:
         self.__prepare_and_notify(AlertType.Movement, self.__config_motion_duration)
 
-    def __on_open_doorbell_requested(self, uuid: int) -> bool:
-        if uuid != self._uuid:
-            return False
-
-        self._send_open_relay()
-        return True
-
-    def on_start_stream_requested(self, uuid: int, is_maintain_stream: bool) -> bool:
-        if uuid != self._uuid:
-            return False
-
+    def start_stream(self, is_maintain_stream: bool):
         if is_maintain_stream:
             self._send_start_stream()
-            return True
+            return
 
         self.__stream_requests += 1
         if self.__stream_requests == 1:
             self._send_start_stream()
-        return True
 
-    def on_stop_stream_requested(self, uuid: int) -> bool:
-        if uuid != self._uuid:
-            return False
-
+    def stop_stream(self):
         self.__stream_requests -= 1
         if self.__stream_requests == 0:
             self._send_stop_stream()
-            return True
+
+    def open_doorbell(self) -> Tuple[bytes or None, str]:
+        self._send_open_relay()
+        return self.save_picture()
 
     def save_picture(self, filename: str = None, image: bytes = None) -> Tuple[bytes or None, str]:
         filename = filename or secure_filename(f'{(time() * 1000)}.jpeg')
