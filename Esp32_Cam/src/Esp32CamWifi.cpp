@@ -11,20 +11,29 @@ Esp32CamWifi::Esp32CamWifi() {
     const char *wifiMenu[] = {"wifi", "exit"};
     setMenu(wifiMenu, 2);
 
-#if DEBUG
     addParameter(&socket_host_parameter);
     addParameter(&socket_port_parameter);
-#endif
 
     setSaveParamsCallback([this] {
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "UnusedValue"
-        isPortalSaved = true;
+        isPortalSaved = true;//flag, signal save for startPortal
 #pragma clang diagnostic pop
-        if (!isUsernameMode) {
-            saveCostumeParameters();
+
+        switch (wifiParamsMode) {
+            case 1:
+                stopConfigPortal();
+            case 0:
+                saveCostumeParameters();
+                return;
+
+            case 2:
+            case 3:
+                Serial.println("Relay check");//todo remove
+                Serial.println(relay_check_parameter.getValue());
+                stopConfigPortal();
+                return;
         }
-        stopConfigPortal();
     });
 }
 
@@ -42,9 +51,7 @@ void Esp32CamWifi::begin() {
     }
     access_point_name = (char *)macStr;
 
-#if DEBUG
     loadCostumeParameters();
-#endif
 
     //Fix bug related to params and EEPROM save
     if (!getWiFiIsSaved()) {
@@ -60,6 +67,10 @@ void Esp32CamWifi::begin() {
             }
 
             esp_wifi_set_config(WIFI_IF_STA, &conf);
+        } else {
+            Serial.println("Fail to get saved wifi settings.");
+            Serial.println(ssid);
+            Serial.println(pass);
         }
     }
 
@@ -70,7 +81,6 @@ void Esp32CamWifi::begin() {
     Serial.println("Successfully connected to WiFi.");
 }
 
-#if DEBUG
 const char *Esp32CamWifi::getHostParam() const {
     return socket_host_parameter.getValue();
 }
@@ -78,7 +88,6 @@ const char *Esp32CamWifi::getHostParam() const {
 uint16_t Esp32CamWifi::getPortParam() const {
     return atoi(socket_port_parameter.getValue()); // NOLINT(cert-err34-c)
 }
-#endif
 
 bool Esp32CamWifi::isReady() {
     if (WiFi.isConnected()) {
@@ -106,6 +115,7 @@ void Esp32CamWifi::loadCostumeParameters() {
 boolean Esp32CamWifi::requestSocketConfig() {
     isPortalSaved = false;
     setParamsMode();
+    wifiParamsMode = 1;
 
     if (WiFiManager::startConfigPortal(access_point_name))
         return true;
@@ -143,22 +153,29 @@ void Esp32CamWifi::setParamsMode() {
 }
 
 void Esp32CamWifi::setUsernameMode() {
-    switch (isUsernameMode) {
+    switch (wifiParamsMode) {
         case 0:
-            isUsernameMode = 1;
-
             setParamsMode();
+        case 1://setParamsMode already on in case 1
+            wifiParamsMode = 2;
+
             clearParams();
             if (getParametersCount() > 0) {
                 getParameters()[0] = &username_parameter;
-            }
-            else {
+            } else {
                 addParameter(&username_parameter);
             }
+
+            if (getParametersCount() > 1) {
+                getParameters()[1] = &relay_check_parameter;
+            } else {
+                addParameter(&relay_check_parameter);
+            }
+
             return;
 
-        case 1:
-            isUsernameMode = 2;
+        case 2:
+            wifiParamsMode = 3;
             username_parameter.setLabel("Username does not exists, insert a registered username:");
             return;
     }

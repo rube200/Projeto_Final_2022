@@ -11,7 +11,13 @@
 //consider using libs from martong in GitHub
 class WifiManagerParam : public WiFiManagerParameter {
 public:
-    WifiManagerParam(const char *id, const char *label, const char *defaultValue, int length) : WiFiManagerParameter(id, label, defaultValue, length) {}
+    WifiManagerParam(const char *id, const char *label, const char *defaultValue, int length) : WiFiManagerParameter(id,
+                                                                                                                     label,
+                                                                                                                     defaultValue,
+                                                                                                                     length) {}
+
+    WifiManagerParam(const char *id, const char *label, const char *defaultValue, int length, const char *custom)
+            : WiFiManagerParameter(id, label, defaultValue, length, custom) {}
 
     void clearParams() {
         init(nullptr,  getLabel(), getValue(), getValueLength(), "", getLabelPlacement());
@@ -28,11 +34,9 @@ public:
 
     void begin();
 
-#if DEBUG
     const char *getHostParam() const;
 
     uint16_t getPortParam() const;
-#endif
     
     static bool isReady();
 
@@ -53,10 +57,13 @@ private:
 
     char *access_point_name = nullptr;
     bool isPortalSaved = false;
-    byte isUsernameMode = 0;//0 not usernameMode, 1 first time usernameMode, 2 and above not first time in usernameMode(Used to show that last username inserted does not exist)
+    byte wifiParamsMode = 0;//0 default (wifi and host settings), 1 just host settings, 2 register username, 3 username not exists, 4 and above nothing
     WifiManagerParam socket_host_parameter = WifiManagerParam("Host", "Socket host", REMOTE_HOST, 50);
     WifiManagerParam socket_port_parameter = WifiManagerParam("Port", "Socket port", REMOTE_PORT_STR, 5);
-    WifiManagerParam username_parameter = WifiManagerParam("Username","Doorbell not registered, please insert your username:","", 50);
+    WifiManagerParam username_parameter = WifiManagerParam("Username",
+                                                           "Doorbell not registered, please insert your username:", "",
+                                                           50);
+    WifiManagerParam relay_check_parameter = WifiManagerParam("Relay_Check", "Have relay?", "", 0, "checked");
 };
 
 #endif //ESP32_CAM_ESP32CAMWIFI_H
