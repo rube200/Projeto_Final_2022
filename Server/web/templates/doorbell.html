@@ -285,8 +285,8 @@
                             return;
                         }
 
-                        captureIds.push(capture.id);
                         createCaptureContainer(capture);
+                        captureIds.push(capture.id);
                     });
 
                     if (lastCaptureId === 0 && data.lastCaptureId > 0) {
@@ -294,7 +294,7 @@
                     }
                     lastCaptureId = data.lastCaptureId;
                 })
-                .catch(error => console.error(`Error calling get-doorbells-info: ${error}`));
+                .catch(error => console.error(`Error calling get-new-captures: ${error}`));
         }
     </script>
     <script>
