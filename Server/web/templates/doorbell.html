@@ -15,10 +15,10 @@
                         class="img-fluid"
                         data="{{ doorbell.image }}"
                         {% if doorbell.online == True %}
+                        data-url="{{ url_for('stream', uuid=doorbell.uuid) }}"
                         id="stream-view"
-                        url="{{ url_for('stream', uuid=doorbell.id) }}"
                         {% endif %}
-                        type='image/jpeg'>
+                        type="image/jpeg">
                 </object>
             </div>
             <div class="card-body d-flex flex-wrap justify-content-evenly text-center">
@@ -69,138 +69,25 @@
             </div>
         </div>
     </div>
-    <div {% if doorbell_files|length == 0 %} class="d-none" {% endif %} id="captures-page-container">
+    <div class="d-none" id="captures-page-container">
         <br/>
         <h1 class="h1 text-center text-dark w-100">Doorbell captures</h1>
         <br/>
-        <div class="justify-content-evenly mb-5 row" id="doorbell-captures">
-            {% for file in doorbell_files %}
-                <div class="card border-2 border-primary col-sm-auto mb-3">
-                    <h4 class="card-title mt-3 text-center text-dark">{{ file.name }}</h4>
-                    <p class="mt-3 text-center text-dark">Time: {{ file.time }}</p>
-                    {% if file.mimetype == 'video/mp4' %}
-                        <video
-                                width="320"
-                                height="240"
-                                class="my-3"
-                                controls
-                                src="{{ url_for('get-resource', filename=file.filename) }}"
-                                type="{{ file.mimetype }}">
-                        </video>
-                    {% else %}
-                        <object
-                                width="320"
-                                height="240"
-                                class="img-fluid my-3"
-                                data="{{ url_for('get-resource', filename=file.filename) }}"
-                                type='{{ file.mimetype }}'>
-
-                        </object>
-                    {% endif %}
-                </div>
-            {% endfor %}
+        <div class="justify-content-evenly mb-5 row" id="captures-container">
         </div>
     </div>
     <div class="popup-pic" id="popup-container">
-        <span id="popup-pic-close-button">&times;</span>
-        <img alt="Bigger image selected by user" id="popup-image" src="{{ doorbell.image }}">
+        <span id="popup-pic-close-button" onclick="closePopup()">&times;</span>
+        <!--suppress RequiredAttributes -->
+        <img alt="Bigger image selected by user" id="popup-image">
     </div>
 {% endblock %}
 
-{% block alert_count_script %}
-    <!--suppress JSUnresolvedVariable -->
-    <script>
-        const capturesPageContainer = document.getElementById('captures-page-container');
-        const doorbellCapturesElement = document.getElementById('doorbell-captures');
-        const baseNewCapturesUrl = '{{ url_for('get-new-captures', current_capture_id='-1') }}';
-
-        let currentAlertsCount = {{ alerts_count }};
-        let lastAlertId = {% if doorbell_files|length > 0 %}{{ (doorbell_files|first).id }}{% else %}0{% endif %};
-
-        function addNewCaptures(capture) {
-
-        }
-
-        function onAlertCount(value) {
-            if (value === currentAlertsCount) {
-                return false;
-            }
-
-            fetch(baseNewCapturesUrl.replace('-1', lastAlertId))
-                .then(response => response.json())
-                .then(data => {
-                    if (!data || data.error) {
-                        console.error(`Error while getting new captures: {data.error}`);
-                        return;
-                    }
-
-                    data.captures.forEach(capture => addNewCaptures(capture));
-                    if (lastAlertId === 0) {
-                        capturesPageContainer.style.display = 'block';
-                    }
-
-                    currentAlertsCount = value;
-                    lastAlertId = data.lastAlertId;
-                })
-                .catch(error => console.error(`Error while getting new captures:: ${error}`));
-
-            return false;
-        }
-    </script>
-{% endblock %}
-
 {% block scripts %}
-    <!--suppress JSUnresolvedVariable -->
     <script>
-        /*
-                const popup = document.getElementById('popup-container');
-                const popupClose = document.getElementById('popup-pic-close-button');
-                popupClose.addEventListener('click', () => popup.style.display = 'none');
-
-                        document.querySelectorAll('.image-container img').forEach(image => {
-                    image.onclick = () => {
-                        document.getElementById('big1').style.display = 'block';
-                        document.querySelector('.popup-pic img').src = image.getAttribute('src');
-                    }
-                });
-
-
-                function creatAlert(email) {
-                    var node = document.getElementById("textarea"),
-                        ele = document.createElement("div");
-                    ele.classList.add("alert")
-                    ele.style.backgroundColor = "#F44336"
-                    ele.style.color = "#FFFFFF"
-                    ele.innerHTML = "<span class='closebtn'>&times;</span>\nInvalid Email: " + email
-                    node.parentNode.parentNode.insertBefore(ele, document.getElementById("targeNode").nextSibling);
-                    document.querySelector(".closebtn").addEventListener("click", gone)
-                }
-
-                function gone() {
-                    div = document.querySelector(".alert")
-                    div.parentNode.removeChild(div)
-                }
-        */
-
-        const doorbellNameInput = document.getElementById('doorbell-name');
-        const doorbellEmailsInput = document.getElementById('alert-emails');
-        const doorbellPasswordInput = document.getElementById('password');
-        const doorbellUpdateForm = document.getElementById('update-form');
-        const streamElement = document.getElementById('stream-view');
-
-        const uuid = {{ doorbell.id }};
-        let emails = [
-            {% for email in doorbell.emails %}
-                '{{ email }}',
-            {% endfor %}
-        ];
-        let name = '{{ doorbell.name }}';
-
-        const inputTest = document.createElement('input');
-        inputTest.type = 'email';
-
+        //Buttons
         function openDoor() {
-            fetch('{{ url_for('open_doorbell', uuid=doorbell.id) }}', {method: 'POST'})
+            fetch('{{ url_for('open_doorbell', uuid=doorbell.uuid) }}', {method: 'POST'})
                 .then(response => response.json())
                 .then(data => {
                     if (!data || data.error) {
@@ -218,47 +105,48 @@
                 });
         }
 
-        function resetForms() {
-            console.debug(emails);
-            doorbellNameInput.value = name;
-            doorbellEmailsInput.value = emails.join('\r\n');
-            doorbellPasswordInput.value = ''
-            return false;
-        }
-
-        function sendForms() {
-            if (!validateForm()) {
-                return false;
-            }
-
-            fetch('{{ url_for('doorbell', uuid=doorbell.id) }}', {
-                body: new FormData(doorbellUpdateForm),
-                method: 'POST'
-            })
+        function takePic() {
+            fetch('{{ url_for('take_picture', uuid=doorbell.uuid) }}', {method: 'POST'})
                 .then(response => response.json())
                 .then(data => {
                     if (!data || data.error) {
-                        console.error(`Error while updating doorbell: ${data.error}`);
-                        alert(`Error while updating doorbell. ${data.error}`);
+                        console.error(`Error while taking a picture: ${data.error}`);
+                        alert(`Error while taking a picture. ${data.error}`);
                         return;
                     }
 
-                    emails = []
-                    for (let email of data.emails) {
-                        emails.push(email);
-                    }
-                    name = data.name;
-                    resetForms();
+                    console.debug(`Picture taken: ${data}`);
+                    //todo set message
                 })
                 .catch(error => {
-                    resetForms();
-                    console.error(`Error while updating doorbell: ${error}`);
-                    alert(`Error while updating doorbell. ${error}`);
+                    console.error(`Error while taking a picture: ${error}`);
+                    alert(`Error while taking a picture. ${error}`);
                 });
+        }
+    </script>
+    <!--suppress JSUnresolvedVariable -->
+    <script>
+        //Forms
+        const doorbellNameInput = document.getElementById('doorbell-name');
+        const doorbellEmailsInput = document.getElementById('alert-emails');
+        const doorbellPasswordInput = document.getElementById('password');
+        const uuid = {{ doorbell.uuid }};
+        let emails = [
+            {% for email in doorbell.emails %}
+                '{{ email }}',
+            {% endfor %}
+        ];
+        let name = '{{ doorbell.name }}';
 
-            console.log("e");
+        function resetForms() {
+            doorbellNameInput.value = name;
+            doorbellEmailsInput.value = emails.join('\r\n');
+            doorbellPasswordInput.value = '';
             return false;
         }
+
+        const inputTest = document.createElement('input');
+        inputTest.type = 'email';
 
         function validateEmail(email) {
             inputTest.value = email;
@@ -299,29 +187,140 @@
             return true;
         }
 
-        function takePic() {
-            fetch('{{ url_for('take_picture', uuid=doorbell.id) }}', {method: 'POST'})
+        const doorbellUpdateForm = document.getElementById('update-form');
+
+        function sendForms() {
+            if (!validateForm()) {
+                return false;
+            }
+
+            fetch('{{ url_for('doorbell', uuid=doorbell.uuid) }}', {
+                body: new FormData(doorbellUpdateForm),
+                method: 'POST'
+            })
                 .then(response => response.json())
                 .then(data => {
                     if (!data || data.error) {
-                        console.error(`Error while taking a picture: ${data.error}`);
-                        alert(`Error while taking a picture. ${data.error}`);
+                        console.error(`Error while updating doorbell: ${data.error}`);
+                        alert(`Error while updating doorbell. ${data.error}`);
                         return;
                     }
 
-                    console.debug(`Picture taken: ${data}`);
-                    //todo set message
+                    emails = [];
+                    for (let email of data.emails) {
+                        emails.push(email);
+                    }
+                    name = data.name;
+                    resetForms();
                 })
                 .catch(error => {
-                    console.error(`Error while taking a picture: ${error}`);
-                    alert(`Error while taking a picture. ${error}`);
+                    resetForms();
+                    console.error(`Error while updating doorbell: ${error}`);
+                    alert(`Error while updating doorbell. ${error}`);
                 });
+
+            return false;
+        }
+    </script>
+    <!--suppress JSUnresolvedVariable -->
+    <script>
+        //Captures
+        const capturesContainer = document.getElementById('captures-container');
+        const baseResourceUrl = '{{ url_for('get-resource', filename='filename') }}';
+
+        function createCaptureContainer(capture) {
+            const cpName = document.createElement('h4');
+            cpName.className = 'card-title mt-3 text-center text-dark';
+            cpName.innerText = capture.name;
+
+            const cpDate = document.createElement('p');
+            cpDate.className = 'mt-3 text-center text-dark';
+            cpDate.innerText = moment(capture.time).format('LLL');
+
+            let cpFile;
+            const fileSrc = baseResourceUrl.replace('filename', capture.filename);
+            if (capture.mimetype === 'video/mp4') {
+                cpFile = document.createElement('video');
+                cpFile.className = "my-3";
+                cpFile.controls = true;
+                cpFile.src = fileSrc;
+                cpFile.type = capture.mimetype;
+                cpFile.width = 320;
+                cpFile.height = 240;
+            } else {
+                cpFile = document.createElement('object');
+                cpFile.className = "img-fluid my-3";
+                cpFile.data = fileSrc;
+                cpFile.width = '320';
+                cpFile.height = '240';
+            }
+            cpFile.onclick = () => openPopup(fileSrc);
+            cpFile.type = capture.mimetype;
+
+            const captureContainer = document.createElement('div');
+            captureContainer.className = 'card border-2 border-primary col-sm-auto mb-3';
+            captureContainer.appendChild(cpName);
+            captureContainer.appendChild(cpDate);
+            captureContainer.appendChild(cpFile);
+
+            capturesContainer.appendChild(captureContainer);
         }
 
+        const baseNewCapturesUrl = '{{ url_for('get-new-captures', current_capture_id='0') }}';
+        const captureIds = [];
+        const capturesPageContainer = document.getElementById('captures-page-container');
+        let lastCaptureId = 0;
+
+        function getCaptures() {
+            fetch(baseNewCapturesUrl.replace('0', lastCaptureId))
+                .then(response => response.json())
+                .then(data => {
+                    if (!data || data.error) {
+                        console.error(`Error getting doorbells: ${data.error}`);
+                        return;
+                    }
+
+                    data.captures.forEach((capture) => {
+                        if (captureIds.includes(capture.id)) {
+                            return;
+                        }
+
+                        captureIds.push(capture.id);
+                        createCaptureContainer(capture);
+                    });
+
+                    if (lastCaptureId === 0 && data.lastCaptureId > 0) {
+                        capturesPageContainer.style.display = 'block';
+                    }
+                    lastCaptureId = data.lastCaptureId;
+                })
+                .catch(error => console.error(`Error calling get-doorbells-info: ${error}`));
+        }
+    </script>
+    <script>
+        //Popup
+        const popup = document.getElementById('popup-container');
+
+        function closePopup() {
+            popup.style.display = 'none';
+        }
+
+        const popupImage = document.getElementById('popup-image');
+
+        function openPopup(src) {
+            popupImage.src = src;
+            popup.style.display = 'block';
+        }
+    </script>
+    <script>
+        //OnLoad and Stream
+        const streamElement = document.getElementById('stream-view');
         window.addEventListener('load', () => {
             resetForms();
+            getCaptures();
+            setInterval(getCaptures, 5000);
             if (streamElement) {
-                streamElement.data = streamElement.getAttribute('url');
+                streamElement.data = streamElement.getAttribute('data-url');
             }
         });
     </script>
