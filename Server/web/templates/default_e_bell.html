@@ -94,11 +94,10 @@
 {% block template_scripts %}
     <script src="{{ url_for('static', filename='moment.js') }}"></script>
 
-    {% block alert_count_script %}{% endblock %}
-    {% if not self.alert_count_script() %}
+    {% block alerts_received_script %}{% endblock %}
+    {% if not self.alerts_received_script() %}
         <script>
-            function onAlertCount() {
-                return false;
+            function onAlertsReceived() {
             }
         </script>
     {% endif %}
@@ -111,7 +110,7 @@
         function createAlertDropdown(alert) {
             const spanMsg = document.createElement('span');
             spanMsg.className = 'small';
-            spanMsg.innerText = moment(alert.date).format('LLL');
+            spanMsg.innerText = moment(alert.time).format('LLL');
 
             const pMsg = document.createElement('p');
             pMsg.innerText = alert.message;
@@ -126,7 +125,7 @@
             mainContainer.id = alert.id;
             mainContainer.appendChild(msgDiv);
 
-            alertsDropdownContainer.insertBefore(mainContainer, alertsDropdownContainer.lastChild);
+            alertsDropdownContainer.insertBefore(mainContainer, alertsDropdownContainer.firstChild);
         }
 
         const alertsCount = document.getElementById('alerts-count');
@@ -143,9 +142,7 @@
                         return;
                     }
 
-                    if (onAlertCount(data)) {
-                        return;
-                    }
+                    onAlertsReceived(data);
 
                     data.alerts.forEach((alert) => {
                         if (alertsIds.includes(alert.id)) {

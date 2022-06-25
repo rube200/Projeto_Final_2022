@@ -79,7 +79,9 @@
     <script>
         //Buttons
         function openDoor() {
-            fetch('{{ url_for('open_doorbell', uuid=doorbell.uuid) }}', {method: 'POST'})
+            fetch('{{ url_for('open_doorbell', uuid=doorbell.uuid) }}', {
+                method: 'POST'
+            })
                 .then(response => response.json())
                 .then(data => {
                     if (!data || data.error) {
@@ -98,7 +100,9 @@
         }
 
         function takePic() {
-            fetch('{{ url_for('take_picture', uuid=doorbell.uuid) }}', {method: 'POST'})
+            fetch('{{ url_for('take_picture', uuid=doorbell.uuid) }}', {
+                method: 'POST'
+            })
                 .then(response => response.json())
                 .then(data => {
                     if (!data || data.error) {
