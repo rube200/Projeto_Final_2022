@@ -32,12 +32,12 @@
             location.href = doorbellsRedirectUrl.replace('0', uuid);
         }
 
-        const doorbells = {}
+        const doorbells = {};
         {% for doorbell in doorbells %}
-            doorbells[{{ doorbell.uuid }}] = document.getElementById('doorbell-{{ doorbell.uuid }}')
+            doorbells[{{ doorbell.uuid }}] = document.getElementById('doorbell-{{ doorbell.uuid }}');
         {% endfor %}
 
-        const doorbellsContainer = document.getElementById('doorbells-container')
+        const doorbellsContainer = document.getElementById('doorbells-container');
 
         function createDoorbellContainer(doorbell) {
             const dName = document.createElement('h2');
@@ -53,7 +53,7 @@
             dState.innerText = doorbell.state;
 
             const dInfoDiv = document.createElement('div');
-            dInfoDiv.className = 'card-body'
+            dInfoDiv.className = 'card-body';
             dInfoDiv.appendChild(dName);
             dInfoDiv.appendChild(dStateLabel);
             dInfoDiv.appendChild(dState);

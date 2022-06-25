@@ -15,8 +15,8 @@
                             class="figure-img img-fluid rounded"
                             data="{{ doorbell.image }}"
                             {% if doorbell.online == True %}
+                            data-url="{{ url_for('stream', uuid=doorbell.uuid) }}"
                             name="stream-view"
-                            url="{{ url_for('stream', uuid=doorbell.id) }}"
                             {% endif %}
                             type="image/jpeg">
                     </object>
@@ -32,7 +32,7 @@
     <script>
         window.addEventListener('load', function () {
             const streams = document.getElementsByName('stream-view');
-            streams.forEach(stream => stream.data = stream.getAttribute('url'));
+            streams.forEach(stream => stream.data = stream.getAttribute('data-url'));
         });
     </script>
 {% endblock %}
