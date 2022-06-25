@@ -3,7 +3,6 @@
 //! authors : Tim Wood, Iskren Chernev, Moment.js contributors
 //! license : MIT
 //! momentjs.com
-// noinspection HttpUrlsUsage
 
 ;(function (global, factory) {
     typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
@@ -77,9 +76,9 @@
     }
 
     function map(arr, fn) {
-        let res = [],
-            i,
-            arrLen = arr.length;
+        const res = [];
+        let i;
+        const arrLen = arr.length;
         for (i = 0; i < arrLen; ++i) {
             res.push(fn(arr[i], i));
         }
@@ -707,7 +706,7 @@
     }
 
     function makeGetSet(unit, keepTime) {
-        return function () {
+        return function (value) {
             if (value != null) {
                 set$1(this, unit, value);
                 hooks.updateOffset(this, keepTime);
@@ -2151,7 +2150,7 @@
                     'use moment.updateLocale(localeName, config) to change ' +
                     'an existing locale. moment.defineLocale(localeName, ' +
                     'config) should only be used for creating a new locale ' +
-                    'See http://momentjs.com/guides/#/warnings/define-locale/ for more info.'
+                    'See https://momentjs.com/guides/#/warnings/define-locale/ for more info.'
                 );
                 parentConfig = locales[name]._config;
             } else if (config.parentLocale != null) {
@@ -2556,7 +2555,7 @@
     hooks.createFromInputFallback = deprecate(
         'value provided is not in a recognized RFC2822 or ISO format. moment construction falls back to js Date(), ' +
         'which is not reliable across all browsers and versions. Non RFC2822/ISO date formats are ' +
-        'discouraged. Please refer to http://momentjs.com/guides/#/warnings/js-date/ for more info.',
+        'discouraged. Please refer to https://momentjs.com/guides/#/warnings/js-date/ for more info.',
         function (config) {
             config._d = new Date(config._i + (config._useUTC ? ' UTC' : ''));
         }
@@ -2866,14 +2865,14 @@
 
     // date from string and array of format strings
     function configFromStringAndArray(config) {
-        let scoreToBeat = 0;
         let tempConfig,
             bestMoment,
+            scoreToBeat = 0,
             i,
             currentScore,
             validFormatFound,
-            bestFormatIsValid = false,
-            configfLen = config._f.length;
+            bestFormatIsValid = false;
+        const configfLen = config._f.length;
 
         if (configfLen === 0) {
             getParsingFlags(config).invalidFormat = true;
@@ -2903,12 +2902,7 @@
 
             getParsingFlags(tempConfig).score = currentScore;
 
-            if (bestFormatIsValid) {
-                if (currentScore < scoreToBeat) {
-                    scoreToBeat = currentScore;
-                    bestMoment = tempConfig;
-                }
-            } else {
+            if (!bestFormatIsValid) {
                 if (
                     scoreToBeat == null ||
                     currentScore < scoreToBeat ||
@@ -2919,6 +2913,11 @@
                     if (validFormatFound) {
                         bestFormatIsValid = true;
                     }
+                }
+            } else {
+                if (currentScore < scoreToBeat) {
+                    scoreToBeat = currentScore;
+                    bestMoment = tempConfig;
                 }
             }
         }
@@ -3046,7 +3045,7 @@
     }
 
     const prototypeMin = deprecate(
-            'moment().min is deprecated, use moment.max instead. http://momentjs.com/guides/#/warnings/min-max/',
+            'moment().min is deprecated, use moment.max instead. https://momentjs.com/guides/#/warnings/min-max/',
             function () {
                 const other = createLocal.apply(null, arguments);
                 if (this.isValid() && other.isValid()) {
@@ -3057,7 +3056,7 @@
             }
         ),
         prototypeMax = deprecate(
-            'moment().max is deprecated, use moment.min instead. http://momentjs.com/guides/#/warnings/min-max/',
+            'moment().max is deprecated, use moment.min instead. https://momentjs.com/guides/#/warnings/min-max/',
             function () {
                 const other = createLocal.apply(null, arguments);
                 if (this.isValid() && other.isValid()) {
@@ -3594,7 +3593,7 @@
                     '(period, number) is deprecated. Please use moment().' +
                     name +
                     '(number, period). ' +
-                    'See http://momentjs.com/guides/#/warnings/add-inverted-param/ for more info.'
+                    'See https://momentjs.com/guides/#/warnings/add-inverted-param/ for more info.'
                 );
                 tmp = val;
                 val = period;
@@ -4343,11 +4342,10 @@
     });
 
     function localeEras() {
-        // noinspection JSUnresolvedVariable
         let i,
             l,
-            date,
-            eras = this._eras || getLocale('en')._eras;
+            date;
+        const eras = this._eras || getLocale('en')._eras;
         for (i = 0, l = eras.length; i < l; ++i) {
             switch (typeof eras[i].since) {
                 case 'string':
@@ -4992,11 +4990,11 @@
         getSetYear
     );
     proto.zone = deprecate(
-        'moment().zone is deprecated, use moment().utcOffset instead. http://momentjs.com/guides/#/warnings/zone/',
+        'moment().zone is deprecated, use moment().utcOffset instead. https://momentjs.com/guides/#/warnings/zone/',
         getSetZone
     );
     proto.isDSTShifted = deprecate(
-        'isDSTShifted is deprecated. See http://momentjs.com/guides/#/warnings/dst-shifted/ for more information',
+        'isDSTShifted is deprecated. See https://momentjs.com/guides/#/warnings/dst-shifted/ for more information',
         isDaylightSavingTimeShifted
     );
 
