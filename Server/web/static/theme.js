@@ -6,7 +6,7 @@
     if (sidebar) {
         for (const toggle of sidebarToggles) {
             // Toggle the side navigation
-            toggle.addEventListener('click', function (e) {
+            toggle.addEventListener('click', function () {
                 document.body.classList.toggle('sidebar-toggled');
                 sidebar.classList.toggle('toggled');
             });

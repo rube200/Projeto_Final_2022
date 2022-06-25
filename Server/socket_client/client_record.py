@@ -3,6 +3,7 @@ from time import monotonic, sleep
 from typing import Callable
 
 import numpy
+# noinspection PyProtectedMember, PyUnresolvedReferences
 from cv2 import imdecode, IMREAD_COLOR, VideoWriter, VideoWriter_fourcc
 
 FOURCC = VideoWriter_fourcc(*'AV10')

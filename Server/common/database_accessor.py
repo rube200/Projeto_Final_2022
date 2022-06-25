@@ -267,7 +267,7 @@ class DatabaseAccessor:
                            f'INNER JOIN doorbell d '
                            f'ON a.uuid = d.id '
                            f'WHERE a.filename IS NOT NULL '
-                           f'AND a.type IN (?, ?, ?) '
+                           f'AND a.type IN (?, ?, ?, ?) '
                            f'AND d.owner = ? '
                            f'ORDER BY a.id DESC',
                            [AlertType.Bell.value, AlertType.Movement.value, AlertType.UserPicture.value,
