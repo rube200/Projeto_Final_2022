@@ -155,7 +155,9 @@
                         alertsIds.push(alert.id);
                     });
 
-                    lastAlertId = data.lastAlertId;
+                    if (data.lastAlertId > lastAlertId) {
+                        lastAlertId = data.lastAlertId;
+                    }
                     alertsCount.innerText = data.alerts.length;
                 })
                 .catch(error => console.error(`Error calling get-new-alerts: ${error}`));

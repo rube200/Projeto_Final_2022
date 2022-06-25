@@ -69,7 +69,7 @@
             </div>
         </div>
     </div>
-    <div class="d-none" id="captures-page-container">
+    <div id="captures-page-container" style="display:none;">
         <br/>
         <h1 class="h1 text-center text-dark w-100">Doorbell captures</h1>
         <br/>
@@ -292,7 +292,10 @@
                     if (lastCaptureId === 0 && data.lastCaptureId > 0) {
                         capturesPageContainer.style.display = 'block';
                     }
-                    lastCaptureId = data.lastCaptureId;
+
+                    if (data.lastCaptureId > lastCaptureId) {
+                        lastCaptureId = data.lastCaptureId;
+                    }
                 })
                 .catch(error => console.error(`Error calling get-new-captures: ${error}`));
         }
