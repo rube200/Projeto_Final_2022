@@ -1,0 +1,126 @@
+{% extends 'default_e_bell.html' %}
+
+{% block e_bell_content %}
+    {% block pre_capture %}{% endblock %}
+    <div id="captures-page-container" style="display:none;">
+        <br/>
+        <h1 class="h1 text-center text-dark w-100">Doorbell captures</h1>
+        <br/>
+        <div class="justify-content-evenly row" id="captures-container">
+        </div>
+    </div>
+    <div class="popup-pic" id="popup-container">
+        <span id="popup-pic-close-button" onclick="closePopup()">&times;</span>
+        <!--suppress RequiredAttributes -->
+        <img alt="Bigger image selected by user" id="popup-image">
+    </div>
+    {% block pos_capture %}{% endblock %}
+{% endblock %}
+
+{% block template_scripts %}
+    {{ super() }}
+    <!--suppress JSDuplicatedDeclaration, JSUnresolvedVariable -->
+    <script>
+        //Captures
+        const capturesContainer = document.getElementById('captures-container');
+        const baseResourceUrl = '{{ url_for('get-resource', filename='filename') }}';
+
+        function createCaptureContainer(capture) {
+            const cpName = document.createElement('h4');
+            cpName.className = 'card-title mt-3 text-center text-dark';
+            cpName.innerText = capture.message;
+
+            const cpDate = document.createElement('p');
+            cpDate.className = 'mt-3 text-center text-dark';
+            cpDate.innerText = moment(capture.time).format('LLL');
+
+            let cpFile;
+            const fileSrc = baseResourceUrl.replace('filename', capture.filename);
+            if (capture.mimetype === 'video/mp4') {
+                cpFile = document.createElement('video');
+                cpFile.className = "my-3";
+                cpFile.controls = true;
+                cpFile.src = fileSrc;
+                cpFile.type = capture.mimetype;
+                cpFile.width = 320;
+                cpFile.height = 240;
+            } else {
+                cpFile = document.createElement('object');
+                cpFile.className = "img-fluid my-3";
+                cpFile.data = fileSrc;
+                cpFile.width = '320';
+                cpFile.height = '240';
+            }
+            cpFile.onclick = () => openPopup(fileSrc);
+            cpFile.type = capture.mimetype;
+
+            const captureContainer = document.createElement('div');
+            captureContainer.className = 'card border-2 border-primary col-sm-auto mb-3';
+            captureContainer.appendChild(cpName);
+            captureContainer.appendChild(cpDate);
+            captureContainer.appendChild(cpFile);
+
+            capturesContainer.appendChild(captureContainer);
+        }
+
+        {% if doorbell %}
+            const baseNewCapturesUrl = '{{ url_for('get-new-doorbell-captures', uuid=doorbell.uuid, current_capture_id='-1') }}';
+        {% else %}
+            const baseNewCapturesUrl = '{{ url_for('get-new-user-captures', current_capture_id='-1') }}';
+        {% endif %}
+        const captureIds = [];
+        const capturesPageContainer = document.getElementById('captures-page-container');
+        let lastCaptureId = 0;
+
+        function getCaptures() {
+            fetch(baseNewCapturesUrl.replace('-1', lastCaptureId))
+                .then(response => response.json())
+                .then(data => {
+                    if (!data || data.error) {
+                        console.error(`Error getting doorbells: ${data.error}`);
+                        return;
+                    }
+
+                    data.captures.forEach((capture) => {
+                        if (captureIds.includes(capture.id)) {
+                            return;
+                        }
+
+                        createCaptureContainer(capture);
+                        captureIds.push(capture.id);
+                    });
+
+                    if (lastCaptureId === 0 && data.lastCaptureId > 0) {
+                        capturesPageContainer.style.display = 'block';
+                    }
+
+                    if (data.lastCaptureId > lastCaptureId) {
+                        lastCaptureId = data.lastCaptureId;
+                    }
+                })
+                .catch(error => console.error(`Error calling get-new-captures: ${error}`));
+        }
+    </script>
+    <script>
+        //Popup
+        const popup = document.getElementById('popup-container');
+
+        function closePopup() {
+            popup.style.display = 'none';
+        }
+
+        const popupImage = document.getElementById('popup-image');
+
+        function openPopup(src) {
+            popupImage.src = src;
+            popup.style.display = 'block';
+        }
+    </script>
+    <script>
+        //OnLoad
+        window.addEventListener('load', () => {
+            getCaptures();
+            setInterval(getCaptures, 5000);
+        });
+    </script>
+{% endblock %}

@@ -13,10 +13,11 @@
                     <object
                             class="figure-img img-fluid rounded"
                             data="{{ doorbell.image }}"
-                            {% if doorbell.online == True %}
-                            data-url="{{ url_for('stream', uuid=doorbell.uuid) }}"
+                            data-online={{ doorbell.online }}
+                                    {% if doorbell.online == True %}
+                                        data-url="{{ url_for('stream', uuid=doorbell.uuid) }}"
                             name="stream-view"
-                            {% endif %}
+                                    {% endif %}
                             type="image/jpeg"
                             width="320"
                             height="240">
@@ -30,6 +31,7 @@
 {% endblock %}
 
 {% block scripts %}
+    <!--suppress JSUnresolvedVariable -->
     <script>
         //Update streams container
         const doorbells = {};
@@ -53,6 +55,7 @@
             } else {
                 sFigureObject.data = doorbell.image;
             }
+            sFigureObject.setAttribute('data-online', doorbell.online);
             sFigureObject.name = 'stream-view';
             sFigureObject.type = 'image/jpeg';
             sFigureObject.width = '320';
@@ -75,8 +78,16 @@
 
         function editStreamContainer(doorbell, streamContainer) {
             const sFigure = streamContainer.getElementsByTagName('figure')[0];
-            const sFigureCaptions = sFigure.getElementsByTagName('figcaption');
+            const sFigureObjet = sFigure.getElementsByTagName('object')[0];
 
+            if (doorbell.online === true && sFigureObjet.getAttribute('data-online').toLowerCase() !== 'true') {
+                //todo check if works
+                const dtUrl = sFigureObjet.data;
+                sFigureObjet.data = dtUrl;
+            }
+            sFigureObjet.setAttribute('data-online', doorbell.online);
+
+            const sFigureCaptions = sFigure.getElementsByTagName('figcaption');
             const sFigureName = sFigureCaptions[0];
             sFigureName.innerText = doorbell.name;
 

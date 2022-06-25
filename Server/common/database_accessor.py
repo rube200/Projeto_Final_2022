@@ -225,7 +225,7 @@ class DatabaseAccessor:
             cursor.close()
             con.close()
 
-    def _get_doorbells(self, username: str):
+    def _get_user_doorbells(self, username: str):
         con = self._get_connection()
         cursor = con.cursor()
         try:
@@ -250,9 +250,8 @@ class DatabaseAccessor:
                            f'AND a.type IN (?, ?, ?, ?) '
                            f'AND d.owner = ? '
                            f'ORDER BY a.id DESC',
-                           [after_alerts_id, AlertType.Bell.value, AlertType.Movement.value,
-                            AlertType.UserPicture.value, AlertType.OpenDoor.value,
-                            username.upper()])
+                           [after_alerts_id, AlertType.System.value, AlertType.NewBell.value, AlertType.Bell.value,
+                            AlertType.Movement.value, username.upper()])
             return cursor.fetchall()
         finally:
             cursor.close()
@@ -271,8 +270,27 @@ class DatabaseAccessor:
                            f'AND d.owner = ? '
                            f'ORDER BY a.id DESC',
                            [AlertType.Bell.value, AlertType.Movement.value, AlertType.UserPicture.value,
-                            AlertType.OpenDoor.value,
-                            username.upper()])
+                            AlertType.OpenDoor.value, username.upper()])
+            return cursor.fetchall()
+        finally:
+            cursor.close()
+            con.close()
+
+    def _get_user_captures_after(self, username: str, after_capture_id: int):
+        con = self._get_connection()
+        cursor = con.cursor()
+        try:
+            cursor.execute(f'SELECT a.id, a.uuid, d.name, a.time, a.type, a.checked, a.filename, a.notes '
+                           f'FROM alerts a '
+                           f'INNER JOIN doorbell d '
+                           f'ON a.uuid = d.id '
+                           f'WHERE a.filename IS NOT NULL '
+                           f'AND a.type IN (?, ?, ?, ?) '
+                           f'AND d.owner = ? '
+                           f'AND a.id > ? '
+                           f'ORDER BY a.id DESC',
+                           [AlertType.Bell.value, AlertType.Movement.value, AlertType.UserPicture.value,
+                            AlertType.OpenDoor.value, username.upper(), after_capture_id])
             return cursor.fetchall()
         finally:
             cursor.close()
@@ -288,28 +306,11 @@ class DatabaseAccessor:
                            f'on a.uuid = d.id '
                            f'WHERE a.uuid = ? '
                            f'AND a.filename IS NOT NULL '
-                           f'AND a.type IN (?, ?, ?) '
+                           f'AND a.type IN (?, ?, ?, ?) '
                            f'AND a.id > ? '
                            f'ORDER BY a.id DESC',
                            [uuid, AlertType.Bell.value, AlertType.Movement.value, AlertType.UserPicture.value,
-                            after_capture_id])
-            return cursor.fetchall()
-        finally:
-            cursor.close()
-            con.close()
-
-    def _get_doorbell_captures(self, uuid: int):
-        con = self._get_connection()
-        cursor = con.cursor()
-        try:
-            cursor.execute(f'SELECT id, time, type, filename '
-                           f'FROM alerts  '
-                           f'WHERE uuid = ? '
-                           f'AND filename IS NOT NULL '
-                           f'AND type IN (?, ?, ?) '
-                           f'ORDER BY id DESC',
-                           [uuid, AlertType.Bell.value, AlertType.Movement.value,
-                            AlertType.UserPicture.value])
+                            AlertType.OpenDoor.value, after_capture_id])
             return cursor.fetchall()
         finally:
             cursor.close()

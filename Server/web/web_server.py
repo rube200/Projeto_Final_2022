@@ -109,8 +109,10 @@ class WebServer(DatabaseAccessor, Flask):
         self.add_url_rule('/streams/<int:uuid>', 'stream', self.__endpoint_stream)
         self.add_url_rule('/get-doorbells-info', 'get-doorbells-info', self.__endpoint_get_doorbells_info)
         self.add_url_rule('/get-new-alerts/<int:current_alert_id>', 'get-new-alerts', self.__endpoint_get_new_alerts)
-        self.add_url_rule('/get-new-captures/<int:uuid>/<int:current_capture_id>', 'get-new-captures',
+        self.add_url_rule('/get-new-user-captures/<int:current_capture_id>', 'get-new-user-captures',
                           self.__endpoint_get_new_captures)
+        self.add_url_rule('/get-new-doorbell-captures/<int:uuid>/<int:current_capture_id>', 'get-new-doorbell-captures',
+                          self.__endpoint_get_new_doorbell_captures)
         self.add_url_rule('/get-resource/<string:filename>', 'get-resource', self.__endpoint_get_resource)
         self.add_url_rule('/open_doorbell/<int:uuid>', 'open_doorbell', self.__endpoint_open_doorbell, methods=['POST'])
         self.add_url_rule('/take_picture/<int:uuid>', 'take_picture', self.__endpoint_take_picture, methods=['POST'])
@@ -136,7 +138,7 @@ class WebServer(DatabaseAccessor, Flask):
         session['name'] = data[1]
         return username
 
-    def __convert_alert(self, alert_data: Row or dict, need_file: bool = False):
+    def __convert_alert(self, alert_data: Row, need_file: bool = False):
         col = alert_data.keys()
         if need_file:
             if 'filename' not in col:
@@ -163,7 +165,7 @@ class WebServer(DatabaseAccessor, Flask):
             'notes': alert_data['notes'] if 'notes' in col else None
         }
 
-    def __convert_captures(self, captures_data: Row or dict):
+    def __convert_captures(self, captures_data: list):
         doorbell_files = []
         for capture in captures_data:
             data = self.__convert_alert(capture, True)
@@ -235,7 +237,7 @@ class WebServer(DatabaseAccessor, Flask):
         if not username:
             return None
 
-        data = self._get_doorbells(username)
+        data = self._get_user_doorbells(username)
         if not data:
             return []
 
@@ -350,7 +352,7 @@ class WebServer(DatabaseAccessor, Flask):
             return render_template('captures.html')
 
         captures = self.__convert_captures(captures_data)
-        return render_template('captures.html', doorbell_files=captures)
+        return render_template('captures.html', captures=captures)
 
     def __endpoint_doorbells(self):
         bells = self.__get_doorbells(True)
@@ -413,12 +415,7 @@ class WebServer(DatabaseAccessor, Flask):
 
         return {'alerts': alerts, 'lastAlertId': alerts[0]['id']}, 200
 
-    def __endpoint_get_new_captures(self, uuid: int, current_capture_id: int):
-        username = self.__authenticate()
-        if not username or not self._check_owner(username, uuid):
-            return {'error': 'Unauthorized request'}, 401
-
-        captures_data = self._get_doorbell_captures_after(uuid, current_capture_id)
+    def __process_captures_request(self, captures_data: list):
         if not captures_data:
             return {'captures': [], 'lastCaptureId': 0}, 200
 
@@ -427,6 +424,22 @@ class WebServer(DatabaseAccessor, Flask):
             return {'captures': [], 'lastCaptureId': 0}, 200
 
         return {'captures': captures, 'lastCaptureId': captures[0]['id']}, 200
+
+    def __endpoint_get_new_captures(self, current_capture_id: int):
+        username = self.__authenticate()
+        if not username:
+            return {'error': 'Unauthorized request'}, 401
+
+        captures_data = self._get_user_captures_after(username, current_capture_id)
+        return self.__process_captures_request(captures_data)
+
+    def __endpoint_get_new_doorbell_captures(self, uuid: int, current_capture_id: int):
+        username = self.__authenticate()
+        if not username or not self._check_owner(username, uuid):
+            return {'error': 'Unauthorized request'}, 401
+
+        captures_data = self._get_doorbell_captures_after(uuid, current_capture_id)
+        return self.__process_captures_request(captures_data)
 
     def __endpoint_get_resource(self, filename: str):
         filename = secure_filename(filename.lower())
