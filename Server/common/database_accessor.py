@@ -238,11 +238,29 @@ class DatabaseAccessor:
             cursor.close()
             con.close()
 
+    def _get_user_alerts(self, username: str):
+        con = self._get_connection()
+        cursor = con.cursor()
+        try:
+            cursor.execute(f'SELECT a.id, a.uuid, d.name, a.time, a.type, a.filename, a.notes '
+                           f'FROM alerts a '
+                           f'INNER JOIN doorbell d '
+                           f'ON a.uuid = d.id '
+                           f'WHERE a.type IN (?, ?, ?, ?) '
+                           f'AND d.owner = ? '
+                           f'ORDER BY a.id DESC',
+                           [AlertType.System.value, AlertType.NewBell.value, AlertType.Bell.value,
+                            AlertType.Movement.value, username.upper()])
+            return cursor.fetchall()
+        finally:
+            cursor.close()
+            con.close()
+
     def _get_user_alerts_after(self, username: str, after_alerts_id: int):
         con = self._get_connection()
         cursor = con.cursor()
         try:
-            cursor.execute(f'SELECT d.id as uuid, d.name, a.id, a.time, a.type '
+            cursor.execute(f'SELECT a.id, a.uuid, d.name, a.time, a.type, a.notes '
                            f'FROM alerts a '
                            f'INNER JOIN doorbell d '
                            f'ON a.uuid = d.id '
@@ -261,7 +279,7 @@ class DatabaseAccessor:
         con = self._get_connection()
         cursor = con.cursor()
         try:
-            cursor.execute(f'SELECT d.id as uuid, d.name, a.id, a.time, a.type, a.filename '
+            cursor.execute(f'SELECT a.id, a.uuid, d.name, a.time, a.type, a.checked, a.filename '
                            f'FROM alerts a '
                            f'INNER JOIN doorbell d '
                            f'ON a.uuid = d.id '
@@ -280,7 +298,7 @@ class DatabaseAccessor:
         con = self._get_connection()
         cursor = con.cursor()
         try:
-            cursor.execute(f'SELECT a.id, a.uuid, d.name, a.time, a.type, a.checked, a.filename, a.notes '
+            cursor.execute(f'SELECT a.id, a.uuid, d.name, a.time, a.type, a.checked, a.filename '
                            f'FROM alerts a '
                            f'INNER JOIN doorbell d '
                            f'ON a.uuid = d.id '
@@ -300,7 +318,7 @@ class DatabaseAccessor:
         con = self._get_connection()
         cursor = con.cursor()
         try:
-            cursor.execute(f'SELECT a.id, a.uuid, d.name, a.time, a.type, a.checked, a.filename, a.notes '
+            cursor.execute(f'SELECT a.id, a.uuid, d.name, a.time, a.type, a.checked, a.filename '
                            f'FROM alerts a '
                            f'INNER JOIN doorbell d '
                            f'on a.uuid = d.id '
@@ -360,6 +378,26 @@ class DatabaseAccessor:
 
             con.commit()
             return True
+        finally:
+            cursor.close()
+            con.close()
+
+    def _mark_alert_checked(self, username: str, last_alert_id: int) -> int:
+        con = self._get_connection()
+        cursor = con.cursor()
+        try:
+            cursor.execute('UPDATE a '
+                           'SET a.checked = TRUE '
+                           'FROM alerts a '
+                           'INNER JOIN doorbell d '
+                           'ON a.uuid = d.id '
+                           'WHERE d.owner = ? '
+                           'AND id <= ? '
+                           'AND NOT checked ',
+                           [username, last_alert_id])
+
+            con.commit()
+            return cursor.rowcount
         finally:
             cursor.close()
             con.close()
