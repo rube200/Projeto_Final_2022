@@ -138,13 +138,14 @@ class WebServer(DatabaseAccessor, Flask):
         session['name'] = data[1]
         return username
 
-    def __convert_alert(self, alert_data: Row, need_file: bool = False):
+    def __convert_alert(self, alert_data: Row, need_file: bool = True):
         col = alert_data.keys()
         if need_file:
             if 'filename' not in col:
                 return None
 
             filename = alert_data['filename']
+            print(filename)
             if not filename or not path.exists(path.join(self.__esp_full_path, filename)):
                 return None
 
@@ -165,10 +166,10 @@ class WebServer(DatabaseAccessor, Flask):
             'notes': alert_data['notes'] if 'notes' in col else None
         }
 
-    def __convert_captures(self, captures_data: list):
+    def __convert_captures(self, captures_data: list, need_file: bool = True):
         doorbell_files = []
         for capture in captures_data:
-            data = self.__convert_alert(capture, True)
+            data = self.__convert_alert(capture, need_file)
             if not data:
                 continue
 
@@ -378,6 +379,41 @@ class WebServer(DatabaseAccessor, Flask):
         doorbell['emails'] = doorbell_data[1]
         return render_template('doorbell.html', doorbell=doorbell)
 
+    def __update_doorbell(self, uuid: int):
+        doorbell_name = request.form.get('doorbell-name')
+        emails = request.form.get('alert-emails')
+        password = request.form.get('password')
+        if not doorbell_name or not emails or not password:
+            return {'error': 'Missing parameters'}, 400
+
+        username = self.__authenticate()
+        if not username or not self._check_owner(username, uuid):
+            return {'error': 'Unauthorized request'}, 401
+
+        re_emails = re.split('[,;\r\n ]', emails)
+        alert_emails = []
+        for email in re_emails:
+            email = email.strip().lower()
+            if not email:
+                continue
+
+            try:
+                validate_email(email)
+            except EmailNotValidError:
+                continue
+
+            if email not in alert_emails:
+                alert_emails.append(email)
+
+        if not self._doorbell_update(username, password, uuid, doorbell_name, alert_emails):
+            return {'error': 'Unauthorized request'}, 401
+
+        return {
+                   'id': uuid,
+                   'name': doorbell_name,
+                   'emails': alert_emails
+               }, 200
+
     def __endpoint_streams(self):
         bells = self.__get_doorbells(True)
         if bells is None:
@@ -409,7 +445,7 @@ class WebServer(DatabaseAccessor, Flask):
         if not alerts_data:
             return {'alerts': [], 'lastAlertId': 0}, 200
 
-        alerts = self.__convert_captures(alerts_data)
+        alerts = self.__convert_captures(alerts_data, False)
         if not alerts:
             return {'alerts': [], 'lastAlertId': 0}, 200
 
@@ -476,41 +512,6 @@ class WebServer(DatabaseAccessor, Flask):
     def __endpoint_take_picture(self, uuid: int):
         return self.__open_door_take_picture(uuid, AlertType.UserPicture, lambda esp: esp.save_picture)
 
-    def __update_doorbell(self, uuid: int):
-        doorbell_name = request.form.get('doorbell-name')
-        emails = request.form.get('alert-emails')
-        password = request.form.get('password')
-        if not doorbell_name or not emails or not password:
-            return {'error': 'Missing parameters'}, 400
-
-        username = self.__authenticate()
-        if not username or not self._check_owner(username, uuid):
-            return {'error': 'Unauthorized request'}, 401
-
-        re_emails = re.split('[,;\r\n ]', emails)
-        alert_emails = []
-        for email in re_emails:
-            email = email.strip().lower()
-            if not email:
-                continue
-
-            try:
-                validate_email(email)
-            except EmailNotValidError:
-                continue
-
-            if email not in alert_emails:
-                alert_emails.append(email)
-
-        if not self._doorbell_update(username, password, uuid, doorbell_name, alert_emails):
-            return {'error': 'Unauthorized request'}, 401
-
-        return {
-                   'id': uuid,
-                   'name': doorbell_name,
-                   'emails': alert_emails
-               }, 200
-
     # todo recheck this one
     def __endpoint_alerts(self):
         username = self.__authenticate()
@@ -518,99 +519,19 @@ class WebServer(DatabaseAccessor, Flask):
             return redirect(url_for('login', page_to_redirect='alerts'))
 
         if request.method == 'POST':
-            data = request.form.get('date')
-            print(data)
-            # mark all alerts dated older than or equal to date as read
-            con = self._get_connection()
-            cursor = con.cursor()
-            try:
-                cursor.execute('UPDATE alerts SET checked = ? WHERE time <= ? ', (True, data))
-                con.commit()
-                return render_template('alerts.html')
-            finally:
-                cursor.close()
-                con.close()
+            return self.__check_alerts(username)
 
-        # con = self._get_connection()
-        # cursor = con.cursor()
-        # cursor.execute("INSERT INTO doorbell VALUES (1, 'doorbell_name', 'joao', '12.2.2020') ")
-        # con.commit()
-        # cursor.execute("INSERT INTO alerts VALUES ('1', '1', ?, '3', False, ?, 'sup sup') ", (datetime.now(), url_for('static', filename='ronaldo.mp4')))
-        # con.commit()
-        # cursor.execute("INSERT INTO alerts VALUES ('2', '2', ?, '3', False, ?, 'sup sup') ", (datetime.now(), url_for('static', filename='ronaldo.mp4')))
-        # con.commit()
-        # cursor.close()
-        # con.close()
-        con = self._get_connection()
-        cursor = con.cursor()
-        try:
-            paths = []
-            names = []
-            dates = []
-            checked = []
-            types = []
-            notes = []
-            cursor.execute(
-                'SELECT d.id, d.name, n.time, n.filename, n.checked, n.type, n.notes  '
-                'FROM doorbell d '
-                'INNER JOIN alerts n '
-                'ON d.id = n.uuid '
-                'WHERE d.owner LIKE ? '
-                'ORDER BY N.time DESC',
-                [username])
-            rows = cursor.fetchall()
+        alerts_data = self._get_user_alerts(username)
+        if not alerts_data:
+            return render_template('alerts.html')
 
-            for row in rows:
-                # types.append(bell[0])
-                paths.append(row[3])
-                dates.append(row[2])  # .split(".")[0])  # split to remove milliseconds
-                names.append(row[1])
-                checked.append(row[4])
-                types.append(row[5])
-                notes.append(row[6])
+        alerts = self.__convert_captures(alerts_data, False)
+        return render_template('alerts.html', alerts=alerts)
 
-            # dummy data
-            """
-            paths.append(url_for('static', filename='ronaldo.mp4'))
-            dates.append('12.2.20')  # split to remove milliseconds
-            names.append('doorbell1')
-            checked.append(False)
-            types.append(4)
-            notes.append("ligma")
-            paths.append(url_for('static', filename='ronaldo.mp4'))
-            dates.append('12.2.20')  # split to remove milliseconds
-            names.append('doorbell1')
-            checked.append(False)
-            types.append(3)
-            notes.append("ligma")
-            paths.append(url_for('static', filename='default_profile.png'))
-            dates.append('12.2.20')  # split to remove milliseconds
-            names.append('doorbell1')
-            checked.append(False)
-            types.append(2)
-            notes.append("ligma")
-            paths.append(url_for('static', filename='default_profile.png'))
-            dates.append('12.2.20')  # split to remove milliseconds
-            names.append('doorbell1')
-            checked.append(False)
-            types.append(3)
-            notes.append("ligma")
-            paths.append(url_for('static', filename='default_profile.png'))
-            dates.append('12.2.20')  # split to remove milliseconds
-            names.append('doorbell1')
-            checked.append(False)
-            types.append(1)
-            notes.append("ligma")
-            paths.append(url_for('static', filename='default_profile.png'))
-            dates.append('12.2.20')  # split to remove milliseconds
-            names.append('doorbell1')
-            checked.append(False)
-            types.append(2)
-            notes.append("ligma")"""
+    def __check_alerts(self, username: str):
+        last_alert_id = request.form.get('last-alert-id')
+        if not last_alert_id:
+            return {'error': 'Invalid request'}, 400
 
-            # return render_template('imageGal.html', types = types, paths = paths, dates = dates, doorbells = names)
-            return render_template('alerts.html', paths=paths, dates=dates, doorbells=names, checks=checked,
-                                   types=types, notes=notes)
-        finally:
-            cursor.close()
-            con.close()
+        count = self._mark_alert_checked(username, int(last_alert_id))
+        return {'alertsMarked': count, 'last-alert-id': last_alert_id}, 200
