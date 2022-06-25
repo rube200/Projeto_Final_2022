@@ -92,6 +92,8 @@
 {% endblock %}
 
 {% block template_scripts %}
+    <script src="{{ url_for('static', filename='moment.js') }}"></script>
+
     {% block alert_count_script %}{% endblock %}
     {% if not self.alert_count_script() %}
         <script>
@@ -101,14 +103,14 @@
         </script>
     {% endif %}
 
-    <!--suppress JSDuplicatedDeclaration, JSUnresolvedVariable -->
+    <!--suppress JSUnresolvedVariable -->
     <script>
         const alertsDropdownContainer = document.getElementById('alerts-count-dropdown');
 
         function createAlertDropdown(alert) {
             const spanMsg = document.createElement('span');
             spanMsg.className = 'small';
-            spanMsg.innerText = alert.date;
+            spanMsg.innerText = moment(alert.date).format('LLL');
 
             const pMsg = document.createElement('p');
             pMsg.innerText = alert.message;
