@@ -7,7 +7,7 @@ from os import environ, path, makedirs
 from sqlite3 import Row
 from time import monotonic, sleep, time
 from traceback import format_exc
-from typing import Callable, Tuple
+from typing import Callable, Tuple, Union
 
 import bcrypt
 import jwt
@@ -128,7 +128,7 @@ class WebServer(DatabaseAccessor, Flask):
             username = payload['username']
             if not username:
                 return None
-        except (jwt.ExpiredSignatureError | jwt.InvalidTokenError):
+        except (Union[jwt.ExpiredSignatureError, jwt.InvalidTokenError]):
             return None
 
         data = self._get_user(username)
@@ -170,9 +170,9 @@ class WebServer(DatabaseAccessor, Flask):
             if not data:
                 continue
 
-            message = data.get('message')
-            if not message:
+            if 'message' not in data:
                 data['message'] = get_alert_type_message(data['type'])
+
             doorbell_files.append(data)
 
         return doorbell_files
@@ -376,7 +376,7 @@ class WebServer(DatabaseAccessor, Flask):
 
         doorbell_data = self._get_doorbell(uuid)
         doorbell = self.__convert_doorbell({'id': uuid, 'name': doorbell_data[0]}, True)
-        doorbell.emails = doorbell_data[1]
+        doorbell['emails'] = doorbell_data[1]
         return render_template('doorbell.html', doorbell=doorbell)
 
     def __endpoint_streams(self):
@@ -423,11 +423,11 @@ class WebServer(DatabaseAccessor, Flask):
 
         captures_data = self._get_user_captures_after(username, current_capture_id)
         if not captures_data:
-            return {}, 200
+            return {'captures': [], 'lastCaptureId': 0}, 200
 
         captures = self.__convert_captures(captures_data)
         if not captures:
-            return {}, 200
+            return {'captures': [], 'lastCaptureId': 0}, 200
 
         return {'captures': captures, 'lastCaptureId': captures[0]['id']}, 200
 
@@ -531,10 +531,9 @@ class WebServer(DatabaseAccessor, Flask):
         # con.commit()
         # cursor.close()
         # con.close()
-
+        con = self._get_connection()
+        cursor = con.cursor()
         try:
-            con = self._get_connection()
-            cursor = con.cursor()
             paths = []
             names = []
             dates = []
