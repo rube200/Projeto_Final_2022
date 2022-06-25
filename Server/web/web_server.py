@@ -109,7 +109,7 @@ class WebServer(DatabaseAccessor, Flask):
         self.add_url_rule('/streams/<int:uuid>', 'stream', self.__endpoint_stream)
         self.add_url_rule('/get-doorbells-info', 'get-doorbells-info', self.__endpoint_get_doorbells_info)
         self.add_url_rule('/get-new-alerts/<int:current_alert_id>', 'get-new-alerts', self.__endpoint_get_new_alerts)
-        self.add_url_rule('/get-new-captures/<int:current_capture_id>', 'get-new-captures',
+        self.add_url_rule('/get-new-captures/<int:uuid>/<int:current_capture_id>', 'get-new-captures',
                           self.__endpoint_get_new_captures)
         self.add_url_rule('/get-resource/<string:filename>', 'get-resource', self.__endpoint_get_resource)
         self.add_url_rule('/open_doorbell/<int:uuid>', 'open_doorbell', self.__endpoint_open_doorbell, methods=['POST'])
@@ -229,9 +229,6 @@ class WebServer(DatabaseAccessor, Flask):
         finally:
             esp.stop_stream()
             return b'Content-Length: 0'
-
-    def __get_new_alerts(self, username: str):
-        pass
 
     def __get_doorbells(self, need_camera: bool):
         username = self.__authenticate()
@@ -416,12 +413,12 @@ class WebServer(DatabaseAccessor, Flask):
 
         return {'alerts': alerts, 'lastAlertId': alerts[0]['id']}, 200
 
-    def __endpoint_get_new_captures(self, current_capture_id: int):
+    def __endpoint_get_new_captures(self, uuid: int, current_capture_id: int):
         username = self.__authenticate()
-        if not username:
+        if not username or not self._check_owner(username, uuid):
             return {'error': 'Unauthorized request'}, 401
 
-        captures_data = self._get_user_captures_after(username, current_capture_id)
+        captures_data = self._get_doorbell_captures_after(uuid, current_capture_id)
         if not captures_data:
             return {'captures': [], 'lastCaptureId': 0}, 200
 

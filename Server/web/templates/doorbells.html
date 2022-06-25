@@ -26,10 +26,9 @@
 {% block scripts %}
     <!--suppress JSUnresolvedVariable -->
     <script>
-        const doorbellsRedirectUrl = '{{ url_for('doorbell', uuid='0') }}';
-
+        const doorbellsRedirectUrl = '{{ url_for('doorbell', uuid='-1') }}';
         function redirectToDoorbell(uuid) {
-            location.href = doorbellsRedirectUrl.replace('0', uuid);
+            location.href = doorbellsRedirectUrl.replace('-1', uuid);
         }
 
         const doorbells = {};

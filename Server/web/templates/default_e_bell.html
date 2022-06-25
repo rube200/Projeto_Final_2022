@@ -130,11 +130,11 @@
 
         const alertsCount = document.getElementById('alerts-count');
         const alertsIds = [];
-        const baseNewAlertsUrl = '{{ url_for('get-new-alerts', current_alert_id='0') }}';
+        const baseNewAlertsUrl = '{{ url_for('get-new-alerts', current_alert_id='-1') }}';
         let lastAlertId = 0;
 
         function getAlerts() {
-            fetch(baseNewAlertsUrl.replace('0', lastAlertId))
+            fetch(baseNewAlertsUrl.replace('-1', lastAlertId))
                 .then(response => response.json())
                 .then(data => {
                     if (!data || data.error) {

@@ -278,22 +278,21 @@ class DatabaseAccessor:
             cursor.close()
             con.close()
 
-    def _get_user_captures_after(self, username: str, after_capture_id: int):
+    def _get_doorbell_captures_after(self, uuid: int, after_capture_id: int):
         con = self._get_connection()
         cursor = con.cursor()
         try:
-            cursor.execute(f'SELECT d.id as uuid, d.name, a.id, a.time, a.type, a.filename '
+            cursor.execute(f'SELECT a.id, a.uuid, d.name, a.time, a.type, a.checked, a.filename, a.notes '
                            f'FROM alerts a '
                            f'INNER JOIN doorbell d '
-                           f'ON a.uuid = d.id '
-                           f'WHERE a.id > ? '
+                           f'on a.uuid = d.id '
+                           f'WHERE a.uuid = ? '
                            f'AND a.filename IS NOT NULL '
                            f'AND a.type IN (?, ?, ?) '
-                           f'AND d.owner = ? '
+                           f'AND a.id > ? '
                            f'ORDER BY a.id DESC',
-                           [after_capture_id, AlertType.Bell.value, AlertType.Movement.value,
-                            AlertType.UserPicture.value,
-                            username.upper()])
+                           [uuid, AlertType.Bell.value, AlertType.Movement.value, AlertType.UserPicture.value,
+                            after_capture_id])
             return cursor.fetchall()
         finally:
             cursor.close()

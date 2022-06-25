@@ -11,7 +11,10 @@ class AlertType(Enum):
     OpenDoor = 6
 
 
-def get_alert_type_message(alert: AlertType) -> str:
+def get_alert_type_message(alert: AlertType or int) -> str:
+    if isinstance(alert, int):
+        alert = AlertType(alert)
+
     if alert == AlertType.Invalid:
         return 'Invalid alert type'
     elif alert == AlertType.System:

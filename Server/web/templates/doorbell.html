@@ -231,7 +231,7 @@
         function createCaptureContainer(capture) {
             const cpName = document.createElement('h4');
             cpName.className = 'card-title mt-3 text-center text-dark';
-            cpName.innerText = capture.name;
+            cpName.innerText = capture.message;
 
             const cpDate = document.createElement('p');
             cpDate.className = 'mt-3 text-center text-dark';
@@ -266,13 +266,13 @@
             capturesContainer.appendChild(captureContainer);
         }
 
-        const baseNewCapturesUrl = '{{ url_for('get-new-captures', current_capture_id='0') }}';
+        const baseNewCapturesUrl = '{{ url_for('get-new-captures', uuid=doorbell.uuid, current_capture_id='-1') }}';
         const captureIds = [];
         const capturesPageContainer = document.getElementById('captures-page-container');
         let lastCaptureId = 0;
 
         function getCaptures() {
-            fetch(baseNewCapturesUrl.replace('0', lastCaptureId))
+            fetch(baseNewCapturesUrl.replace('-1', lastCaptureId))
                 .then(response => response.json())
                 .then(data => {
                     if (!data || data.error) {
