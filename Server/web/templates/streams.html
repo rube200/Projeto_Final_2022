@@ -2,23 +2,24 @@
 
 {% set title='All streams' %}
 {% set nav_title='Streams from all doorbells' %}
-{% set no_bells=doorbells|length <= 0 %}
+{% set have_content=doorbells|length > 0 %}
+{% set nothing_message='You don\'t have any doorbells.' %}
 
 {% block e_bell_content %}
-    <div class="d-flex flex-wrap justify-content-evenly">
+    <div class="d-flex flex-wrap justify-content-evenly" id="streams-container">
         {% for doorbell in doorbells %}
-            <div class="m-5">
+            <div class="m-5" id="stream-{{ doorbell.uuid }}">
                 <figure class="figure">
                     <object
-                            width="320"
-                            height="240"
                             class="figure-img img-fluid rounded"
                             data="{{ doorbell.image }}"
                             {% if doorbell.online == True %}
                             data-url="{{ url_for('stream', uuid=doorbell.uuid) }}"
                             name="stream-view"
                             {% endif %}
-                            type="image/jpeg">
+                            type="image/jpeg"
+                            width="320"
+                            height="240">
                     </object>
                     <figcaption class="figure-caption text-center">{{ doorbell.name }}</figcaption>
                     <figcaption class="figure-caption text-center">{{ doorbell.state }}</figcaption>
@@ -30,9 +31,92 @@
 
 {% block scripts %}
     <script>
+        //Update streams container
+        const doorbells = {};
+        {% for doorbell in doorbells %}
+            doorbells[{{ doorbell.uuid }}] = document.getElementById('stream-{{ doorbell.uuid }}');
+        {% endfor %}
+
+        const streamBaseUrl = '{{ url_for('stream', uuid='-1') }}';
+        const streamsContainer = document.getElementById('streams-container');
+
+        function createStreamContainer(doorbell) {
+            const sFigureCaptionState = document.createElement('figcaption');
+            const sFigureCaptionName = sFigureCaptionState.cloneNode();
+            sFigureCaptionState.innerText = doorbell.state;
+            sFigureCaptionName.innerText = doorbell.name;
+
+            const sFigureObject = document.createElement('object');
+            sFigureObject.className = 'figure-img img-fluid rounded';
+            if (doorbell.online === true) {
+                sFigureObject.data = streamBaseUrl.replace('-1', doorbell.uuid);
+            } else {
+                sFigureObject.data = doorbell.image;
+            }
+            sFigureObject.name = 'stream-view';
+            sFigureObject.type = 'image/jpeg';
+            sFigureObject.width = '320';
+            sFigureObject.height = '240';
+
+            const sFigure = document.createElement('figure');
+            sFigure.className = 'figure';
+            sFigure.appendChild(sFigureObject);
+            sFigure.appendChild(sFigureCaptionName);
+            sFigure.appendChild(sFigureCaptionState);
+
+            const sContainer = document.createElement('div');
+            sContainer.className = 'm-5';
+            sContainer.id = `stream-${doorbell.uuid}`;
+            sContainer.appendChild(sFigure);
+
+            streamsContainer.appendChild(sContainer);
+            return sContainer;
+        }
+
+        function editStreamContainer(doorbell, streamContainer) {
+            const sFigure = streamContainer.getElementsByTagName('figure')[0];
+            const sFigureCaptions = sFigure.getElementsByTagName('figcaption');
+
+            const sFigureName = sFigureCaptions[0];
+            sFigureName.innerText = doorbell.name;
+
+            const sFigureState = sFigureCaptions[1];
+            sFigureState.innerText = doorbell.state;
+        }
+
+        const nothingToShow = document.getElementById('nothing-to-show');
+        function getDoorbellStat() {
+            fetch('{{ url_for('get-doorbells-info') }}')
+                .then(response => response.json())
+                .then(data => {
+                    if (!data || data.error) {
+                        console.error(`Error getting doorbells: ${data.error}`);
+                        return;
+                    }
+
+                    const oldCount = doorbells.length;
+                    data.doorbells.forEach((doorbell) => {
+                        const streamContainer = doorbells[doorbell.uuid];
+                        if (streamContainer !== undefined) {
+                            editStreamContainer(doorbell, streamContainer);
+                            return;
+                        }
+
+                        doorbells[doorbell.uuid] = createStreamContainer(doorbell);
+                    });
+                    if (oldCount === 0 && doorbells.length > 0) {
+                        nothingToShow.style.display = 'none';
+                    }
+                })
+                .catch(error => console.error(`Error calling get-doorbells-info: ${error}`));
+        }
+
         window.addEventListener('load', function () {
             const streams = document.getElementsByName('stream-view');
-            streams.forEach(stream => stream.data = stream.getAttribute('data-url'));
+            streams.forEach(stream => {
+                stream.data = stream.getAttribute('data-url');
+            });
+            setInterval(getDoorbellStat, 5000);
         });
     </script>
 {% endblock %}

@@ -1,7 +1,8 @@
 {% extends 'default_e_bell.html' %}
 
 {% set nav_title='Doorbells' %}
-{% set no_bells=doorbells|length <= 0 %}
+{% set have_content=doorbells|length > 0 %}
+{% set nothing_message='You don\'t have any doorbells.' %}
 
 {% block e_bell_content %}
     <div class="d-flex flex-wrap justify-content-evenly" id="doorbells-container">
@@ -26,6 +27,7 @@
 {% block scripts %}
     <!--suppress JSUnresolvedVariable -->
     <script>
+        //Update doorbells container
         const doorbellsRedirectUrl = '{{ url_for('doorbell', uuid='-1') }}';
         function redirectToDoorbell(uuid) {
             location.href = doorbellsRedirectUrl.replace('-1', uuid);
@@ -72,7 +74,7 @@
             dContainer.appendChild(dInfoDiv);
 
             doorbellsContainer.appendChild(dContainer);
-            doorbells[doorbell.uuid] = dContainer;
+            return dContainer;
         }
 
         function editDoorbellContainer(doorbell, doorbellContainer) {
@@ -87,6 +89,7 @@
             dState.innerText = doorbell.state;
         }
 
+        const nothingToShow = document.getElementById('nothing-to-show');
         function getDoorbellStat() {
             fetch('{{ url_for('get-doorbells-info') }}')
                 .then(response => response.json())
@@ -96,6 +99,7 @@
                         return;
                     }
 
+                    const oldCount = doorbells.length;
                     data.doorbells.forEach((doorbell) => {
                         const doorbellContainer = doorbells[doorbell.uuid];
                         if (doorbellsContainer !== undefined) {
@@ -103,8 +107,11 @@
                             return;
                         }
 
-                        createDoorbellContainer(doorbell);
+                        doorbells[doorbell.uuid] = createDoorbellContainer(doorbell);
                     });
+                    if (oldCount === 0 && doorbells.length > 0) {
+                        nothingToShow.style.display = 'none';
+                    }
                 })
                 .catch(error => console.error(`Error calling get-doorbells-info: ${error}`));
         }
