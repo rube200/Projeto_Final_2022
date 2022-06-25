@@ -1,11 +1,26 @@
 {% extends 'default_e_bell.html' %}
 
 {% set nav_title='Alerts' %}
+{% set have_content=alerts|length > 0 %}
+{% set nothing_message='You don\'t have any alerts.' %}
 
 {% block e_bell_content %}
-<div class="boxy">
-    <button type="button" class="mark-btn vertical-center btn-clic" onclick="markRead()">Mark all as Read</button>
-</div>
+    <div id="alerts-page-container" style="display:none;">
+        <br/>
+        <h1 class="h1 text-center text-dark w-100">Alerts</h1>
+        <br/>
+        <div class="justify-content-evenly row" id="alerts-container">
+        </div>
+    </div>
+    <div class="popup-pic" id="popup-container">
+        <span id="popup-pic-close-button" onclick="closePopup()">&times;</span>
+        <!--suppress RequiredAttributes -->
+        <img alt="Bigger image selected by user" id="popup-image">
+    </div>
+
+    <div class="boxy">
+        <button type="button" class="mark-btn vertical-center btn-clic" onclick="markRead()">Mark all as Read</button>
+    </div>
     <div class="d-flex flex-wrap justify-content-around" style="padding-bottom: 5px;">
         {% for type in types %}
             {% if 1 == type %}
@@ -44,125 +59,105 @@
                 <!--bell rang-->
                 <div class="card m-2" class = "card">
                     <button type="button" onclick="bigPic(this)" class="card-body card-hover card-hover-purple">
-                      {% if checks[loop.index0] == false %}
-                      <img style="width: 50px; float: right;" src="{{ url_for('static', filename='alert.png') }}">
-                      {% endif %}
-                      <h2 class="card-title">{{ doorbells[loop.index0] }}</h2>                  
-                      <h4>Bell Was Rang</h4>
-                      <h3 class="card-subtitle text-muted date">{{ dates[loop.index0] }}</h3> 
-                      {% if ".mp4" in paths[loop.index0]  %}
-                        <video loop autoplay class = "target" style="width: 50px; float: right;" src="{{ paths[loop.index0] }}">
-                      {% else %}
-                        <img class = "target" style="width: 50px; float: right;" src='{{ paths[loop.index0] }}'>
-                      {% endif %}                  
-                      
+                        {% if checks[loop.index0] == false %}
+                            <img style="width: 50px; float: right;" src="{{ url_for('static', filename='alert.png') }}">
+                        {% endif %}
+                        <h2 class="card-title">{{ doorbells[loop.index0] }}</h2>
+                        <h4>Bell Was Rang</h4>
+                        <h3 class="card-subtitle text-muted date">{{ dates[loop.index0] }}</h3>
+                        {% if ".mp4" in paths[loop.index0] %}
+                            <video loop autoplay class="target" style="width: 50px; float: right;"
+                                   src="{{ paths[loop.index0] }}">
+                        {% else %}
+                            <img class="target" style="width: 50px; float: right;" src='{{ paths[loop.index0] }}'>
+                        {% endif %}
+
                     </button>
-                  </div> 
-            {% else %}    
+                </div>
+            {% else %}
                 <!--movimento detetado-->
-                <div class="card m-2" class = "card">
+                <div class="card m-2" class="card">
                     <button type="button" onclick="bigPic(this)" class="card-body card-hover card-hover-red">
-                      {% if checks[loop.index0] == false %}
-                      <img style="width: 50px; float: right;" src="{{ url_for('static', filename='alert.png') }}">
-                      {% endif %}
-                      <h2 class="card-title">{{ doorbells[loop.index0] }}</h2>
-                      <h4>Movement Detected</h4>
-                      <h3 class="card-subtitle text-muted date">{{ dates[loop.index0] }}</h3>
-                      {% if ".mp4" in paths[loop.index0]  %}
-                        <video loop autoplay class = "target" style="width: 50px; float: right;" src="{{ paths[loop.index0] }}">
-                      {% else %}
-                        <img class = "target" style="width: 50px; float: right;" src='{{ paths[loop.index0] }}'>
-                      {% endif %}  
-                       
-                 
+                        {% if checks[loop.index0] == false %}
+                            <img style="width: 50px; float: right;" src="{{ url_for('static', filename='alert.png') }}">
+                        {% endif %}
+                        <h2 class="card-title">{{ doorbells[loop.index0] }}</h2>
+                        <h4>Movement Detected</h4>
+                        <h3 class="card-subtitle text-muted date">{{ dates[loop.index0] }}</h3>
+                        {% if ".mp4" in paths[loop.index0] %}
+                            <video loop autoplay class="target" style="width: 50px; float: right;"
+                                   src="{{ paths[loop.index0] }}">
+                        {% else %}
+                            <img class="target" style="width: 50px; float: right;" src='{{ paths[loop.index0] }}'>
+                        {% endif %}
+
+
                     </button>
-                  </div>     
-                     
-            {% endif %}  
+                </div>
+
+            {% endif %}
         {% endfor %}
     </div>
 
 
-    <div class="popup-pic" id = "big1">
-        <span id="span1">&times;</span>
-        <img src='{{ paths[0] }}' alt="">
-      </div>
-      <div class="popup-pic" id = "big2">
-          <span id="span2">&times;</span>
-          <video src='{{ paths[0] }}' alt="" controls>
-      </div>
-      <div class="popup-pic" id = "big3">
-        <span id="span3">&times;</span>
-        <div id="msg-Board">
-        </div>
-    </div>
-  
 
-      {% block alert_count_script %}
-        <script>
-          function onAlertCount(data) {
-            if (data > 0){
-              location.reload(true);//refresh page
-            }
-              //metes aqui o teu codigo
-              //isto aqui e chamado sempre que a pagina vai buscar os alerts
-              //data -> numero de alerts (ex: 0,3,etc)
-              
-              //se deres 'return false' o contador de notificacoes vai mudar
-              //se deres 'return true' ele vai ser ignora enao vai ser alterado
-              return false;
-          }
-        //podes acrescentar aqui mais codigo ou funcoes
 
-            function bigPic(elem){
-              var path = elem.querySelector(".target").src;
-              if(path.includes(".mp4")){
-                    document.getElementById('big2').style.display = 'block';
-                    document.querySelector('.popup-pic video').src = path;
-              }else{
-                document.getElementById('big1').style.display = 'block';
-                document.querySelector('.popup-pic img').src = path;
-              }
+{% endblock %}
+
+
+{% block scripts %}
+    <script>
+        const alertsPageContainer = document.getElementById('alerts-page-container');
+    </script>
+
+
+
+    <script>
+        //Popup
+        const popup = document.getElementById('popup-container');
+
+        function closePopup() {
+            popup.style.display = 'none';
+        }
+
+        const popupImage = document.getElementById('popup-image');
+
+        function openPopup(src) {
+            popupImage.src = src;
+            popup.style.display = 'block';
+        }
+    </script>
+    <script>
+        //Mark alerts
+        let lastAlertId = 0;
+
+        function markAlertsChecked() {
+            if (lastAlertId === 0) {
+                //todo maybe add a message
+                return;
             }
 
-            function bigMsg(elem){
-                var msg = elem.querySelector("p").textContent;
-                console.log(msg)
-                document.getElementById('big3').style.display = 'block';
-                document.querySelector('#msg-Board').textContent = msg;
-            }
-  
-            document.getElementById('span1').onclick = () =>{
-              document.getElementById('big1').style.display = 'none';
-            };
-            document.getElementById('span2').onclick = () =>{
-              document.getElementById('big2').style.display = 'none';
-            };
-            document.getElementById('span3').onclick = () =>{
-              document.getElementById('big3').style.display = 'none';
-            };
+            const formAlertId = new FormData();
+            formAlertId.append('last-alert-id', lastAlertId.toString());
+            fetch('{{ url_for("alerts") }}', {
+                body: formAlertId,
+                method: 'POST',
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (!data || data.error) {
+                        console.error(`Error while marking alerts: ${data.error}`);
+                        alert(`Error while marking alerts. ${data.error}`);
+                        return;
+                    }
 
-            function markRead(){
-                var dates = []
-                document.querySelectorAll(".date").forEach(element => {
-                    dates.push(element.textContent)
+                    console.log(data);
+                    //todo something
+                })
+                .catch(error => {
+                    console.error(`Error while marking alerts: ${error}`);
+                    alert(`Error while marking alerts. ${error}`);
                 });
-
-                var date = dates.reduce((a, b) => a > b ? a : b); //reduce list to just the most recent date
-                //needs a post here to tell server to mark all notifications up to older than (and as old as) "date"
-
-
-                var xhr = new XMLHttpRequest();
-                xhr.open('POST', '{{ url_for("alerts") }}', true);
-                var data = new FormData();
-                data.append('date', date);
-                xhr.onload = function () {
-                    // do something to response
-                    location.reload(true);
-                };
-                xhr.send(data);
-            }
-        </script>
-      {% endblock %}
-    
+        }
+    </script>
 {% endblock %}
