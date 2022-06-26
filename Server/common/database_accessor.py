@@ -248,7 +248,7 @@ class DatabaseAccessor:
                            f'ON a.uuid = d.id '
                            f'WHERE a.type IN (?, ?, ?, ?) '
                            f'AND d.owner = ? '
-                           f'ORDER BY a.id DESC',
+                           f'ORDER BY a.time',
                            [AlertType.System.value, AlertType.NewBell.value, AlertType.Bell.value,
                             AlertType.Movement.value, username.upper()])
             return cursor.fetchall()
@@ -267,7 +267,7 @@ class DatabaseAccessor:
                            f'WHERE a.id > ? '
                            f'AND a.type IN (?, ?, ?, ?) '
                            f'AND d.owner = ? '
-                           f'ORDER BY a.id DESC',
+                           f'ORDER BY a.time',
                            [after_alerts_id, AlertType.System.value, AlertType.NewBell.value, AlertType.Bell.value,
                             AlertType.Movement.value, username.upper()])
             return cursor.fetchall()
@@ -286,7 +286,7 @@ class DatabaseAccessor:
                            f'WHERE a.filename IS NOT NULL '
                            f'AND a.type IN (?, ?, ?, ?) '
                            f'AND d.owner = ? '
-                           f'ORDER BY a.id DESC',
+                           f'ORDER BY a.time DESC',
                            [AlertType.Bell.value, AlertType.Movement.value, AlertType.UserPicture.value,
                             AlertType.OpenDoor.value, username.upper()])
             return cursor.fetchall()
@@ -326,7 +326,7 @@ class DatabaseAccessor:
                            f'AND a.filename IS NOT NULL '
                            f'AND a.type IN (?, ?, ?, ?) '
                            f'AND a.id > ? '
-                           f'ORDER BY a.id DESC',
+                           f'ORDER BY a.time DESC',
                            [uuid, AlertType.Bell.value, AlertType.Movement.value, AlertType.UserPicture.value,
                             AlertType.OpenDoor.value, after_capture_id])
             return cursor.fetchall()
