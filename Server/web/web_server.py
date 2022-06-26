@@ -145,7 +145,6 @@ class WebServer(DatabaseAccessor, Flask):
                 return None
 
             filename = alert_data['filename']
-            print(filename)
             if not filename or not path.exists(path.join(self.__esp_full_path, filename)):
                 return None
 
@@ -174,7 +173,12 @@ class WebServer(DatabaseAccessor, Flask):
                 continue
 
             if 'message' not in data:
-                data['message'] = get_alert_type_message(data['type'])
+                tp = data['type']
+                if tp == AlertType.NewBell.value:
+                    nm = data['name']
+                    data['message'] = f'{get_alert_type_message(tp)} ({nm})'
+                else:
+                    data['message'] = get_alert_type_message(data['type'])
 
             doorbell_files.append(data)
 

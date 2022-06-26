@@ -72,6 +72,7 @@ class ClientSocket(ClientData):
             log.debug(ex.winerror)
             log.debug(ex.strerror)
             log.debug(ex.filename)
+            # todo analyse
             # timeout error 110
             # os error 107
 

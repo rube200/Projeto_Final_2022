@@ -7,10 +7,10 @@
 {% block e_bell_content %}
     <div class="d-flex flex-wrap justify-content-evenly" id="doorbells-container">
         {% for doorbell in doorbells %}
-            <div class="card card-hover card-hover-cyan m-5" id="doorbell-{{ doorbell.uuid }}"
+            <div class="card card-hover card-hover-cyan card-width m-5" id="doorbell-{{ doorbell.uuid }}"
                  onclick="redirectToDoorbell({{ doorbell.uuid }})">
                 <img alt="Last image from stream for {{ doorbell.name }}"
-                     class="figure-img img-fluid"
+                     class="figure-img img-fluid doorbells-image"
                      src="{{ doorbell.image }}"
                      width="320"
                      height="240"/>
