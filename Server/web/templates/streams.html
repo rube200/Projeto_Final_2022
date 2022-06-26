@@ -96,6 +96,7 @@
         }
 
         const nothingToShow = document.getElementById('nothing-to-show');
+
         function getDoorbellStat() {
             fetch('{{ url_for('get-doorbells-info') }}')
                 .then(response => response.json())

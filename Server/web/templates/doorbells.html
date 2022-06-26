@@ -29,6 +29,7 @@
     <script>
         //Update doorbells container
         const doorbellsRedirectUrl = '{{ url_for('doorbell', uuid='-1') }}';
+
         function redirectToDoorbell(uuid) {
             location.href = doorbellsRedirectUrl.replace('-1', uuid);
         }
@@ -90,6 +91,7 @@
         }
 
         const nothingToShow = document.getElementById('nothing-to-show');
+
         function getDoorbellStat() {
             fetch('{{ url_for('get-doorbells-info') }}')
                 .then(response => response.json())

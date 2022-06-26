@@ -242,7 +242,7 @@ class DatabaseAccessor:
         con = self._get_connection()
         cursor = con.cursor()
         try:
-            cursor.execute(f'SELECT a.id, a.uuid, d.name, a.time, a.type, a.filename, a.notes '
+            cursor.execute(f'SELECT a.id, a.uuid, d.name, a.time, a.type, a.checked, a.filename, a.notes '
                            f'FROM alerts a '
                            f'INNER JOIN doorbell d '
                            f'ON a.uuid = d.id '
@@ -260,7 +260,7 @@ class DatabaseAccessor:
         con = self._get_connection()
         cursor = con.cursor()
         try:
-            cursor.execute(f'SELECT a.id, a.uuid, d.name, a.time, a.type, a.notes '
+            cursor.execute(f'SELECT a.id, a.uuid, d.name, a.time, a.type, a.checked, a.filename, a.notes '
                            f'FROM alerts a '
                            f'INNER JOIN doorbell d '
                            f'ON a.uuid = d.id '
