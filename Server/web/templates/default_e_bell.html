@@ -22,7 +22,7 @@
             <ul class="nav-pills navbar-nav list-group list-group-flush text-light" id="accordionSidebar">
                 {% for nv in nav %}
                     <li class="bg-dark border-white list-group-item nav-item p-0">
-                        <a class="nav-link {% if nv.id|lower == name|lower %}active disabled{% endif %} m-2 p-2 text-center"
+                        <a class="nav-link {% if nv.id|lower == name|lower %}active disabled {% endif %}m-2 p-2 text-center"
                            href="{{ url_for(nv.url) }}">
                             <i class="bi {{ nv.icon }}"></i>
                             <span>{{ nv.title }}</span>

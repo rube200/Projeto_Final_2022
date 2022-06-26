@@ -72,7 +72,7 @@ body {
     width: 348px;
 }
 
-.doorbells-image {
+.card-image-recenter {
     margin-top: 13px;
     margin-left: 13px;
     margin-right: 13px;
@@ -234,8 +234,4 @@ body {
     height: 150px;
     position: relative;
     margin-top: 10px;
-}
-
-.btn-clic:active {
-    background-color: rgba(20, 6, 214, 0.81);
 }

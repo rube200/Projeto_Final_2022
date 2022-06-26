@@ -7,10 +7,10 @@
 {% block e_bell_content %}
     <div class="d-flex flex-wrap justify-content-evenly" id="doorbells-container">
         {% for doorbell in doorbells %}
-            <div class="card card-hover card-hover-cyan card-width m-5" id="doorbell-{{ doorbell.uuid }}"
+            <div class="card card-hover card-hover-cyan card-width m-4" id="doorbell-{{ doorbell.uuid }}"
                  onclick="redirectToDoorbell({{ doorbell.uuid }})">
                 <img alt="Last image from stream for {{ doorbell.name }}"
-                     class="figure-img img-fluid doorbells-image"
+                     class="figure-img img-fluid card-image-recenter"
                      src="{{ doorbell.image }}"
                      width="320"
                      height="240"/>
@@ -69,7 +69,7 @@
             dImg.height = 240;
 
             const dContainer = document.createElement('div');
-            dContainer.className = 'card card-hover card-hover-cyan m-5';
+            dContainer.className = 'card card-hover card-hover-cyan m-4';
             dContainer.id = `doorbell-${doorbell.uuid}`;
             dContainer.appendChild(dImg);
             dContainer.appendChild(dInfoDiv);
