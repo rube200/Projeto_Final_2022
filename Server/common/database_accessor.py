@@ -256,6 +256,26 @@ class DatabaseAccessor:
             cursor.close()
             con.close()
 
+    def _get_user_unchecked_alerts_after(self, username: str, after_alerts_id: int):
+        con = self._get_connection()
+        cursor = con.cursor()
+        try:
+            cursor.execute(f'SELECT a.id, a.uuid, d.name, a.time, a.type, a.filename, a.notes '
+                           f'FROM alerts a '
+                           f'INNER JOIN doorbell d '
+                           f'ON a.uuid = d.id '
+                           f'WHERE a.id > ? '
+                           f'AND NOT a.checked '
+                           f'AND a.type IN (?, ?, ?, ?) '
+                           f'AND d.owner = ? '
+                           f'ORDER BY a.time',
+                           [after_alerts_id, AlertType.System.value, AlertType.NewBell.value, AlertType.Bell.value,
+                            AlertType.Movement.value, username.upper()])
+            return cursor.fetchall()
+        finally:
+            cursor.close()
+            con.close()
+
     def _get_user_alerts_after(self, username: str, after_alerts_id: int):
         con = self._get_connection()
         cursor = con.cursor()
@@ -286,7 +306,7 @@ class DatabaseAccessor:
                            f'WHERE a.filename IS NOT NULL '
                            f'AND a.type IN (?, ?, ?, ?) '
                            f'AND d.owner = ? '
-                           f'ORDER BY a.time DESC',
+                           f'ORDER BY a.time',
                            [AlertType.Bell.value, AlertType.Movement.value, AlertType.UserPicture.value,
                             AlertType.OpenDoor.value, username.upper()])
             return cursor.fetchall()
@@ -306,7 +326,7 @@ class DatabaseAccessor:
                            f'AND a.type IN (?, ?, ?, ?) '
                            f'AND d.owner = ? '
                            f'AND a.id > ? '
-                           f'ORDER BY a.id DESC',
+                           f'ORDER BY a.id',
                            [AlertType.Bell.value, AlertType.Movement.value, AlertType.UserPicture.value,
                             AlertType.OpenDoor.value, username.upper(), after_capture_id])
             return cursor.fetchall()
@@ -326,7 +346,7 @@ class DatabaseAccessor:
                            f'AND a.filename IS NOT NULL '
                            f'AND a.type IN (?, ?, ?, ?) '
                            f'AND a.id > ? '
-                           f'ORDER BY a.time DESC',
+                           f'ORDER BY a.time',
                            [uuid, AlertType.Bell.value, AlertType.Movement.value, AlertType.UserPicture.value,
                             AlertType.OpenDoor.value, after_capture_id])
             return cursor.fetchall()
