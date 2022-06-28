@@ -94,12 +94,13 @@ class WebServer(DatabaseAccessor, Flask):
         icon_path = path.join(self.static_folder, 'favicon.png')
         self.icon_base64 = convert_image_to_base64(self.open_resource(icon_path).read())
         self.add_url_rule('/', 'index', self.__endpoint_index)
-        self.add_url_rule('/login', 'login', self.__endpoint_login, defaults={'page_to_redirect': None},
+        self.add_url_rule('/login', 'login', self.__endpoint_login, defaults={'page_to_redirect': ''},
                           methods=['GET', 'POST'])
         self.add_url_rule('/login/<string:page_to_redirect>', 'login', self.__endpoint_login, methods=['GET', 'POST'])
-        self.add_url_rule('/register', 'register', self.__endpoint_register, methods=['GET', 'POST'])
+        self.add_url_rule('/register', 'register', self.__endpoint_register, defaults={'page_to_redirect': ''},
+                          methods=['GET', 'POST'])
         self.add_url_rule('/register/<string:page_to_redirect>', 'register', self.__endpoint_register,
-                          defaults={'page_to_redirect': None}, methods=['GET', 'POST'])
+                          methods=['GET', 'POST'])
         self.add_url_rule('/logout', 'logout', endpoint_logout)
         self.add_url_rule('/alerts', 'alerts', self.__endpoint_alerts, methods=['GET', 'POST'])
         self.add_url_rule('/captures', 'captures', self.__endpoint_captures)
@@ -109,6 +110,8 @@ class WebServer(DatabaseAccessor, Flask):
         self.add_url_rule('/streams/<int:uuid>', 'stream', self.__endpoint_stream)
         self.add_url_rule('/get-doorbells-info', 'get-doorbells-info', self.__endpoint_get_doorbells_info)
         self.add_url_rule('/get-new-alerts/<int:current_alert_id>', 'get-new-alerts', self.__endpoint_get_new_alerts)
+        self.add_url_rule('/get-new-unchecked-alerts/<int:current_alert_id>', 'get-new-unchecked-alerts',
+                          self.__endpoint_get_new_unchecked_alerts)
         self.add_url_rule('/get-new-user-captures/<int:current_capture_id>', 'get-new-user-captures',
                           self.__endpoint_get_new_captures)
         self.add_url_rule('/get-new-doorbell-captures/<int:uuid>/<int:current_capture_id>', 'get-new-doorbell-captures',
@@ -440,20 +443,28 @@ class WebServer(DatabaseAccessor, Flask):
 
         return {'doorbells': doorbells}, 200
 
-    def __endpoint_get_new_alerts(self, current_alert_id: int):
+    def __get_new_alerts(self, current_alert_id: int, unchecked_only: bool):
         username = self.__authenticate()
         if not username:
             return {'error': 'Unauthorized request'}, 401
 
-        alerts_data = self._get_user_alerts_after(username, current_alert_id)
+        func = self._get_user_unchecked_alerts_after if unchecked_only else self._get_user_alerts_after
+        # noinspection PyArgumentList
+        alerts_data = func(username, current_alert_id)
         if not alerts_data:
-            return {'alerts': [], 'lastAlertId': 0}, 200
+            return {'alerts': [], 'lastAlertId': current_alert_id}, 200
 
         alerts = self.__convert_captures(alerts_data, False)
         if not alerts:
-            return {'alerts': [], 'lastAlertId': 0}, 200
+            return {'alerts': [], 'lastAlertId': current_alert_id}, 200
 
-        return {'alerts': alerts, 'lastAlertId': alerts[0]['id']}, 200
+        return {'alerts': alerts, 'lastAlertId': alerts[-1]['id']}, 200
+
+    def __endpoint_get_new_alerts(self, current_alert_id: int):
+        return self.__get_new_alerts(current_alert_id, False)
+
+    def __endpoint_get_new_unchecked_alerts(self, current_alert_id: int):
+        return self.__get_new_alerts(current_alert_id, True)
 
     def __process_captures_request(self, captures_data: list):
         if not captures_data:
@@ -463,7 +474,7 @@ class WebServer(DatabaseAccessor, Flask):
         if not captures:
             return {'captures': [], 'lastCaptureId': 0}, 200
 
-        return {'captures': captures, 'lastCaptureId': captures[0]['id']}, 200
+        return {'captures': captures, 'lastCaptureId': captures[-1]['id']}, 200
 
     def __endpoint_get_new_captures(self, current_capture_id: int):
         username = self.__authenticate()
@@ -530,6 +541,7 @@ class WebServer(DatabaseAccessor, Flask):
             return render_template('alerts.html')
 
         alerts = self.__convert_captures(alerts_data, False)
+        alerts.reverse()
         return render_template('alerts.html', alerts=alerts)
 
     def __check_alerts(self, username: str):
