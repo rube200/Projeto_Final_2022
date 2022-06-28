@@ -93,16 +93,8 @@
 
 {% block template_scripts %}
     <script src="{{ url_for('static', filename='moment.js') }}"></script>
-
-    {% block alerts_received_script %}{% endblock %}
-    {% if not self.alerts_received_script() %}
-        <script>
-            function onAlertsReceived() {
-            }
-        </script>
-    {% endif %}
-
     <!--suppress JSUnresolvedVariable -->
+
     <script>
         //Alerts notification
         const alertsDropdownContainer = document.getElementById('alerts-count-dropdown');
@@ -130,19 +122,17 @@
 
         const alertsCount = document.getElementById('alerts-count');
         const alertsIds = [];
-        const baseNewAlertsUrl = '{{ url_for('get-new-alerts', current_alert_id='-1') }}';
+        const baseNewUncheckedAlertsUrl = '{{ url_for('get-new-unchecked-alerts', current_alert_id='-1') }}';
         let lastAlertId = 0;
 
         function getAlerts() {
-            fetch(baseNewAlertsUrl.replace('-1', lastAlertId))
+            fetch(baseNewUncheckedAlertsUrl.replace('-1', lastAlertId))
                 .then(response => response.json())
                 .then(data => {
                     if (!data || data.error) {
                         console.error(`Error getting alerts: ${data.error}`);
                         return;
                     }
-
-                    onAlertsReceived(data);
 
                     data.alerts.forEach((alert) => {
                         if (alertsIds.includes(alert.id)) {

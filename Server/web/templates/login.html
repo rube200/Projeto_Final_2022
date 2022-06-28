@@ -31,7 +31,7 @@
         </button>
         <div class="fw-light mt-3 text-center">
             Don't have an account?
-            <a href="{{ url_for('register') }}" class="text-primary">
+            <a href="{{ url_for('register', page_to_redirect=page_to_redirect) }}" class="text-primary">
                 Create
             </a>
         </div>

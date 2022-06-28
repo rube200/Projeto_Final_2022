@@ -40,19 +40,16 @@
                 cpFile = document.createElement('video');
                 cpFile.className = "my-3";
                 cpFile.controls = true;
-                cpFile.src = fileSrc;
-                cpFile.type = capture.mimetype;
-                cpFile.width = 320;
-                cpFile.height = 240;
             } else {
-                cpFile = document.createElement('object');
+                cpFile = document.createElement('img');
+                cpFile.alt = `Capture img ${capture.filename}`;
                 cpFile.className = "img-fluid my-3";
-                cpFile.data = fileSrc;
-                cpFile.width = '320';
-                cpFile.height = '240';
             }
             cpFile.onclick = () => openPopup(fileSrc);
+            cpFile.src = fileSrc;
             cpFile.type = capture.mimetype;
+            cpFile.width = 320;
+            cpFile.height = 240;
 
             const captureContainer = document.createElement('div');
             captureContainer.className = 'border-2 border-primary card card-width col-sm-auto mb-3';
@@ -60,7 +57,7 @@
             captureContainer.appendChild(cpDate);
             captureContainer.appendChild(cpFile);
 
-            capturesContainer.appendChild(captureContainer);
+            capturesContainer.insertBefore(captureContainer, capturesContainer.firstChild);
         }
 
         {% if doorbell %}
