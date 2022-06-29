@@ -25,6 +25,8 @@ public:
 
     void setUsername(const char *);
 
+    void setRelay(const bool relay);
+
     bool connectSocket(bool should_restart_esp = false);
 
 
@@ -69,6 +71,7 @@ private:
     const char *host = REMOTE_HOST;
     uint16_t port = REMOTE_PORT;
     const char *username = nullptr;
+    bool relay = true;
 
 
     Esp32CamPacket readPacket;

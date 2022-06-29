@@ -13,7 +13,8 @@ create table if not exists doorbell
 (
     id            integer
         constraint doorbell_pk primary key,
-    name          text not null,
+    name          text    not null,
+    relay         boolean not null,
     owner         text references user on update cascade on delete restrict,
     registered_at DATETIME default current_timestamp not null
 );

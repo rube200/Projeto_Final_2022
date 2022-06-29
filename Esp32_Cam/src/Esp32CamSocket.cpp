@@ -22,6 +22,10 @@ void Esp32CamSocket::setUsername(const char *usr) {
     usernamePortal = false;
 }
 
+void Esp32CamSocket::setRelay(const bool hasRelay) {
+    relay = hasRelay;
+}
+
 bool Esp32CamSocket::connectSocket(const bool should_restart_esp) {
     if (connected()) {//connect should check for connected Esp32Cam::loop()
         return true;
@@ -40,6 +44,7 @@ bool Esp32CamSocket::connectSocket(const bool should_restart_esp) {
             Serial.println("Connected to host!");
             return true;
         }
+        delay(100);
     }
 
     Serial.println("Fail to connect to host.");
@@ -272,7 +277,13 @@ bool Esp32CamSocket::sendUuid() {
 }
 
 bool Esp32CamSocket::sendUsername() {
-    auto packet = Esp32CamPacket(Username, (const uint8_t *) username, strlen(username));
+    const auto size = strlen(username);
+    auto *packetData = new uint8_t[size + 1];
+    memcpy(packetData, username, size);
+    packetData[size] = relay;
+
+    auto packet = Esp32CamPacket(Username, packetData, size + 1);
+    free(packetData);
     return sendPacket(packet, "Username");
 }
 

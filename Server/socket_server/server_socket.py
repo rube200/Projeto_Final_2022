@@ -56,8 +56,8 @@ class ServerSocket(DatabaseAccessor):
         self.__clients[uuid] = client
         return not owner, 5000, 5000, 5000
 
-    def __on_esp_username_recv(self, client: EspClient, username: str) -> bool:
-        success = self._register_doorbell(username, client.uuid)
+    def __on_esp_username_recv(self, client: EspClient, username: str, relay: bool) -> bool:
+        success = self._register_doorbell(username, client.uuid, relay)
         if success:
             self.__events.on_alert(client.uuid, AlertType.NewBell, {})
         return success

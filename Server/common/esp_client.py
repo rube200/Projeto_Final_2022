@@ -49,8 +49,9 @@ class EspClient(ClientSocket, ClientRecord):
         self._send_config(config)
 
     def _process_username(self, data: bytes) -> None:
-        username = data.decode('utf-8')
-        is_valid = self.__events.on_esp_username_recv(self, username)
+        username = data[:-1].decode('utf-8')
+        relay = data[-1]
+        is_valid = self.__events.on_esp_username_recv(self, username, relay)
         self._send_username_confirmation(is_valid)
 
     def _process_camera(self, image: bytes) -> None:

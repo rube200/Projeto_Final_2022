@@ -32,7 +32,7 @@
 
             const cpDate = document.createElement('p');
             cpDate.className = 'mt-3 text-center text-dark';
-            cpDate.innerText = moment(capture.time).format('LLL');
+            cpDate.innerText = getTimeString(capture.time);
 
             let cpFile;
             const fileSrc = baseResourceUrl.replace('filename', capture.filename);

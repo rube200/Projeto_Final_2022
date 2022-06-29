@@ -37,12 +37,14 @@ public:
     const char *getHostParam() const;
 
     uint16_t getPortParam() const;
-    
+
     static bool isReady();
 
     boolean requestSocketConfig();
 
     const char *requestUsername();
+
+    bool hasRelay() const;
 
 private:
     void setParamsMode();
@@ -63,7 +65,9 @@ private:
     WifiManagerParam username_parameter = WifiManagerParam("Username",
                                                            "Doorbell not registered, please insert your username:", "",
                                                            50);
-    WifiManagerParam relay_check_parameter = WifiManagerParam("Relay_Check", "Have relay?", "", 0, "checked");
+    WifiManagerParam relay_check_parameter = WifiManagerParam("Relay_Check", "Have relay?", "", 1,
+                                                              "checked type=\"checkbox\"");
+    bool relay = true;
 };
 
 #endif //ESP32_CAM_ESP32CAMWIFI_H

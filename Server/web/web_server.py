@@ -192,6 +192,7 @@ class WebServer(DatabaseAccessor, Flask):
         doorbell = {
             'uuid': uuid,
             'name': bell_data['name'],
+            'relay': bell_data['relay'],
         }
 
         default_image = url_for('static', filename='default_profile.png')
@@ -382,8 +383,8 @@ class WebServer(DatabaseAccessor, Flask):
             return redirect(url_for('doorbells'))
 
         doorbell_data = self._get_doorbell(uuid)
-        doorbell = self.__convert_doorbell({'id': uuid, 'name': doorbell_data[0]}, True)
-        doorbell['emails'] = doorbell_data[1]
+        doorbell = self.__convert_doorbell({'id': uuid, 'name': doorbell_data[0], 'relay': doorbell_data[1]}, True)
+        doorbell['emails'] = doorbell_data[2]
         return render_template('doorbell.html', doorbell=doorbell)
 
     def __update_doorbell(self, uuid: int):

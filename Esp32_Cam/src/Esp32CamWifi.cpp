@@ -29,8 +29,8 @@ Esp32CamWifi::Esp32CamWifi() {
 
             case 2:
             case 3:
-                Serial.println("Relay check");//todo remove
-                Serial.println(relay_check_parameter.getValue());
+                relay = server->args() ==
+                        getParametersCount();//WM doesnt have checkbox so this is a trick to get the value.
                 stopConfigPortal();
                 return;
         }
@@ -40,16 +40,17 @@ Esp32CamWifi::Esp32CamWifi() {
 void Esp32CamWifi::begin() {
     Serial.println("Starting WiFiManager...");
 
-    auto * mac = getMac();
+    auto *mac = getMac();
     char tmpMacStr[13] = {0};
     sprintf(tmpMacStr, "%02X%02X%02X%02X%02X%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 
-    char macStr[28] = ACCESS_POINT_PREFIX_NAME;
+    char *macStr = new char[28];
+    memcpy(macStr, ACCESS_POINT_PREFIX_NAME, 16);
     for (int i = 0; i < 13; ++i) {
         auto index = 15 + i;
         macStr[index] = tmpMacStr[i];
     }
-    access_point_name = (char *)macStr;
+    access_point_name = (char *) macStr;
 
     loadCostumeParameters();
 
@@ -134,6 +135,10 @@ const char *Esp32CamWifi::requestUsername() {
 #pragma clang diagnostic pop
 
     return nullptr;
+}
+
+bool Esp32CamWifi::hasRelay() const {
+    return relay;
 }
 
 void Esp32CamWifi::saveCostumeParameters() const {

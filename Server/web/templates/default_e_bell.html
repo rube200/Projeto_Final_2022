@@ -94,7 +94,12 @@
 {% block template_scripts %}
     <script src="{{ url_for('static', filename='moment.js') }}"></script>
     <!--suppress JSUnresolvedVariable -->
-
+    <script>
+        //Time
+        function getTimeString(time) {
+            return moment(time).format('LLL')
+        }
+    </script>
     <script>
         //Alerts notification
         const alertsDropdownContainer = document.getElementById('alerts-count-dropdown');
@@ -102,7 +107,7 @@
         function createAlertDropdown(alert) {
             const spanMsg = document.createElement('span');
             spanMsg.className = 'small';
-            spanMsg.innerText = moment(alert.time).format('LLL');
+            spanMsg.innerText = getTimeString(alert.time);
 
             const pMsg = document.createElement('p');
             pMsg.innerText = alert.message;

@@ -35,7 +35,7 @@ class DatabaseAccessor:
             cursor.close()
             con.close()
 
-    def _register_doorbell(self, username: str, uuid: int) -> bool:
+    def _register_doorbell(self, username: str, uuid: int, relay: bool) -> bool:
         username = username.upper()
         con = self._get_connection()
         cursor = con.cursor()
@@ -49,9 +49,9 @@ class DatabaseAccessor:
             if not data or not data[0]:
                 return False
 
-            cursor.execute('INSERT OR IGNORE INTO doorbell(id, name, owner) '
-                           'VALUES (?, ?, ?)',
-                           [uuid, uuid, username])
+            cursor.execute('INSERT OR IGNORE INTO doorbell(id, name, relay, owner) '
+                           'VALUES (?, ?, ?, ?)',
+                           [uuid, uuid, relay, username])
             cursor.execute('INSERT OR IGNORE INTO doorbell_alerts '
                            'SELECT ?, email '
                            'FROM user '
@@ -229,7 +229,7 @@ class DatabaseAccessor:
         con = self._get_connection()
         cursor = con.cursor()
         try:
-            cursor.execute('SELECT id, name '
+            cursor.execute('SELECT id, name, relay '
                            'FROM doorbell '
                            'WHERE owner = ?',
                            [username.upper()]),
@@ -358,12 +358,13 @@ class DatabaseAccessor:
         con = self._get_connection()
         cursor = con.cursor()
         try:
-            cursor.execute('SELECT name '
+            cursor.execute('SELECT name, relay '
                            'FROM doorbell '
                            'WHERE id = ?',
                            [uuid]),
             data = cursor.fetchone()
             name = data['name'] if data else uuid
+            relay = data['relay'] if data else None
 
             cursor.execute('SELECT email '
                            'FROM doorbell_alerts '
@@ -371,7 +372,7 @@ class DatabaseAccessor:
                            [uuid]),
             data = cursor.fetchall()
             emails = [d['email'] for d in data] if data else []
-            return name, emails
+            return name, relay, emails
         finally:
             cursor.close()
             con.close()

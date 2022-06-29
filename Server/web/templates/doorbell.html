@@ -27,7 +27,7 @@
                     Take Picture
                 </button>
                 <button class="border-0 btn btn-violet px-4 py-2 text-nowrap text-white w-auto" onclick="openDoor()"
-                        type="button">
+                        type="button" {% if not doorbell.relay %}disabled{% endif %}>
                     Open Door
                 </button>
             </div>

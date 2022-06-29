@@ -12,7 +12,7 @@
                 {% if not alert.checked %}
                     <img alt="Alert not checked icon"
                          class="position-absolute top-0 end-0"
-                         data-checked
+                         data-check="true"
                          src="{{ url_for('static', filename='alert.png') }}"
                          width="50"
                          height="50">
@@ -45,7 +45,8 @@
                         4 - Movement
                     -->
                     <h2 class="card-title text-wrap">{{ alert.message }}</h2>
-                    <h4 class="card-subtitle">{{ alert.time }}</h4>
+                    <!--suppress HtmlUnknownAttribute -->
+                    <h4 class="card-subtitle" name="alert-time-to-process">{{ alert.time }}</h4>
                     {% if alert.notes %}
                         <p class="card-text text-muted">{{ alert.notes }}</p>
                     {% endif %}
@@ -53,11 +54,10 @@
             </div>
         {% endfor %}
     </div>
-    <div class="d-flex justify-content-end mt-5 me-2">
-        <button class="btn btn-primary"
-                {% if have_content %}style="display: block;"{% endif %}
-                type="button">Mark all as Read
-        </button>
+    <div class="d-flex justify-content-end mt-5 me-2"
+         id="mark-read-container"
+         {% if not have_content %}style="display: none!important;"{% endif %}>
+        <button class="btn btn-primary" type="button">Mark all as Read</button>
     </div>
     <div class="popup-pic" id="popup-container">
         <span id="popup-pic-close-button" onclick="closePopup()">&times;</span>
@@ -114,6 +114,7 @@
                 });
         }
     </script>
+    <!--suppress JSUnresolvedVariable -->
     <script>
         //Alerts
         const alertsElements = {};
@@ -121,10 +122,82 @@
             alertsElements[{{ alert.id }}] = document.getElementById('alert-{{ alert.id }}');
         {% endfor %}
 
-        const alertsPageContainer = document.getElementById('alerts-container');
+        const alertsContainer = document.getElementById('alerts-container');
+        const baseResourceUrl = '{{ url_for('get-resource', filename='filename') }}';
 
         function createAlertContainer(alert) {
+            let fileContainer;
+            if (alert.mimeType === 'video/mp4') {
+                fileContainer = document.createElement('video');
+                fileContainer.controls = true;
+            } else {
+                fileContainer = document.createElement('img');
+                fileContainer.alt = `Alert image ${alert.filename}`;
+            }
+            fileContainer.className = 'card-image-recenter';
+            fileContainer.src = baseResourceUrl.replace('filename', alert.filename);
+            fileContainer.type = alert.mimeType;
+            fileContainer.width = 320;
+            fileContainer.height = 240;
 
+            const infoContainer = document.createElement('div');
+            infoContainer.className = 'card-body text-center';
+
+            const titleText = document.createElement('h2');
+            titleText.className = 'card-title text-wrap';
+            titleText.innerText = alert.message;
+
+            const subtitleText = document.createElement('h4');
+            subtitleText.className = 'card-subtitle';
+            subtitleText.innerText = getTimeString(alert.time);
+
+            infoContainer.appendChild(titleText);
+            infoContainer.appendChild(subtitleText);
+            if (alert.notes) {
+                const notesContainer = document.createElement('p');
+                notesContainer.className = 'card-text text-muted';
+                notesContainer.innerText = alert.notes;
+                infoContainer.appendChild(notesContainer);
+            }
+
+            let alertColor;
+            switch (alert.type) {
+                case 2:
+                    alertColor = 'card-hover-green';
+                    break;
+                case 3:
+                    alertColor = 'card-hover-purple';
+                    break;
+                case 4:
+                    alertColor = 'card-hover-red';
+                    break;
+
+                default:
+                    alertColor = 'card-hover-grey';
+                    break;
+            }
+
+            const alertContainer = document.createElement('div');
+            alertContainer.className = 'card card-hover card-width m-2 text-white';
+            alertContainer.classList.add(alertColor);
+            alertContainer.id = `alert-${alert.id}`;
+
+            if (!alert.checked) {
+                const uncheckImg = document.createElement('img');
+                uncheckImg.alt = "Alert not checked icon";
+                uncheckImg.className = 'position-absolute top-0 end-0';
+                uncheckImg.setAttribute('data-check', 'true');
+                uncheckImg.src = '{{ url_for('static', filename='alert.png') }}';
+                uncheckImg.width = 50;
+                uncheckImg.height = 50;
+                alertContainer.appendChild(uncheckImg);
+            }
+
+            alertContainer.appendChild(fileContainer);
+            alertContainer.appendChild(infoContainer);
+
+            alertsContainer.insertBefore(alertContainer, alertsContainer.firstChild);
+            return alertContainer;
         }
 
         function editAlertContainer(alert, alertContainer) {
@@ -133,7 +206,7 @@
             }
 
             const img = alertContainer.getElementsByTagName('img')[0];
-            if (!img.hasAttribute('data-checked')) {
+            if (!img.hasAttribute('data-check')) {
                 return;
             }
 
@@ -141,6 +214,7 @@
         }
 
         const baseNewAlertsUrl = '{{ url_for('get-new-alerts', current_alert_id='-1') }}';
+        const markReadContainer = document.getElementById('mark-read-container');
         let lastUncheckedAlertId = 0;
 
         function getNewAlerts() {
@@ -166,16 +240,28 @@
                         }
                     });
 
+                    if (lastCaptureId === 0 && data.lastCaptureId > 0) {
+                        capturesPageContainer.style.display = 'block';
+                    }
+
+                    if (lastUncheckedAlertId === 0 && (data.lastAlertId > 0 || last > -1)) {
+                        markReadContainer.style.display = '';
+                        nothingToShow.style.display = 'none';
+                    }
+
                     if (last >= 0) {
                         lastUncheckedAlertId = last;
                     } else {
-
                         lastUncheckedAlertId = data.lastAlertId;
                     }
                 })
                 .catch(error => console.error(`Error calling get-new-alerts: ${error}`));
         }
 
-        window.addEventListener('load', () => setInterval(getNewAlerts, 5000));
+        const alertTimeToUpdate = document.getElementsByName('alert-time-to-process');
+        window.addEventListener('load', () => {
+            alertTimeToUpdate.forEach(element => element.innerText = getTimeString(element.innerText));
+            setInterval(getNewAlerts, 5000);
+        });
     </script>
 {% endblock %}

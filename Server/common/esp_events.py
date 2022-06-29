@@ -44,7 +44,7 @@ class EspEvents:
     def __init__(self):
         self.__events__ = (
             'on_esp_uuid_recv',  # Client -> (username, bell_duration, motion_duration)
-            'on_esp_username_recv',  # Client, username -> bool
+            'on_esp_username_recv',  # Client, username, relay -> bool
             'on_esp_disconnect',  # Client -> bool
             'on_alert',  # int, AlertType, dict-> None
         )
