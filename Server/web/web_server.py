@@ -7,7 +7,7 @@ from os import environ, path, makedirs
 from sqlite3 import Row
 from time import monotonic, sleep, time
 from traceback import format_exc
-from typing import Callable, Tuple, Union
+from typing import Union
 
 import bcrypt
 import jwt
@@ -19,7 +19,6 @@ from werkzeug.utils import secure_filename
 
 from common.alert_type import AlertType, get_alert_type_message
 from common.database_accessor import DatabaseAccessor
-from common.esp_client import EspClient
 from common.esp_clients import EspClients
 from common.esp_events import EspEvents
 
@@ -64,9 +63,7 @@ class WebServer(DatabaseAccessor, Flask):
         self.config.from_pyfile('flask.cfg')
 
         environ['ESP_FILES_DIR'] = self.__esp_full_path = path.join(self.root_path, self.config['ESP_FILES_DIR'])
-        if not path.exists(self.__esp_full_path):
-            makedirs(self.__esp_full_path)
-
+        makedirs(self.__esp_full_path, 770, True)
         if self.config.get('RANDOM_SECRET_KEY'):
             import secrets
             self.config['JWT_SECRET_KEY'] = secrets.token_hex(32)
@@ -110,8 +107,8 @@ class WebServer(DatabaseAccessor, Flask):
         self.add_url_rule('/streams/<int:uuid>', 'stream', self.__endpoint_stream)
         self.add_url_rule('/get-doorbells-info', 'get-doorbells-info', self.__endpoint_get_doorbells_info)
         self.add_url_rule('/get-new-alerts/<int:current_alert_id>', 'get-new-alerts', self.__endpoint_get_new_alerts)
-        self.add_url_rule('/get-new-unchecked-alerts/<int:current_alert_id>', 'get-new-unchecked-alerts',
-                          self.__endpoint_get_new_unchecked_alerts)
+        self.add_url_rule('/get-unchecked-alerts', 'get-unchecked-alerts',
+                          self.__endpoint_get_unchecked_alerts)
         self.add_url_rule('/get-new-user-captures/<int:current_capture_id>', 'get-new-user-captures',
                           self.__endpoint_get_new_captures)
         self.add_url_rule('/get-new-doorbell-captures/<int:uuid>/<int:current_capture_id>', 'get-new-doorbell-captures',
@@ -137,6 +134,9 @@ class WebServer(DatabaseAccessor, Flask):
             return None
 
         data = self._get_user(username)
+        if not data:
+            return None
+
         session['username'] = username = data[0]
         session['name'] = data[1]
         return username
@@ -188,7 +188,7 @@ class WebServer(DatabaseAccessor, Flask):
         return doorbell_files
 
     def __convert_doorbell(self, bell_data: Row or dict, get_camera: bool):
-        uuid = bell_data['id']
+        uuid = bell_data['uuid']
         doorbell = {
             'uuid': uuid,
             'name': bell_data['name'],
@@ -370,7 +370,6 @@ class WebServer(DatabaseAccessor, Flask):
 
         return render_template('doorbells.html', doorbells=bells)
 
-    # todo adding support to relay
     def __endpoint_doorbell(self, uuid: int):
         if request.method == 'POST':
             return self.__update_doorbell(uuid)
@@ -383,7 +382,7 @@ class WebServer(DatabaseAccessor, Flask):
             return redirect(url_for('doorbells'))
 
         doorbell_data = self._get_doorbell(uuid)
-        doorbell = self.__convert_doorbell({'id': uuid, 'name': doorbell_data[0], 'relay': doorbell_data[1]}, True)
+        doorbell = self.__convert_doorbell({'uuid': uuid, 'name': doorbell_data[0], 'relay': doorbell_data[1]}, True)
         doorbell['emails'] = doorbell_data[2]
         return render_template('doorbell.html', doorbell=doorbell)
 
@@ -449,9 +448,11 @@ class WebServer(DatabaseAccessor, Flask):
         if not username:
             return {'error': 'Unauthorized request'}, 401
 
-        func = self._get_user_unchecked_alerts_after if unchecked_only else self._get_user_alerts_after
-        # noinspection PyArgumentList
-        alerts_data = func(username, current_alert_id)
+        if unchecked_only:
+            alerts_data = self._get_user_unchecked_alerts(username)
+        else:
+            alerts_data = self._get_user_alerts_after(username, current_alert_id)
+
         if not alerts_data:
             return {'alerts': [], 'lastAlertId': current_alert_id}, 200
 
@@ -464,8 +465,8 @@ class WebServer(DatabaseAccessor, Flask):
     def __endpoint_get_new_alerts(self, current_alert_id: int):
         return self.__get_new_alerts(current_alert_id, False)
 
-    def __endpoint_get_new_unchecked_alerts(self, current_alert_id: int):
-        return self.__get_new_alerts(current_alert_id, True)
+    def __endpoint_get_unchecked_alerts(self):
+        return self.__get_new_alerts(0, True)
 
     def __process_captures_request(self, captures_data: list):
         if not captures_data:
@@ -505,8 +506,7 @@ class WebServer(DatabaseAccessor, Flask):
 
         return send_from_directory(self.config['ESP_FILES_DIR'], filename)
 
-    def __open_door_take_picture(self, uuid: int, alert_type: AlertType,
-                                 esp_func: Callable[[EspClient], Tuple[bytes or None, str]]):
+    def __open_door_take_picture(self, uuid: int, alert_type: AlertType, open_door: bool):
         username = self.__authenticate()
         if not username or not self._check_owner(username, uuid):
             return {'error': 'Unauthorized request'}, 401
@@ -515,7 +515,10 @@ class WebServer(DatabaseAccessor, Flask):
         if not esp:
             return {'error': 'Doorbell is offline'}, 404
 
-        image, filename = esp_func(esp)
+        if open_door:
+            image, filename = esp.open_doorbell()
+        else:
+            image, filename = esp.save_picture()
         if not image:
             return {'error': 'Doorbell is offline'}, 404
 
@@ -523,12 +526,11 @@ class WebServer(DatabaseAccessor, Flask):
         return {'filename': filename, 'mimetype': 'image/jpeg'}, 200
 
     def __endpoint_open_doorbell(self, uuid: int):
-        return self.__open_door_take_picture(uuid, AlertType.UserPicture, lambda esp: esp.open_doorbell)
+        return self.__open_door_take_picture(uuid, AlertType.UserPicture, True)
 
     def __endpoint_take_picture(self, uuid: int):
-        return self.__open_door_take_picture(uuid, AlertType.UserPicture, lambda esp: esp.save_picture)
+        return self.__open_door_take_picture(uuid, AlertType.UserPicture, False)
 
-    # todo recheck this one
     def __endpoint_alerts(self):
         username = self.__authenticate()
         if not username:
