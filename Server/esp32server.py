@@ -1,6 +1,6 @@
 import logging as log
 from logging.handlers import RotatingFileHandler
-from os import environ
+from os import environ, path, makedirs
 from threading import Thread
 from traceback import format_exc
 
@@ -25,8 +25,10 @@ def config_logger(filename: str = 'esp32server.py.log'):
         return
 
     logger = True
+    makedirs('logs', 0o770, True)
+    filepath = path.join('logs', filename)
     lg = log.getLogger()
-    lg.addHandler(RotatingFileHandler(filename, maxBytes=65536, backupCount=5))
+    lg.addHandler(RotatingFileHandler(filepath, maxBytes=65536, backupCount=5))
     lg.addHandler(log.StreamHandler())
     lg.setLevel(log.DEBUG if environ.get('ESP32_DEBUG') else log.INFO)
 

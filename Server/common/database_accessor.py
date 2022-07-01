@@ -115,19 +115,12 @@ class DatabaseAccessor:
             con.close()
 
     def _get_alert_emails(self, uuid: int) -> str or None:
-        con = self._get_connection()
-        cursor = con.cursor()
-        try:
-            cursor.execute(
-                'SELECT email '
-                'FROM doorbell_alerts '
-                'WHERE uuid = ?',
-                [uuid])
-            data = cursor.fetchall()
-            return [d['email'] for d in data] if data else []
-        finally:
-            cursor.close()
-            con.close()
+        data = self.__get_all(
+            'SELECT email '
+            'FROM doorbell_alerts '
+            'WHERE uuid = ?',
+            [uuid])
+        return [d['email'] for d in data] if data else []
 
     def _check_owner(self, username: str, uuid: int) -> bool:
         con = self._get_connection()
@@ -226,133 +219,83 @@ class DatabaseAccessor:
             con.close()
 
     def _get_user_doorbells(self, username: str):
-        con = self._get_connection()
-        cursor = con.cursor()
-        try:
-            cursor.execute('SELECT id, name, relay '
-                           'FROM doorbell '
-                           'WHERE owner = ?',
-                           [username.upper()]),
-            return cursor.fetchall()
-        finally:
-            cursor.close()
-            con.close()
+        return self.__get_all('SELECT id as uuid, name, relay '
+                              'FROM doorbell '
+                              'WHERE owner = ?',
+                              [username.upper()])
 
     def _get_user_alerts(self, username: str):
-        con = self._get_connection()
-        cursor = con.cursor()
-        try:
-            cursor.execute(f'SELECT a.id, a.uuid, d.name, a.time, a.type, a.checked, a.filename, a.notes '
-                           f'FROM alerts a '
-                           f'INNER JOIN doorbell d '
-                           f'ON a.uuid = d.id '
-                           f'WHERE a.type IN (?, ?, ?, ?) '
-                           f'AND d.owner = ? '
-                           f'ORDER BY a.time',
-                           [AlertType.System.value, AlertType.NewBell.value, AlertType.Bell.value,
-                            AlertType.Movement.value, username.upper()])
-            return cursor.fetchall()
-        finally:
-            cursor.close()
-            con.close()
+        return self.__get_all(f'SELECT a.id, a.uuid, d.name, a.time, a.type, a.checked, a.filename, a.notes '
+                              f'FROM alerts a '
+                              f'INNER JOIN doorbell d '
+                              f'ON a.uuid = d.id '
+                              f'WHERE a.type IN (?, ?, ?, ?) '
+                              f'AND d.owner = ? '
+                              f'ORDER BY a.time',
+                              [AlertType.System.value, AlertType.NewBell.value, AlertType.Bell.value,
+                               AlertType.Movement.value, username.upper()])
 
-    def _get_user_unchecked_alerts_after(self, username: str, after_alerts_id: int):
-        con = self._get_connection()
-        cursor = con.cursor()
-        try:
-            cursor.execute(f'SELECT a.id, a.uuid, d.name, a.time, a.type, a.filename, a.notes '
-                           f'FROM alerts a '
-                           f'INNER JOIN doorbell d '
-                           f'ON a.uuid = d.id '
-                           f'WHERE a.id > ? '
-                           f'AND NOT a.checked '
-                           f'AND a.type IN (?, ?, ?, ?) '
-                           f'AND d.owner = ? '
-                           f'ORDER BY a.time',
-                           [after_alerts_id, AlertType.System.value, AlertType.NewBell.value, AlertType.Bell.value,
-                            AlertType.Movement.value, username.upper()])
-            return cursor.fetchall()
-        finally:
-            cursor.close()
-            con.close()
+    def _get_user_unchecked_alerts(self, username: str):
+        return self.__get_all(f'SELECT a.id, a.uuid, d.name, a.time, a.type, a.filename, a.notes '
+                              f'FROM alerts a '
+                              f'INNER JOIN doorbell d '
+                              f'ON a.uuid = d.id '
+                              f'WHERE NOT a.checked '
+                              f'AND a.type IN (?, ?, ?, ?) '
+                              f'AND d.owner = ? '
+                              f'ORDER BY a.time',
+                              [AlertType.System.value, AlertType.NewBell.value, AlertType.Bell.value,
+                               AlertType.Movement.value, username.upper()])
 
     def _get_user_alerts_after(self, username: str, after_alerts_id: int):
-        con = self._get_connection()
-        cursor = con.cursor()
-        try:
-            cursor.execute(f'SELECT a.id, a.uuid, d.name, a.time, a.type, a.checked, a.filename, a.notes '
-                           f'FROM alerts a '
-                           f'INNER JOIN doorbell d '
-                           f'ON a.uuid = d.id '
-                           f'WHERE a.id > ? '
-                           f'AND a.type IN (?, ?, ?, ?) '
-                           f'AND d.owner = ? '
-                           f'ORDER BY a.time',
-                           [after_alerts_id, AlertType.System.value, AlertType.NewBell.value, AlertType.Bell.value,
-                            AlertType.Movement.value, username.upper()])
-            return cursor.fetchall()
-        finally:
-            cursor.close()
-            con.close()
+        return self.__get_all(f'SELECT a.id, a.uuid, d.name, a.time, a.type, a.checked, a.filename, a.notes '
+                              f'FROM alerts a '
+                              f'INNER JOIN doorbell d '
+                              f'ON a.uuid = d.id '
+                              f'WHERE a.id > ? '
+                              f'AND a.type IN (?, ?, ?, ?) '
+                              f'AND d.owner = ? '
+                              f'ORDER BY a.time',
+                              [after_alerts_id, AlertType.System.value, AlertType.NewBell.value, AlertType.Bell.value,
+                               AlertType.Movement.value, username.upper()])
 
     def _get_user_captures(self, username: str):
-        con = self._get_connection()
-        cursor = con.cursor()
-        try:
-            cursor.execute(f'SELECT a.id, a.uuid, d.name, a.time, a.type, a.checked, a.filename '
-                           f'FROM alerts a '
-                           f'INNER JOIN doorbell d '
-                           f'ON a.uuid = d.id '
-                           f'WHERE a.filename IS NOT NULL '
-                           f'AND a.type IN (?, ?, ?, ?) '
-                           f'AND d.owner = ? '
-                           f'ORDER BY a.time',
-                           [AlertType.Bell.value, AlertType.Movement.value, AlertType.UserPicture.value,
-                            AlertType.OpenDoor.value, username.upper()])
-            return cursor.fetchall()
-        finally:
-            cursor.close()
-            con.close()
+        return self.__get_all(f'SELECT a.id, a.uuid, d.name, a.time, a.type, a.checked, a.filename '
+                              f'FROM alerts a '
+                              f'INNER JOIN doorbell d '
+                              f'ON a.uuid = d.id '
+                              f'WHERE a.filename IS NOT NULL '
+                              f'AND a.type IN (?, ?, ?, ?) '
+                              f'AND d.owner = ? '
+                              f'ORDER BY a.time',
+                              [AlertType.Bell.value, AlertType.Movement.value, AlertType.UserPicture.value,
+                               AlertType.OpenDoor.value, username.upper()])
 
     def _get_user_captures_after(self, username: str, after_capture_id: int):
-        con = self._get_connection()
-        cursor = con.cursor()
-        try:
-            cursor.execute(f'SELECT a.id, a.uuid, d.name, a.time, a.type, a.checked, a.filename '
-                           f'FROM alerts a '
-                           f'INNER JOIN doorbell d '
-                           f'ON a.uuid = d.id '
-                           f'WHERE a.filename IS NOT NULL '
-                           f'AND a.type IN (?, ?, ?, ?) '
-                           f'AND d.owner = ? '
-                           f'AND a.id > ? '
-                           f'ORDER BY a.id',
-                           [AlertType.Bell.value, AlertType.Movement.value, AlertType.UserPicture.value,
-                            AlertType.OpenDoor.value, username.upper(), after_capture_id])
-            return cursor.fetchall()
-        finally:
-            cursor.close()
-            con.close()
+        return self.__get_all(f'SELECT a.id, a.uuid, d.name, a.time, a.type, a.checked, a.filename '
+                              f'FROM alerts a '
+                              f'INNER JOIN doorbell d '
+                              f'ON a.uuid = d.id '
+                              f'WHERE a.filename IS NOT NULL '
+                              f'AND a.type IN (?, ?, ?, ?) '
+                              f'AND d.owner = ? '
+                              f'AND a.id > ? '
+                              f'ORDER BY a.id',
+                              [AlertType.Bell.value, AlertType.Movement.value, AlertType.UserPicture.value,
+                               AlertType.OpenDoor.value, username.upper(), after_capture_id])
 
     def _get_doorbell_captures_after(self, uuid: int, after_capture_id: int):
-        con = self._get_connection()
-        cursor = con.cursor()
-        try:
-            cursor.execute(f'SELECT a.id, a.uuid, d.name, a.time, a.type, a.checked, a.filename '
-                           f'FROM alerts a '
-                           f'INNER JOIN doorbell d '
-                           f'on a.uuid = d.id '
-                           f'WHERE a.uuid = ? '
-                           f'AND a.filename IS NOT NULL '
-                           f'AND a.type IN (?, ?, ?, ?) '
-                           f'AND a.id > ? '
-                           f'ORDER BY a.time',
-                           [uuid, AlertType.Bell.value, AlertType.Movement.value, AlertType.UserPicture.value,
-                            AlertType.OpenDoor.value, after_capture_id])
-            return cursor.fetchall()
-        finally:
-            cursor.close()
-            con.close()
+        return self.__get_all(f'SELECT a.id, a.uuid, d.name, a.time, a.type, a.checked, a.filename '
+                              f'FROM alerts a '
+                              f'INNER JOIN doorbell d '
+                              f'on a.uuid = d.id '
+                              f'WHERE a.uuid = ? '
+                              f'AND a.filename IS NOT NULL '
+                              f'AND a.type IN (?, ?, ?, ?) '
+                              f'AND a.id > ? '
+                              f'ORDER BY a.time',
+                              [uuid, AlertType.Bell.value, AlertType.Movement.value, AlertType.UserPicture.value,
+                               AlertType.OpenDoor.value, after_capture_id])
 
     def _get_doorbell(self, uuid: int):
         con = self._get_connection()
@@ -361,7 +304,7 @@ class DatabaseAccessor:
             cursor.execute('SELECT name, relay '
                            'FROM doorbell '
                            'WHERE id = ?',
-                           [uuid]),
+                           [uuid])
             data = cursor.fetchone()
             name = data['name'] if data else uuid
             relay = data['relay'] if data else None
@@ -369,7 +312,7 @@ class DatabaseAccessor:
             cursor.execute('SELECT email '
                            'FROM doorbell_alerts '
                            'WHERE uuid = ?',
-                           [uuid]),
+                           [uuid])
             data = cursor.fetchall()
             emails = [d['email'] for d in data] if data else []
             return name, relay, emails
@@ -419,6 +362,16 @@ class DatabaseAccessor:
 
             con.commit()
             return cursor.rowcount
+        finally:
+            cursor.close()
+            con.close()
+
+    def __get_all(self, cmd: str, args: list):
+        con = self._get_connection()
+        cursor = con.cursor()
+        try:
+            cursor.execute(cmd, args)
+            return cursor.fetchall()
         finally:
             cursor.close()
             con.close()
