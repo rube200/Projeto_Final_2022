@@ -100,6 +100,7 @@
             return moment(time).format('LLL')
         }
     </script>
+    <!--suppress JSUnresolvedVariable -->
     <script>
         //Alerts notification
         const alertsDropdownContainer = document.getElementById('alerts-count-dropdown');
@@ -127,11 +128,9 @@
 
         const alertsCount = document.getElementById('alerts-count');
         const alertsIds = [];
-        const baseNewUncheckedAlertsUrl = '{{ url_for('get-new-unchecked-alerts', current_alert_id='-1') }}';
-        let lastAlertId = 0;
 
         function getAlerts() {
-            fetch(baseNewUncheckedAlertsUrl.replace('-1', lastAlertId))
+            fetch('{{ url_for('get-unchecked-alerts') }}')
                 .then(response => response.json())
                 .then(data => {
                     if (!data || data.error) {
@@ -146,11 +145,10 @@
 
                         createAlertDropdown(alert);
                         alertsIds.push(alert.id);
+
+                        //todo add remove option
                     });
 
-                    if (data.lastAlertId > lastAlertId) {
-                        lastAlertId = data.lastAlertId;
-                    }
                     alertsCount.innerText = data.alerts.length;
                 })
                 .catch(error => console.error(`Error calling get-new-alerts: ${error}`));

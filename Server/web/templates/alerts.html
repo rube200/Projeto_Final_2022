@@ -240,10 +240,6 @@
                         }
                     });
 
-                    if (lastCaptureId === 0 && data.lastCaptureId > 0) {
-                        capturesPageContainer.style.display = 'block';
-                    }
-
                     if (lastUncheckedAlertId === 0 && (data.lastAlertId > 0 || last > -1)) {
                         markReadContainer.style.display = '';
                         nothingToShow.style.display = 'none';

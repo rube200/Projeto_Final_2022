@@ -101,17 +101,17 @@
                         return;
                     }
 
-                    const oldCount = doorbells.length;
+                    const oldCount = Object.keys(doorbells).length;
                     data.doorbells.forEach((doorbell) => {
                         const doorbellContainer = doorbells[doorbell.uuid];
-                        if (doorbellsContainer !== undefined) {
+                        if (doorbellContainer === undefined) {
+                            doorbells[doorbell.uuid] = createDoorbellContainer(doorbell);
+                        } else {
                             editDoorbellContainer(doorbell, doorbellContainer);
-                            return;
                         }
-
-                        doorbells[doorbell.uuid] = createDoorbellContainer(doorbell);
                     });
-                    if (oldCount === 0 && doorbells.length > 0) {
+
+                    if (oldCount === 0 && Object.keys(doorbells).length > 0) {
                         nothingToShow.style.display = 'none';
                     }
                 })

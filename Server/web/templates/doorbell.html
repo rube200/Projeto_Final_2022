@@ -73,9 +73,37 @@
 
 {% block pos_capture %}
     <div class="mb-5"></div>
+    <div class="modal" id="request-modal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="request-modal-title">Doorbell action</h5>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center">
+                        <img alt="Doorbell action capture"
+                             class="img-fluid"
+                             id="request-modal-image"
+                             src=""/>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" aria-label="Close">Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}
 
 {% block scripts %}
+    <!--suppress JSUnresolvedVariable -->
+    <script>
+        //Modal
+        const requestModal = new bootstrap.Modal(document.getElementById('request-modal'));
+        const requestModalTitle = document.getElementById('request-modal-title');
+        const requestModalImage = document.getElementById('request-modal-image');
+    </script>
     <script>
         //Buttons
         function openDoor() {
@@ -90,8 +118,9 @@
                         return;
                     }
 
-                    console.debug(`Doorbell opened: ${data}`);
-                    //todo set message
+                    requestModalTitle.innerText = 'Doorbell opened.';
+                    requestModalImage.src = baseResourceUrl.replace('filename', data.filename);
+                    requestModal.show();
                 })
                 .catch(error => {
                     console.error(`Error while opening doorbell: ${error}`);
@@ -111,8 +140,9 @@
                         return;
                     }
 
-                    console.debug(`Picture taken: ${data}`);
-                    //todo set message
+                    requestModalTitle.innerText = 'Picture took.';
+                    requestModalImage.src = baseResourceUrl.replace('filename', data.filename);
+                    requestModal.show();
                 })
                 .catch(error => {
                     console.error(`Error while taking a picture: ${error}`);
