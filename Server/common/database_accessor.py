@@ -350,18 +350,18 @@ class DatabaseAccessor:
         con = self._get_connection()
         cursor = con.cursor()
         try:
-            cursor.execute('UPDATE a '
-                           'SET a.checked = TRUE '
-                           'FROM alerts a '
-                           'INNER JOIN doorbell d '
-                           'ON a.uuid = d.id '
-                           'WHERE d.owner = ? '
-                           'AND id <= ? '
-                           'AND NOT checked ',
-                           [username, last_alert_id])
+            cursor.execute('UPDATE alerts '
+                           'SET checked = TRUE '
+                           'WHERE id <= ? '
+                           'AND uuid IN ('
+                           'SELECT id '
+                           'FROM doorbell '
+                           'WHERE owner = ?'
+                           ') AND NOT checked ',
+                           [last_alert_id, username.upper()])
 
             con.commit()
-            return cursor.rowcount
+            return cursor.rowcount > 0
         finally:
             cursor.close()
             con.close()
