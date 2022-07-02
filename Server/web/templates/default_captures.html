@@ -9,10 +9,35 @@
         <div class="justify-content-evenly row" id="captures-container">
         </div>
     </div>
-    <div class="popup-pic" id="popup-container">
-        <span id="popup-pic-close-button" onclick="closePopup()">&times;</span>
-        <!--suppress RequiredAttributes -->
-        <img alt="Bigger image selected by user" id="popup-image">
+    <div class="modal" id="request-modal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-center w-100" id="request-modal-title">Doorbell action</h5>
+                </div>
+                <div class="modal-body">
+                    <p class="text-center" id="request-modal-subtitle">Modal body text goes here.</p>
+                    <div class="text-center" id="modal-body-container">
+                        <img alt="Bigger image selected by user"
+                             class="img-fluid"
+                             id="request-modal-image"
+                             width="240"
+                             height="320"
+                             src="">
+                        <video
+                                class="img-fluid"
+                                controls
+                                id="request-modal-video"
+                                width="240"
+                                height="320"></video>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" aria-label="Close">Close
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
     {% block pos_capture %}{% endblock %}
 {% endblock %}
@@ -32,24 +57,25 @@
 
             const cpDate = document.createElement('p');
             cpDate.className = 'mt-3 text-center text-dark';
-            cpDate.innerText = getTimeString(capture.time);
+            const cpTime = getTimeString(capture.time);
+            cpDate.innerText = cpTime;
 
             let cpFile;
             const fileSrc = baseResourceUrl.replace('filename', capture.filename);
             if (capture.mimetype === 'video/mp4') {
                 cpFile = document.createElement('video');
-                cpFile.className = 'my-3';
+                cpFile.className = 'my-3 mx-auto';
                 cpFile.controls = true;
             } else {
                 cpFile = document.createElement('img');
                 cpFile.alt = `Capture img ${capture.filename}`;
-                cpFile.className = 'img-fluid my-3';
+                cpFile.className = 'img-fluid my-3 mx-auto';
             }
-            cpFile.onclick = () => openPopup(fileSrc);
+            cpFile.onclick = () => openPopup(capture.message, cpTime, fileSrc, capture.mimetype);
             cpFile.src = fileSrc;
             cpFile.type = capture.mimetype;
-            cpFile.width = 320;
-            cpFile.height = 240;
+            cpFile.width = 240;
+            cpFile.height = 320;
 
             const captureContainer = document.createElement('div');
             captureContainer.className = 'border-2 border-primary card card-width col-sm-auto mb-3';
@@ -99,18 +125,29 @@
         }
     </script>
     <script>
-        //Popup
-        const popup = document.getElementById('popup-container');
+        //Modal
+        const requestModal = new bootstrap.Modal(document.getElementById('request-modal'));
+        const requestModalTitle = document.getElementById('request-modal-title');
+        const requestModalSubtitle = document.getElementById('request-modal-subtitle');
+        const requestModalBodyContainer = document.getElementById('modal-body-container');
+        const requestModalImage = document.getElementById('request-modal-image');
+        const requestModalVideo = document.getElementById('request-modal-video');
 
-        function closePopup() {
-            popup.style.display = 'none';
-        }
+        function openPopup(title, subtitle, src, type) {
+            requestModalTitle.innerText = title;
+            requestModalSubtitle.innerText = subtitle;
+            while (requestModalBodyContainer.lastElementChild) {
+                requestModalBodyContainer.removeChild(requestModalBodyContainer.lastElementChild);
+            }
 
-        const popupImage = document.getElementById('popup-image');
-
-        function openPopup(src) {
-            popupImage.src = src;
-            popup.style.display = 'block';
+            if (type === 'video/mp4') {
+                requestModalVideo.src = src;
+                requestModalBodyContainer.appendChild(requestModalVideo);
+            } else {
+                requestModalImage.src = src;
+                requestModalBodyContainer.appendChild(requestModalImage);
+            }
+            requestModal.show();
         }
     </script>
     <script>

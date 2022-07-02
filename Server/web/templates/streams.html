@@ -19,8 +19,8 @@
                             name="stream-view"
                                     {% endif %}
                             type="image/jpeg"
-                            width="320"
-                            height="240">
+                            width="240"
+                            height="320">
                     </object>
                     <figcaption class="figure-caption text-center">{{ doorbell.name }}</figcaption>
                     <figcaption class="figure-caption text-center">{{ doorbell.state }}</figcaption>
@@ -58,8 +58,8 @@
             sFigureObject.setAttribute('data-online', doorbell.online);
             sFigureObject.name = 'stream-view';
             sFigureObject.type = 'image/jpeg';
-            sFigureObject.width = '320';
-            sFigureObject.height = '240';
+            sFigureObject.width = '240';
+            sFigureObject.height = '320';
 
             const sFigure = document.createElement('figure');
             sFigure.className = 'figure';

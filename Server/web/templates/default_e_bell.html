@@ -141,7 +141,7 @@
 
                     for (const alert in alerts) {
                         if (data.alerts.find(a => a.id = alert)) {
-                            return;
+                            continue;
                         }
 
                         const alertNode = alerts[alert];

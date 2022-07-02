@@ -8,12 +8,12 @@
 {% block e_bell_content %}
     <div class="d-flex flex-wrap justify-content-evenly" id="alerts-container">
         {% for alert in alerts %}
-            <div class="card card-hover card-width m-2 text-white {% if alert.type == 1 %} card-hover-grey{% elif alert.type == 2 %} card-hover-green{% elif alert.type == 3 %} card-hover-purple{% else %} card-hover-red{% endif %}"
+            <div class="card card-hover {% if alert.type == 1 or alert.type == 2 %}card-announcement-width{% else %}w-auto{% endif %} m-2 text-white {% if alert.type == 1 %} card-hover-grey{% elif alert.type == 2 %} card-hover-green{% elif alert.type == 3 %} card-hover-purple{% else %} card-hover-red{% endif %}"
                  id="alert-{{ alert.id }}">
                 {% if not alert.checked %}
-                     {% do enable_mark_read.append(1) %}
+                    {% do enable_mark_read.append(1) %}
                     <img alt="Alert not checked icon"
-                         class="position-absolute top-0 end-0"
+                         class="position-absolute top-0 end-0 z-index-1"
                          data-check="true"
                          src="{{ url_for('static', filename='alert.png') }}"
                          width="50"
@@ -24,22 +24,24 @@
                            controls
                            src="{{ url_for('get-resource', filename=alert.filename) }}"
                            type="{{ alert.mimetype }}"
-                           width="320"
-                           height="240">
+                           width="240"
+                           height="320">
                     </video>
                 {% else %}
                     <img alt="Alert image {{ alert.filename }}"
                          class="card-image-recenter"
                             {% if alert.type == 1 or alert.type == 2 %}
                          src="{{ url_for('static', filename='announcement.png') }}"
+                         width="320"
+                         height="240"
                             {% else %}
                          src="{{ url_for('get-resource', filename=alert.filename) }}"
+                         width="240"
+                         height="320"
                             {% endif %}
-                         type="{{ alert.mimetype }}"
-                         width="320"
-                         height="240">
+                         type="{{ alert.mimetype }}">
                 {% endif %}
-                <div class="card-body text-center">
+                <div class="card-body text-center w-100">
                     <!--
                         1 - System
                         2 - NewBell
@@ -56,7 +58,7 @@
             </div>
         {% endfor %}
     </div>
-    <div class="justify-content-end mt-5 me-2"
+    <div class="justify-content-end mt-3 me-2"
          id="mark-read-container"
             {% if enable_mark_read %}
          style="display: flex;"
@@ -75,7 +77,7 @@
 
 {% block scripts %}
     <script>
-        //Popup
+        //Popup>
         const popup = document.getElementById('popup-container');
 
         function closePopup() {
@@ -95,11 +97,10 @@
         const checkedAlerts = {};
         const uncheckedAlerts = {};
         {% for alert in alerts %}
-            const alertElement = document.getElementById('alert-{{ alert.id }}');
             {% if alert.checked %}
-                checkedAlerts[{{ alert.id }}] = alertElement;
+                checkedAlerts[{{ alert.id }}] = document.getElementById('alert-{{ alert.id }}');
             {% else %}
-                uncheckedAlerts[{{ alert.id }}] = alertElement;
+                uncheckedAlerts[{{ alert.id }}] = document.getElementById('alert-{{ alert.id }}');
             {% endif %}
         {% endfor %}
 
@@ -111,15 +112,18 @@
             if (alert.mimeType === 'video/mp4') {
                 fileContainer = document.createElement('video');
                 fileContainer.controls = true;
+                setTimeout(() => {
+                    fileContainer.src = baseResourceUrl.replace('filename', alert.filename);
+                }, 5500);
             } else {
                 fileContainer = document.createElement('img');
                 fileContainer.alt = `Alert image ${alert.filename}`;
+                fileContainer.src = baseResourceUrl.replace('filename', alert.filename);
             }
             fileContainer.className = 'card-image-recenter';
-            fileContainer.src = baseResourceUrl.replace('filename', alert.filename);
             fileContainer.type = alert.mimeType;
-            fileContainer.width = 320;
-            fileContainer.height = 240;
+            fileContainer.width = 240;
+            fileContainer.height = 320;
 
             const infoContainer = document.createElement('div');
             infoContainer.className = 'card-body text-center';
@@ -221,7 +225,7 @@
                             }
                         } else {
                             if (firstUnchecked === -1) {
-                                firstUnchecked = alert.id;
+                                firstUnchecked = alert.id - 1;
                             }
 
                             if (!(alert.id in uncheckedAlerts)) {
