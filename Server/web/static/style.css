@@ -76,7 +76,7 @@ body {
     max-width: 380px;
 }
 
-.-z-index-1 {
+.z-index-1 {
     z-index: 300;
 }
 
@@ -100,68 +100,6 @@ body {
 .pic:hover video {
     transform: scale(1.1);
 }
-
-.popup-pic {
-    position: fixed;
-    top: 0;
-    left: 0;
-    background: rgba(0, 0, 0, .9);
-    height: 100vh;
-    width: 100vw;
-    z-index: 200;
-    display: none;
-}
-
-.popup-pic span {
-    position: absolute;
-    top: -15px;
-    right: 10px;
-    font-size: 60px;
-    font-weight: bolder;
-    cursor: pointer;
-    z-index: 100;
-}
-
-.popup-pic img {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    border: 5px solid rgb(255, 255, 255);
-    border-radius: 5px;
-    object-fit: cover;
-}
-
-.popup-pic video {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    border: 5px solid rgb(255, 255, 255);
-    border-radius: 5px;
-    object-fit: cover;
-}
-
-.popup-pic div {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    border: 5px solid rgb(0, 0, 0);
-    background-color: rgb(255, 255, 255);
-    border-radius: 5px;
-    width: 750px;
-    height: 450px;
-    object-fit: cover;
-    text-align: center;
-}
-
-@media (max-width: 768px) {
-    .popup.pic img {
-        width: 95%;
-    }
-}
-
 
 .form-control {
     margin-bottom: 10px;
@@ -212,32 +150,4 @@ body {
 .alert {
     padding: 5px;
     flex: 1;
-}
-
-.mark-btn {
-    display: inline-block;
-    background-color: rgba(67, 56, 216, 0.81);
-    border-radius: 10px;
-    border: 4px double rgb(204, 204, 204);
-    color: rgb(238, 238, 238);
-    text-align: center;
-    font-size: 28px;
-    padding: 15px;
-    width: 200px;
-    cursor: pointer;
-    margin: 5px;
-}
-
-.vertical-center {
-    margin-top: 5px;
-    position: absolute;
-    left: 50%;
-    -ms-transform: translateX(-50%);
-    transform: translateX(-50%);
-}
-
-.boxy {
-    height: 150px;
-    position: relative;
-    margin-top: 10px;
 }

@@ -27,8 +27,7 @@
                 document.body.classList.add('sidebar-toggled');
                 sidebar.classList.add('toggled');
 
-            }
-            else {
+            } else {
                 document.body.classList.remove('sidebar-toggled');
                 sidebar.classList.remove('toggled');
             }

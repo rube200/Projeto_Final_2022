@@ -67,30 +67,10 @@
             {% endif %}>
         <button class="btn btn-primary" onclick="markAlertsChecked()">Mark all as Read</button>
     </div>
-    <div class="popup-pic" id="popup-container">
-        <span id="popup-pic-close-button" onclick="closePopup()">&times;</span>
-        <!--suppress RequiredAttributes -->
-        <img alt="Bigger image selected by user" id="popup-image">
-    </div>
 {% endblock %}
 
 
 {% block scripts %}
-    <script>
-        //Popup>
-        const popup = document.getElementById('popup-container');
-
-        function closePopup() {
-            popup.style.display = 'none';
-        }
-
-        const popupImage = document.getElementById('popup-image');
-
-        function openPopup(src) {
-            popupImage.src = src;
-            popup.style.display = 'block';
-        }
-    </script>
     <!--suppress JSUnresolvedVariable -->
     <script>
         //Alerts

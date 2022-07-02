@@ -44,7 +44,7 @@
 
 {% block template_scripts %}
     {{ super() }}
-    <!--suppress JSDuplicatedDeclaration, JSUnresolvedVariable -->
+    <!--suppress JSDuplicatedDeclaration, JSUnresolvedVariable, JSUnusedGlobalSymbols -->
     <script>
         //Captures
         const capturesContainer = document.getElementById('captures-container');
@@ -124,6 +124,7 @@
                 .catch(error => console.error(`Error calling get-new-captures: ${error}`));
         }
     </script>
+    <!--suppress JSUnresolvedVariable, JSUnresolvedFunction -->
     <script>
         //Modal
         const requestModal = new bootstrap.Modal(document.getElementById('request-modal'));
