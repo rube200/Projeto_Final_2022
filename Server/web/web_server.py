@@ -156,7 +156,7 @@ class WebServer(DatabaseAccessor, Flask):
             mimetype = guess_type(filename)[0]
         else:
             filename = alert_data['filename'] if 'filename' in col else None
-            mimetype = 'image/jpeg'
+            mimetype = guess_type(filename)[0] if filename else 'image/jpeg'
 
         return {
             'id': alert_data['id'],
