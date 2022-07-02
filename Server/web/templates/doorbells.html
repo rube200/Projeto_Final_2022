@@ -118,6 +118,7 @@
                 .catch(error => console.error(`Error calling get-doorbells-info: ${error}`));
         }
 
+        document.addEventListener('refresh', () => getDoorbellStat());
         window.addEventListener('load', () => setInterval(getDoorbellStat, 5000));
     </script>
 {% endblock %}

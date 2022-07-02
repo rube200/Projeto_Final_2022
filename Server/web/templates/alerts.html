@@ -165,7 +165,7 @@
 
             if (!alert.checked) {
                 const uncheckImg = document.createElement('img');
-                uncheckImg.alt = "Alert not checked icon";
+                uncheckImg.alt = 'Alert not checked icon';
                 uncheckImg.className = 'position-absolute top-0 end-0';
                 uncheckImg.setAttribute('data-check', 'true');
                 uncheckImg.src = '{{ url_for('static', filename='alert.png') }}';
@@ -193,7 +193,7 @@
         const baseNewAlertsUrl = '{{ url_for('get-new-alerts', current_alert_id='-1') }}';
         const markReadContainer = document.getElementById('mark-read-container');
         let firstUncheckedAlertId = 0;
-        let lastAlertId = 0;
+        let lastAlertId = {{ last_alert_id }};
 
         function getNewAlerts() {
             fetch(baseNewAlertsUrl.replace('-1', firstUncheckedAlertId))
@@ -236,12 +236,16 @@
                         markReadContainer.style.display = 'none';
                     }
 
+                    if (firstUnchecked !== -1) {
+                        firstUncheckedAlertId = firstUnchecked;
+                    }
                     lastAlertId = data.lastAlertId;
                 })
                 .catch(error => console.error(`Error calling get-new-alerts: ${error}`));
         }
 
         const alertTimeToUpdate = document.getElementsByName('alert-time-to-process');
+        document.addEventListener('refresh', () => getNewAlerts());
         window.addEventListener('load', () => {
             alertTimeToUpdate.forEach(element => element.innerText = getTimeString(element.innerText));
             setInterval(getNewAlerts, 5000);
@@ -250,14 +254,14 @@
     <script>
         //Mark alerts
         function markAlertsChecked() {
-            if (Object.keys(uncheckedAlerts).length === 0) {
+            if (Object.keys(uncheckedAlerts).length === 0 || lastAlertId === 0) {
                 //todo add msg
                 return;
             }
 
             const formAlertId = new FormData();
             formAlertId.append('last-alert-id', lastAlertId);
-            fetch('{{ url_for("alerts") }}', {
+            fetch('{{ url_for('alerts') }}', {
                 body: formAlertId,
                 method: 'POST',
             })
@@ -270,6 +274,7 @@
                     }
 
                     console.log(data);
+                    document.dispatchEvent(new Event('refresh'))
                     //todo something
                 })
                 .catch(error => {

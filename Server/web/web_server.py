@@ -543,11 +543,11 @@ class WebServer(DatabaseAccessor, Flask):
 
         alerts_data = self._get_user_alerts(username)
         if not alerts_data:
-            return render_template('alerts.html')
+            return render_template('alerts.html', last_alert_id=0)
 
         alerts = self.__convert_captures(alerts_data, False)
         alerts.reverse()
-        return render_template('alerts.html', alerts=alerts)
+        return render_template('alerts.html', alerts=alerts, last_alert_id=alerts[-1]['id'])
 
     def __check_alerts(self, username: str):
         last_alert_id = request.form.get('last-alert-id')

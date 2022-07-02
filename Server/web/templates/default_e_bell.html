@@ -92,7 +92,7 @@
 {% endblock %}
 
 {% block template_scripts %}
-    <script src="{{ url_for('static', filename='moment.js') }}"></script>
+    <script src='{{ url_for('static', filename='moment.js') }}'></script>
     <!--suppress JSUnresolvedVariable -->
     <script>
         //Time
@@ -162,6 +162,7 @@
                 .catch(error => console.error(`Error calling get-new-alerts: ${error}`));
         }
 
+        document.addEventListener('refresh', () => getAlerts());
         window.addEventListener('load', () => {
             getAlerts();
             setInterval(getAlerts, 5000);

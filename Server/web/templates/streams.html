@@ -123,6 +123,7 @@
                 .catch(error => console.error(`Error calling get-doorbells-info: ${error}`));
         }
 
+        document.addEventListener('refresh', () => getDoorbellStat());
         window.addEventListener('load', () => {
             const streams = document.getElementsByName('stream-view');
             streams.forEach(stream => {
