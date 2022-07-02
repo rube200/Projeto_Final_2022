@@ -7,6 +7,9 @@ from threading import Thread
 from traceback import format_exc
 from typing import Tuple
 
+import cv2
+import numpy
+
 from socket_client.client_data import ClientData
 from socket_client.packet import Packet
 from socket_common.packet_helper import PacketType
@@ -149,7 +152,14 @@ class ClientSocket(ClientData):
         raise NotImplementedError(f'{self.__name__} does not implement __process_username')
 
     def _process_camera(self, data: bytes) -> None:
-        self._camera = data
+        np_img = numpy.frombuffer(data, dtype=numpy.uint8)
+        # noinspection PyUnresolvedReferences
+        img = cv2.imdecode(np_img, cv2.IMREAD_COLOR)
+        # noinspection PyUnresolvedReferences
+        img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
+        # noinspection PyUnresolvedReferences
+        success, buffer = cv2.imencode('.jpeg', img)
+        self._camera = buffer.tobytes() if success else data
 
     def _process_bell_pressed(self) -> None:
         raise NotImplementedError(f'{self.__name__} does not implement __process_bell_pressed')

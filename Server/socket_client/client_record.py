@@ -43,7 +43,7 @@ class ClientRecord(Thread):
 
         self.__record_until = record_until
         self.__video_name = name
-        self.__video_writer = VideoWriter(name, FOURCC, 20, (320, 240))
+        self.__video_writer = VideoWriter(name, FOURCC, 20, (240, 320))
 
         if self.__running:
             self.__waiter.clear()
