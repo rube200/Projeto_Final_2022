@@ -68,6 +68,8 @@ class WebServer(DatabaseAccessor, Flask):
             import secrets
             self.config['JWT_SECRET_KEY'] = secrets.token_hex(32)
             self.config['SECRET_KEY'] = secrets.token_hex(32)
+
+        self.jinja_env.add_extension('jinja2.ext.do')
         self.__mail = Mail(self)
         self.__setup_db()
         self.__setup_web()

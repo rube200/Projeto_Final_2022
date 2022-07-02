@@ -3,6 +3,7 @@
 {% set nav_title='Alerts' %}
 {% set have_content=alerts|length > 0 %}
 {% set nothing_message='You don\'t have any alerts.' %}
+{% set enable_mark_read = [] %}
 
 {% block e_bell_content %}
     <div class="d-flex flex-wrap justify-content-evenly" id="alerts-container">
@@ -10,6 +11,7 @@
             <div class="card card-hover card-width m-2 text-white {% if alert.type == 1 %} card-hover-grey{% elif alert.type == 2 %} card-hover-green{% elif alert.type == 3 %} card-hover-purple{% else %} card-hover-red{% endif %}"
                  id="alert-{{ alert.id }}">
                 {% if not alert.checked %}
+                     {% do enable_mark_read.append(1) %}
                     <img alt="Alert not checked icon"
                          class="position-absolute top-0 end-0"
                          data-check="true"
@@ -54,10 +56,14 @@
             </div>
         {% endfor %}
     </div>
-    <div class="d-flex justify-content-end mt-5 me-2"
+    <div class="justify-content-end mt-5 me-2"
          id="mark-read-container"
-         {% if not have_content %}style="display: none!important;"{% endif %}>
-        <button class="btn btn-primary" type="button">Mark all as Read</button>
+            {% if enable_mark_read %}
+         style="display: flex;"
+            {% else %}
+         style="display: none;"
+            {% endif %}>
+        <button class="btn btn-primary" onclick="markAlertsChecked()">Mark all as Read</button>
     </div>
     <div class="popup-pic" id="popup-container">
         <span id="popup-pic-close-button" onclick="closePopup()">&times;</span>
@@ -83,43 +89,18 @@
             popup.style.display = 'block';
         }
     </script>
-    <script>
-        //Mark alerts
-        function markAlertsChecked() {
-            if (lastAlertId === 0) {
-                //todo maybe add a message
-                return;
-            }
-
-            const formAlertId = new FormData();
-            formAlertId.append('last-alert-id', lastAlertId);
-            fetch('{{ url_for("alerts") }}', {
-                body: formAlertId,
-                method: 'POST',
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (!data || data.error) {
-                        console.error(`Error while marking alerts: ${data.error}`);
-                        alert(`Error while marking alerts. ${data.error}`);
-                        return;
-                    }
-
-                    console.log(data);
-                    //todo something
-                })
-                .catch(error => {
-                    console.error(`Error while marking alerts: ${error}`);
-                    alert(`Error while marking alerts. ${error}`);
-                });
-        }
-    </script>
     <!--suppress JSUnresolvedVariable -->
     <script>
         //Alerts
-        const alertsElements = {};
+        const checkedAlerts = {};
+        const uncheckedAlerts = {};
         {% for alert in alerts %}
-            alertsElements[{{ alert.id }}] = document.getElementById('alert-{{ alert.id }}');
+            const alertElement = document.getElementById('alert-{{ alert.id }}');
+            {% if alert.checked %}
+                checkedAlerts[{{ alert.id }}] = alertElement;
+            {% else %}
+                uncheckedAlerts[{{ alert.id }}] = alertElement;
+            {% endif %}
         {% endfor %}
 
         const alertsContainer = document.getElementById('alerts-container');
@@ -201,10 +182,6 @@
         }
 
         function editAlertContainer(alert, alertContainer) {
-            if (!alert.checked) {
-                return;
-            }
-
             const img = alertContainer.getElementsByTagName('img')[0];
             if (!img.hasAttribute('data-check')) {
                 return;
@@ -215,10 +192,11 @@
 
         const baseNewAlertsUrl = '{{ url_for('get-new-alerts', current_alert_id='-1') }}';
         const markReadContainer = document.getElementById('mark-read-container');
-        let lastUncheckedAlertId = 0;
+        let firstUncheckedAlertId = 0;
+        let lastAlertId = 0;
 
         function getNewAlerts() {
-            fetch(baseNewAlertsUrl.replace('-1', lastUncheckedAlertId))
+            fetch(baseNewAlertsUrl.replace('-1', firstUncheckedAlertId))
                 .then(response => response.json())
                 .then(data => {
                     if (!data || data.error) {
@@ -226,30 +204,39 @@
                         return;
                     }
 
-                    let last = -1;
+                    let firstUnchecked = -1;
                     data.alerts.forEach((alert) => {
-                        const alertContainer = alertsElements[alert.id];
-                        if (alertContainer === undefined) {
-                            alertsElements[alert.id] = createAlertContainer(alert);
-                        } else {
-                            editAlertContainer(alert, alertContainer);
+                        if (alert.id in checkedAlerts) {
+                            return;
                         }
 
-                        if (last === -1 && !alert.checked) {
-                            last = alert.id - 1;
+                        if (alert.checked) {
+                            if (alert.id in uncheckedAlerts) {
+                                const alertElement = uncheckedAlerts[alert.id];
+                                delete uncheckedAlerts[alert.id];
+                                editAlertContainer(alert, alertElement);
+                                checkedAlerts[alert.id] = alertElement;
+                            } else {
+                                checkedAlerts[alert.id] = createAlertContainer(alert);
+                            }
+                        } else {
+                            if (firstUnchecked === -1) {
+                                firstUnchecked = alert.id;
+                            }
+
+                            if (!(alert.id in uncheckedAlerts)) {
+                                uncheckedAlerts[alert.id] = createAlertContainer(alert);
+                            }
                         }
                     });
 
-                    if (lastUncheckedAlertId === 0 && (data.lastAlertId > 0 || last > -1)) {
-                        markReadContainer.style.display = '';
-                        nothingToShow.style.display = 'none';
+                    if (Object.keys(uncheckedAlerts).length > 0) {
+                        markReadContainer.style.display = 'flex';
+                    } else {
+                        markReadContainer.style.display = 'none';
                     }
 
-                    if (last >= 0) {
-                        lastUncheckedAlertId = last;
-                    } else {
-                        lastUncheckedAlertId = data.lastAlertId;
-                    }
+                    lastAlertId = data.lastAlertId;
                 })
                 .catch(error => console.error(`Error calling get-new-alerts: ${error}`));
         }
@@ -259,5 +246,36 @@
             alertTimeToUpdate.forEach(element => element.innerText = getTimeString(element.innerText));
             setInterval(getNewAlerts, 5000);
         });
+    </script>
+    <script>
+        //Mark alerts
+        function markAlertsChecked() {
+            if (Object.keys(uncheckedAlerts).length === 0) {
+                //todo add msg
+                return;
+            }
+
+            const formAlertId = new FormData();
+            formAlertId.append('last-alert-id', lastAlertId);
+            fetch('{{ url_for("alerts") }}', {
+                body: formAlertId,
+                method: 'POST',
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (!data || data.error) {
+                        console.error(`Error while marking alerts: ${data.error}`);
+                        alert(`Error while marking alerts. ${data.error}`);
+                        return;
+                    }
+
+                    console.log(data);
+                    //todo something
+                })
+                .catch(error => {
+                    console.error(`Error while marking alerts: ${error}`);
+                    alert(`Error while marking alerts. ${error}`);
+                });
+        }
     </script>
 {% endblock %}
