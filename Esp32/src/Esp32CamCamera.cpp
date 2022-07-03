@@ -58,13 +58,12 @@ uint8_t *Esp32CamCamera::getCameraFrame(size_t *frame_len) {
     if (fb->format == PIXFORMAT_JPEG) {
         frame = espMalloc(fb->len);
         if (!frame) {
-            *frame_len = 0;
             esp_camera_fb_return(fb);
             Serial.println("Fail to allocate frame.");
             return nullptr;
         }
 
-        memcpy((void *) frame, fb->buf, fb->len);
+        memcpy(frame, fb->buf, fb->len);
         *frame_len = fb->len;
         esp_camera_fb_return(fb);
         return frame;

@@ -1,5 +1,14 @@
 #include "Esp32CamPacket.h"
 
+Esp32CamPacket::Esp32CamPacket(const packetType packet_type) {
+    type = packet_type;
+    data_len = 0;
+    expected_len = 0;
+
+    allocPacket(0);
+    toHeader();
+}
+
 Esp32CamPacket::Esp32CamPacket(const packetType packet_type, const uint8_t *data, const size_t data_len) {
     type = packet_type;
     this->data_len = data_len;
@@ -23,7 +32,7 @@ size_t Esp32CamPacket::packetLen() const {
 }
 
 void Esp32CamPacket::resetPacket() {
-    if (pkt) {
+    if (pkt && pkt_len) {
         free(pkt);
         pkt = nullptr;
     }
@@ -86,6 +95,9 @@ void Esp32CamPacket::fromHeader(const uint8_t *header) {
 
 void Esp32CamPacket::allocPacket(const size_t data_size) {
     const auto len = HEADER_SIZE + data_size;
+    if (pkt_len == len) {
+        return;
+    }
 
     pkt = espRealloc(pkt, len);
     if (!pkt) {

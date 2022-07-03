@@ -104,6 +104,7 @@ static uint8_t *getMac() {
     }
 
     if (esp_read_mac(macPointer, ESP_MAC_WIFI_STA) != ESP_OK) {
+        free(macPointer);
         Serial.println("Fail to read mac");
         return nullptr;
     }

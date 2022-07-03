@@ -18,6 +18,9 @@ enum packetType {
     OpenRelay = 9
 };
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-function"
+
 static const char *getTypeToString(packetType type) {
     switch (type) {
         case Invalid:
@@ -45,9 +48,13 @@ static const char *getTypeToString(packetType type) {
     }
 }
 
+#pragma clang diagnostic pop
+
 class Esp32CamPacket {
 public:
     Esp32CamPacket() = default;
+
+    Esp32CamPacket(packetType);
 
     Esp32CamPacket(packetType, const uint8_t *, size_t);
 

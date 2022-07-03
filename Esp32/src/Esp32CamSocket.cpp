@@ -140,6 +140,7 @@ size_t Esp32CamSocket::receiveHeader(int av) {
 
     const auto headerLen = readBytes(header, HEADER_SIZE);
     if (headerLen != HEADER_SIZE) {
+        free(header);
         Serial.printf("FATAL ERROR!! Fail to get header - %d\n", headerLen);
         restartEsp();
         return 0;
@@ -271,9 +272,8 @@ bool Esp32CamSocket::sendUuid() {
     }
 
     auto packet = Esp32CamPacket(Uuid, baseMac, MAC_SIZE);
-    const auto state = sendPacket(packet, "Uuid");
     free(baseMac);
-    return state;
+    return sendPacket(packet, "Uuid");
 }
 
 bool Esp32CamSocket::sendUsername() {
@@ -352,7 +352,7 @@ void Esp32CamSocket::sendBellPressed() {
         return;
     }
 
-    auto packet = Esp32CamPacket(BellPressed, nullptr, 0);
+    auto packet = Esp32CamPacket(BellPressed);
     sendPacket(packet, "BellPressed");
     if (bellCaptureDuration > 0) {
         streamUntil = std::max(streamUntil, (uint64_t) esp_timer_get_time() + bellCaptureDuration);
@@ -366,7 +366,7 @@ void Esp32CamSocket::sendMotionDetected() {
         return;
     }
 
-    auto packet = Esp32CamPacket(MotionDetected, nullptr, 0);
+    auto packet = Esp32CamPacket(MotionDetected);
     sendPacket(packet, "MotionDetected");
     if (motionCaptureDuration > 0) {
         streamUntil = std::max(streamUntil, (uint64_t) esp_timer_get_time() + motionCaptureDuration);
