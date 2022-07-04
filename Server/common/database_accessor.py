@@ -52,7 +52,7 @@ class DatabaseAccessor:
             cursor.execute('INSERT OR IGNORE INTO doorbell(id, name, relay, owner) '
                            'VALUES (?, ?, ?, ?)',
                            [uuid, uuid, relay, username])
-            cursor.execute('INSERT OR IGNORE INTO doorbell_alerts '
+            cursor.execute('INSERT OR IGNORE INTO doorbell_emails '
                            'SELECT ?, email '
                            'FROM user '
                            'WHERE username = ?',
@@ -117,7 +117,7 @@ class DatabaseAccessor:
     def _get_alert_emails(self, uuid: int) -> str or None:
         data = self.__get_all(
             'SELECT email '
-            'FROM doorbell_alerts '
+            'FROM doorbell_emails '
             'WHERE uuid = ?',
             [uuid])
         return [d['email'] for d in data] if data else []
@@ -310,7 +310,7 @@ class DatabaseAccessor:
             relay = data['relay'] if data else None
 
             cursor.execute('SELECT email '
-                           'FROM doorbell_alerts '
+                           'FROM doorbell_emails '
                            'WHERE uuid = ?',
                            [uuid])
             data = cursor.fetchall()
@@ -332,11 +332,11 @@ class DatabaseAccessor:
                            'SET name = ? '
                            'WHERE id = ?',
                            [doorbell_name, uuid])
-            cursor.execute('DELETE FROM doorbell_alerts '
+            cursor.execute('DELETE FROM doorbell_emails '
                            'WHERE uuid = ?',
                            [uuid])
             if len(alert_emails):
-                cursor.executemany('INSERT INTO doorbell_alerts '
+                cursor.executemany('INSERT INTO doorbell_emails '
                                    'VALUES (?, ?)',
                                    zip([uuid] * len(alert_emails), alert_emails))
 
