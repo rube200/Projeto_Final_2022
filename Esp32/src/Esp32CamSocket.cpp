@@ -283,7 +283,7 @@ bool Esp32CamSocket::sendUsername() {
     packetData[size] = relay;
 
     auto packet = Esp32CamPacket(Username, packetData, size + 1);
-    free(packetData);
+    delete[] packetData;
     return sendPacket(packet, "Username");
 }
 
