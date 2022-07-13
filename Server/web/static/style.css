@@ -151,3 +151,7 @@ body {
     padding: 5px;
     flex: 1;
 }
+
+button:disabled, [type=button]:disabled, [type=reset]:disabled, [type=submit]:disabled {
+    cursor: not-allowed;
+}
