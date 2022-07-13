@@ -54,9 +54,9 @@ class Esp32CamPacket {
 public:
     Esp32CamPacket() = default;
 
-    Esp32CamPacket(packetType);
+    explicit Esp32CamPacket(packetType);
 
-    Esp32CamPacket(packetType, const uint8_t *, size_t);
+    explicit Esp32CamPacket(packetType, const uint8_t *, size_t);
 
     ~Esp32CamPacket();
 

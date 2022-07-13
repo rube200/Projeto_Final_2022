@@ -25,7 +25,7 @@ public:
 
     void setUsername(const char *);
 
-    void setRelay(const bool relay);
+    void setRelay(bool relay);
 
     bool connectSocket(bool should_restart_esp = false);
 
