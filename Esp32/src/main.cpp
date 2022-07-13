@@ -15,4 +15,4 @@ void loop() {
     }
 }
 
-//todo flash
+//todo use esp32cam flash to light

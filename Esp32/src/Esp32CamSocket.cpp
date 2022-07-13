@@ -59,7 +59,7 @@ bool Esp32CamSocket::connectSocket(const bool should_restart_esp) {
 
 void Esp32CamSocket::processSocket() {
     if (available() < 0) {
-        Serial.println("TODO Available bellow 0");
+        Serial.println("SOMETHING WENT WRONG AVAILABLE BELLOW 0");
         return;
     }
 

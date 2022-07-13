@@ -39,7 +39,22 @@ class ServerSocket(DatabaseAccessor):
         self.__tcp_socket.setsockopt(SOL_SOCKET, SO_KEEPALIVE, True)
 
     def __del__(self):
-        pass  # todo
+        DatabaseAccessor.__del__(self)
+        self.__events.on_alert -= self.__on_alert
+        self.__events.on_esp_disconnect -= self.__on_esp_disconnect
+        self.__events.on_esp_username_recv -= self.__on_esp_username_recv
+        self.__events.on_esp_uuid_recv -= self.__on_esp_uuid_recv
+
+        self.__selector.unregister(self.__tcp_socket)
+        self.__selector.close()
+
+        self.__clients.close_all()
+
+        self.__tcp_socket.shutdown(SHUT_RDWR)
+        self.__tcp_socket.close()
+
+        del self.__tcp_socket
+        # todo may miss some code
 
     def __on_esp_uuid_recv(self, client: EspClient) -> Tuple[bool, int, int, int] or None:
         uuid = client.uuid

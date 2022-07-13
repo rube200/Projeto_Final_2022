@@ -31,7 +31,7 @@
 {% endblock %}
 
 {% block scripts %}
-    <!--suppress JSUnresolvedVariable -->
+    <!--suppress JSUnresolvedVariable, SillyAssignmentJS -->
     <script>
         //Update streams container
         const doorbells = {};
@@ -81,9 +81,8 @@
             const sFigureObjet = sFigure.getElementsByTagName('object')[0];
 
             if (doorbell.online === true && sFigureObjet.getAttribute('data-online').toLowerCase() !== 'true') {
-                //todo check if works
-                const dtUrl = sFigureObjet.data;
-                sFigureObjet.data = dtUrl;
+                //This should refresh steam view
+                sFigureObjet.data = sFigureObjet.data;
             }
             sFigureObjet.setAttribute('data-online', doorbell.online);
 

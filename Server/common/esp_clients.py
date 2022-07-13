@@ -57,6 +57,14 @@ class EspClients:
         finally:
             self.__lock.release()
 
+    def close_all(self) -> None:
+        self.__lock.acquire()
+        try:
+            for key in self.__esp_clients:
+                self.__esp_clients.pop(key).close()
+        finally:
+            self.__lock.release()
+
     @property
     def esp_clients(self) -> Dict[int, EspClient]:
         return dict(self.__esp_clients)

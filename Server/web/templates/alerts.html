@@ -239,7 +239,7 @@
         //Mark alerts
         function markAlertsChecked() {
             if (Object.keys(uncheckedAlerts).length === 0 || lastAlertId === 0) {
-                //todo add msg
+                alert('There is no alerts to mark as checked.');
                 return;
             }
 
@@ -257,9 +257,8 @@
                         return;
                     }
 
-                    console.log(data);
+                    //Maybe add message to user
                     document.dispatchEvent(new Event('refresh'))
-                    //todo something
                 })
                 .catch(error => {
                     console.error(`Error while marking alerts: ${error}`);
