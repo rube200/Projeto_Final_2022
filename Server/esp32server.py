@@ -1,6 +1,6 @@
 import logging as log
 from logging.handlers import RotatingFileHandler
-from os import environ, path, makedirs
+from os import environ, path, makedirs, umask
 from threading import Thread
 from traceback import format_exc
 
@@ -25,7 +25,9 @@ def config_logger(filename: str = 'esp32server.py.log'):
         return
 
     logger = True
+    old_mask = umask(000)
     makedirs('logs', 0o770, True)
+    umask(old_mask)
     filepath = path.join('logs', filename)
     lg = log.getLogger()
     lg.addHandler(RotatingFileHandler(filepath, maxBytes=65536, backupCount=5))

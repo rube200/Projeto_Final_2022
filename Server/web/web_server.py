@@ -3,7 +3,7 @@ import re
 from base64 import b64encode
 from datetime import datetime
 from mimetypes import guess_type
-from os import environ, path, makedirs
+from os import environ, path, makedirs, umask
 from sqlite3 import Row
 from time import monotonic, sleep, time
 from traceback import format_exc
@@ -63,7 +63,10 @@ class WebServer(DatabaseAccessor, Flask):
         self.config.from_pyfile('flask.cfg')
 
         environ['ESP_FILES_DIR'] = self.__esp_full_path = path.join(self.root_path, self.config['ESP_FILES_DIR'])
-        makedirs(self.__esp_full_path, 770, True)
+        old_mask = umask(000)
+        makedirs(self.__esp_full_path, 0o770, True)
+        umask(old_mask)
+
         if self.config.get('RANDOM_SECRET_KEY'):
             import secrets
             self.config['JWT_SECRET_KEY'] = secrets.token_hex(32)
