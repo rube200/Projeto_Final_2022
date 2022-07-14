@@ -30,7 +30,10 @@ class DatabaseAccessor:
                            'LIMIT 1',
                            [uuid])
             data = cursor.fetchone()
-            return data['owner'] if data else None
+            if not data:
+                return None
+
+            return data['owner']
         finally:
             cursor.close()
             con.close()
@@ -109,7 +112,10 @@ class DatabaseAccessor:
                 'LIMIT 1',
                 [uuid])
             data = cursor.fetchone()
-            return data['name'] if data else None
+            if not data:
+                return None
+
+            return data['name']
         finally:
             cursor.close()
             con.close()
@@ -166,7 +172,10 @@ class DatabaseAccessor:
                            'LIMIT 1',
                            [username.upper()])
             data = cursor.fetchone()
-            return data['username'], data['name'] if data else None
+            if not data:
+                return None
+
+            return data['username'], data['name']
         finally:
             cursor.close()
             con.close()
@@ -213,7 +222,10 @@ class DatabaseAccessor:
                            'WHERE username = ?',
                            [upper_username])
             data = cursor.fetchone()
-            return data['username'], data['name'] if data else None
+            if not data:
+                return None
+
+            return data['username'], data['name']
         finally:
             cursor.close()
             con.close()
@@ -306,8 +318,15 @@ class DatabaseAccessor:
                            'WHERE id = ?',
                            [uuid])
             data = cursor.fetchone()
-            name = data['name'] if data else uuid
-            relay = data['relay'] if data else None
+            if data:
+                name = data['name']
+            else:
+                name = uuid
+
+            if data:
+                relay = data['relay']
+            else:
+                relay = None
 
             cursor.execute('SELECT email '
                            'FROM doorbell_emails '
