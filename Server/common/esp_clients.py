@@ -60,8 +60,10 @@ class EspClients:
     def close_all(self) -> None:
         self.__lock.acquire()
         try:
-            for key in self.__esp_clients:
-                self.__esp_clients.pop(key).close()
+            for client in self.__esp_clients.values():
+                client.close()
+            self.__esp_clients.clear()
+
         finally:
             self.__lock.release()
 

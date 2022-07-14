@@ -14,7 +14,7 @@ from socket_client.client_socket import ClientSocket
 class EspClient(ClientSocket, ClientRecord):
     def __init__(self, address: Tuple[str, int], tcp_socket: socket, events: EspEvents):
         ClientSocket.__init__(self, address, tcp_socket)
-        ClientRecord.__init__(self, lambda: self._camera)
+        ClientRecord.__init__(self, lambda: self._not_rotate_frame)
         self.__events = events
         self.__config_bell_duration = 0.0
         self.__config_motion_duration = 0.0
@@ -23,9 +23,13 @@ class EspClient(ClientSocket, ClientRecord):
         self.__stream_requests = 0
 
     def close(self):
+        if not self.__events:
+            return
+
+        self.__events = None
         ClientSocket.close(self)
         ClientRecord.close(self)
-        self.__events = None
+
         del self.__config_bell_duration
         del self.__config_motion_duration
         del self.__esp_files_path
@@ -107,7 +111,7 @@ class EspClient(ClientSocket, ClientRecord):
         return self.save_picture()
 
     def save_picture(self, filename: str = None, image: bytes = None) -> Tuple[bytes or None, str]:
-        filename = filename or secure_filename(f'{(time() * 1000)}.jpeg')
+        filename = filename or secure_filename(f'{time()}.jpeg')
         image = image or self._camera
         if not image:
             return None, filename

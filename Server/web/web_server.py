@@ -76,7 +76,6 @@ class WebServer(DatabaseAccessor, Flask):
 
     def __del__(self):
         DatabaseAccessor.__del__(self)
-        self.__events.on_alert -= self.__on_alert
         # todo finish
 
     def __setup_db(self):

@@ -48,6 +48,7 @@ class Esp32Server:
 
         if self.__socket_server:
             self.__socket_server.shutdown()
+            self.__socket_server.close()
             del self.__socket_server
 
         if self.__socket_thread:

@@ -71,6 +71,7 @@
             const dContainer = document.createElement('div');
             dContainer.className = 'card card-hover card-hover-cyan m-4';
             dContainer.id = `doorbell-${doorbell.uuid}`;
+            dContainer.onclick=() => redirectToDoorbell(doorbell.uuid);
             dContainer.appendChild(dImg);
             dContainer.appendChild(dInfoDiv);
 

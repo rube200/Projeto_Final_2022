@@ -3,7 +3,7 @@ from datetime import datetime
 from multiprocessing import Event
 from os import environ
 from selectors import DefaultSelector, EVENT_READ
-from socket import socket, AF_INET, SHUT_RDWR, SOCK_STREAM, SOL_SOCKET, SO_KEEPALIVE
+from socket import socket, AF_INET, SHUT_RDWR, SOCK_STREAM, SOL_SOCKET, SO_KEEPALIVE, SO_REUSEADDR
 from traceback import format_exc
 from typing import Tuple
 
@@ -35,16 +35,16 @@ class ServerSocket(DatabaseAccessor):
         self.__shutdown_request = False
         self.__wait_shutdown = Event()
         self.__tcp_socket = socket(AF_INET, SOCK_STREAM)
+        self.__tcp_socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
         self.__tcp_socket.bind(self.__server_address)
         self.__tcp_socket.setsockopt(SOL_SOCKET, SO_KEEPALIVE, True)
 
     def __del__(self):
         DatabaseAccessor.__del__(self)
-        self.__events.on_alert -= self.__on_alert
-        self.__events.on_esp_disconnect -= self.__on_esp_disconnect
-        self.__events.on_esp_username_recv -= self.__on_esp_username_recv
-        self.__events.on_esp_uuid_recv -= self.__on_esp_uuid_recv
+        self.close()
+        # todo may miss some code
 
+    def close(self) -> None:
         self.__selector.unregister(self.__tcp_socket)
         self.__selector.close()
 
@@ -54,7 +54,6 @@ class ServerSocket(DatabaseAccessor):
         self.__tcp_socket.close()
 
         del self.__tcp_socket
-        # todo may miss some code
 
     def __on_esp_uuid_recv(self, client: EspClient) -> Tuple[bool, int, int, int] or None:
         uuid = client.uuid

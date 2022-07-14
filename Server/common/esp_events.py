@@ -49,6 +49,12 @@ class EspEvents:
             'on_alert',  # int, AlertType, dict-> None
         )
 
+    def __del__(self):
+        # noinspection PyUnusedLocal
+        for event in self.__iter__():
+            del event
+        del self.__dict__
+
     def __getattr__(self, name: str):
         if name not in self.__events__:
             raise AttributeError(f'\'{name}\' is not a declared event')
