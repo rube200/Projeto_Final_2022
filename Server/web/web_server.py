@@ -268,10 +268,11 @@ class WebServer(DatabaseAccessor, Flask):
 
         return data
 
-    def __redirect_after_auth(self, username: str, name: str, page_to_redirect: str):
+    def __redirect_after_auth(self, username: str, name: str, keep_sign: bool, page_to_redirect: str):
         session['token'] = jwt.encode({'username': username}, self.config['JWT_SECRET_KEY'], 'HS256')
         session['username'] = username
         session['name'] = name
+        session.permanent = keep_sign
         return redirect(url_for(page_to_redirect if page_to_redirect else 'doorbells'))
 
     def __on_alert(self, uuid: int, alert_type: AlertType, data: dict):
@@ -323,6 +324,7 @@ class WebServer(DatabaseAccessor, Flask):
 
         username = request.form.get('username')
         password = request.form.get('password')
+        keep_sign = request.form.get('keep_sign')
         if not username or not password:
             flash('Username and/or password are required.', 'danger')
             return render_template('login.html', page_to_redirect=page_to_redirect)
@@ -332,7 +334,7 @@ class WebServer(DatabaseAccessor, Flask):
             flash('Invalid username or password.', 'danger')
             return render_template('login.html', page_to_redirect=page_to_redirect)
 
-        return self.__redirect_after_auth(data[0], data[1], page_to_redirect)
+        return self.__redirect_after_auth(data[0], data[1], True if keep_sign else False, page_to_redirect)
 
     def __endpoint_register(self, page_to_redirect: str):
         if self.__authenticate():
@@ -354,7 +356,7 @@ class WebServer(DatabaseAccessor, Flask):
             flash('Username or email already taken.', 'danger')
             return render_template('register.html', page_to_redirect=page_to_redirect)
 
-        return self.__redirect_after_auth(data[0], data[1], page_to_redirect)
+        return self.__redirect_after_auth(data[0], data[1], True, page_to_redirect)
 
     def __endpoint_captures(self):
         username = self.__authenticate()

@@ -94,7 +94,6 @@ class ClientRecord(Thread):
                 self.__video_writer.release()
 
         finally:
-            log.info(self.__video_name)
             self.__video_writer = None
             self.__video_name = None
             self.__working = False

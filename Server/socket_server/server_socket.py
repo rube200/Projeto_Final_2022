@@ -68,7 +68,7 @@ class ServerSocket(DatabaseAccessor):
             log.info(f'Esp32 not registered {uuid!r}')
 
         self.__clients[uuid] = client
-        return not owner, 5000, 5000, 5000
+        return not owner, 0, 5000, 5000
 
     def __on_esp_username_recv(self, client: EspClient, username: str, relay: bool) -> bool:
         success = self._register_doorbell(username, client.uuid, relay)
