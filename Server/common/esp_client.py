@@ -58,8 +58,8 @@ class EspClient(ClientSocket, ClientRecord):
         is_valid = self.__events.on_esp_username_recv(self, username, relay)
         self._send_username_confirmation(is_valid)
 
-    def _process_camera(self, image: bytes) -> None:
-        super(EspClient, self)._process_camera(image)
+    def _process_camera(self, data: bytes) -> None:
+        super(EspClient, self)._process_camera(data)
 
         while self.__esp_to_save_paths:
             filename, (alert_type, alert_time) = self.__esp_to_save_paths.popitem()
@@ -68,9 +68,10 @@ class EspClient(ClientSocket, ClientRecord):
             else:
                 save_img = self.__config_motion_duration <= 0.0
             if save_img:
-                self.save_picture(filename, image)
+                self.save_picture(filename, self.camera)
 
-            self.__events.on_alert(self.uuid, alert_type, {'filename': filename, 'image': image, 'time': alert_time})
+            self.__events.on_alert(self.uuid, alert_type,
+                                   {'filename': filename, 'image': self.camera, 'time': alert_time})
 
     def __prepare_and_notify(self, alert_type: AlertType, duration: float) -> None:
         alert_time = time()
