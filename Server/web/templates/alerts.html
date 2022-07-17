@@ -9,7 +9,8 @@
     <div class="d-flex flex-wrap justify-content-evenly" id="alerts-container">
         {% for alert in alerts %}
             <div class="card card-hover {% if alert.type == 1 or alert.type == 2 %}card-announcement-width{% else %}w-auto{% endif %} m-2 text-white {% if alert.type == 1 %} card-hover-grey{% elif alert.type == 2 %} card-hover-green{% elif alert.type == 3 %} card-hover-purple{% else %} card-hover-red{% endif %}"
-                 id="alert-{{ alert.id }}">
+                 id="alert-{{ alert.id }}"
+                 onclick="openPopup('{{ alert.message }}', getTimeString('{{ alert.time }}'),{% if alert.mimetype == 'video/mp4' %}'{{ url_for('get-resource', filename=alert.filename) }}',{% elif alert.type == 1 or alert.type == 2 %}'{{ url_for('static', filename='announcement.png') }}',{% else %}'{{ url_for('get-resource', filename=alert.filename) }}',{% endif %}'{{ alert.mimetype }}');">
                 {% if not alert.checked %}
                     {% do enable_mark_read.append(1) %}
                     <img alt="Alert not checked icon"
@@ -67,10 +68,67 @@
             {% endif %}>
         <button class="btn btn-primary" onclick="markAlertsChecked()">Mark all as Read</button>
     </div>
+    <div class="modal" id="request-modal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-center w-100" id="request-modal-title">Doorbell action</h5>
+                </div>
+                <div class="modal-body">
+                    <p class="text-center" id="request-modal-subtitle">Modal body text goes here.</p>
+                    <div class="text-center" id="modal-body-container">
+                        <img alt="Bigger image selected by user"
+                             class="img-fluid"
+                             id="request-modal-image"
+                             width="360"
+                             height="480"
+                             src="">
+                        <video
+                                class="img-fluid"
+                                controls
+                                id="request-modal-video"
+                                width="360"
+                                height="480"></video>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" aria-label="Close">Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}
 
 
 {% block scripts %}
+    <!--suppress JSUnresolvedVariable, JSUnresolvedFunction -->
+    <script>
+        //Modal
+        const requestModal = new bootstrap.Modal(document.getElementById('request-modal'));
+        const requestModalTitle = document.getElementById('request-modal-title');
+        const requestModalSubtitle = document.getElementById('request-modal-subtitle');
+        const requestModalBodyContainer = document.getElementById('modal-body-container');
+        const requestModalImage = document.getElementById('request-modal-image');
+        const requestModalVideo = document.getElementById('request-modal-video');
+
+        function openPopup(title, subtitle, src, type) {
+            requestModalTitle.innerText = title;
+            requestModalSubtitle.innerText = subtitle;
+            while (requestModalBodyContainer.lastElementChild) {
+                requestModalBodyContainer.removeChild(requestModalBodyContainer.lastElementChild);
+            }
+
+            if (type === 'video/mp4') {
+                requestModalVideo.src = src;
+                requestModalBodyContainer.appendChild(requestModalVideo);
+            } else {
+                requestModalImage.src = src;
+                requestModalBodyContainer.appendChild(requestModalImage);
+            }
+            requestModal.show();
+        }
+    </script>
     <!--suppress JSUnresolvedVariable -->
     <script>
         //Alerts
@@ -98,7 +156,11 @@
             } else {
                 fileContainer = document.createElement('img');
                 fileContainer.alt = `Alert image ${alert.filename}`;
-                fileContainer.src = baseResourceUrl.replace('filename', alert.filename);
+                if (alert.type === 1 || alert.type === 2) {
+                    fileContainer.src = '{{ url_for('static', filename='announcement.png') }}';
+                } else {
+                    fileContainer.src = baseResourceUrl.replace('filename', alert.filename);
+                }
             }
             fileContainer.className = 'card-image-recenter';
             fileContainer.type = alert.mimeType;
@@ -146,6 +208,7 @@
             alertContainer.className = 'card card-hover card-width m-2 text-white';
             alertContainer.classList.add(alertColor);
             alertContainer.id = `alert-${alert.id}`;
+            alertContainer.onclick = () => openPopup(alert.message, subtitleText.innerText, fileContainer.src, alert.mimeType);
 
             if (!alert.checked) {
                 const uncheckImg = document.createElement('img');

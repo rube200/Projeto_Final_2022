@@ -71,7 +71,6 @@
                 cpFile.alt = `Capture img ${capture.filename}`;
                 cpFile.className = 'img-fluid my-3 mx-auto';
             }
-            cpFile.onclick = () => openPopup(capture.message, cpTime, fileSrc, capture.mimetype);
             cpFile.src = fileSrc;
             cpFile.type = capture.mimetype;
             cpFile.width = 240;
@@ -79,6 +78,7 @@
 
             const captureContainer = document.createElement('div');
             captureContainer.className = 'border-2 border-primary card card-width col-sm-auto mb-3';
+            captureContainer.onclick = () => openPopup(capture.message, cpTime, fileSrc, capture.mimetype);
             captureContainer.appendChild(cpName);
             captureContainer.appendChild(cpDate);
             captureContainer.appendChild(cpFile);
