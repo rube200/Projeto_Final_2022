@@ -169,7 +169,7 @@ class WebServer(DatabaseAccessor, Flask):
             'mimetype': mimetype,
             'uuid': alert_data['uuid'] if 'uuid' in col else None,
             'name': alert_data['name'] if 'name' in col else None,
-            'checked': alert_data['checked'] if 'checked' in col else None,
+            'checked': bool(alert_data['checked']) if 'checked' in col else None,
             'notes': alert_data['notes'] if 'notes' in col else None
         }
 

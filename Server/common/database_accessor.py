@@ -370,7 +370,7 @@ class DatabaseAccessor:
         cursor = con.cursor()
         try:
             cursor.execute('UPDATE alerts '
-                           'SET checked = TRUE '
+                           'SET checked = 1 '
                            'WHERE id <= ? '
                            'AND uuid IN ('
                            'SELECT id '

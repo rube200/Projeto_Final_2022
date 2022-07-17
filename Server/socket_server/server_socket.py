@@ -82,6 +82,7 @@ class ServerSocket(DatabaseAccessor):
 
     def __on_alert(self, uuid: int, alert_type: AlertType, info: dict) -> None:
         data = {'uuid': uuid, 'type': alert_type.value}
+        info = info or {}
         if 'time' in info:
             data['time'] = datetime.fromtimestamp(info['time'])
         if 'checked' in info:

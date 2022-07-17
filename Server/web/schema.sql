@@ -28,7 +28,7 @@ create table if not exists alerts
     uuid     integer references doorbell on update cascade on delete cascade,
     time     datetime default current_timestamp not null,
     type     integer not null,
-    checked  boolean  default false not null,
+    checked  boolean  default 0 not null,
     filename text     default null,
     notes    text     default null
 );
