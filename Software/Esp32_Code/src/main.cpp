@@ -14,5 +14,3 @@ void loop() {
         espDelayUs(50000);//50ms
     }
 }
-
-//todo use esp32cam flash to light
