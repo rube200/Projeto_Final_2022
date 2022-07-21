@@ -65,7 +65,7 @@ private:
     WifiManagerParam username_parameter = WifiManagerParam("Username",
                                                            "Doorbell not registered, please insert your username:", "",
                                                            50);
-    WifiManagerParam relay_check_parameter = WifiManagerParam("Relay_Check", "Have relay?", "", 1,
+    WifiManagerParam relay_check_parameter = WifiManagerParam("Relay_Check", "Has relay?", "", 1,
                                                               "checked type=\"checkbox\"");
     bool relay = true;
 };
