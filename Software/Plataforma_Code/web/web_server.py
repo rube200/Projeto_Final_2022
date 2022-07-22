@@ -42,7 +42,7 @@ def endpoint_logout():
     return redirect(url_for('index'))
 
 
-valid_files = ('jpg', 'jpeg', 'png', 'mp4')
+valid_files = ('jpg', 'jpeg', 'png', 'webm')
 
 
 def is_valid_file(filename: str, filepath: str) -> bool:

@@ -10,7 +10,7 @@
         {% for alert in alerts %}
             <div class="card card-hover {% if alert.type == 1 or alert.type == 2 %}card-announcement-width{% else %}w-auto{% endif %} m-2 text-white {% if alert.type == 1 %} card-hover-grey{% elif alert.type == 2 %} card-hover-green{% elif alert.type == 3 %} card-hover-purple{% else %} card-hover-red{% endif %}"
                  id="alert-{{ alert.id }}"
-                 onclick="openPopup('{{ alert.message }}', getTimeString('{{ alert.time }}'),{% if alert.mimetype == 'video/mp4' %}'{{ url_for('get-resource', filename=alert.filename) }}',{% elif alert.type == 1 or alert.type == 2 %}'{{ url_for('static', filename='announcement.png') }}',{% else %}'{{ url_for('get-resource', filename=alert.filename) }}',{% endif %}'{{ alert.mimetype }}');">
+                 onclick="openPopup('{{ alert.message }}', getTimeString('{{ alert.time }}'),{% if alert.mimetype == 'video/webm' %}'{{ url_for('get-resource', filename=alert.filename) }}',{% elif alert.type == 1 or alert.type == 2 %}'{{ url_for('static', filename='announcement.png') }}',{% else %}'{{ url_for('get-resource', filename=alert.filename) }}',{% endif %}'{{ alert.mimetype }}');">
                 {% if not alert.checked %}
                     {% do enable_mark_read.append(1) %}
                     <img alt="Alert not checked icon"
@@ -20,7 +20,8 @@
                          width="50"
                          height="50">
                 {% endif %}
-                {% if alert.mimetype == 'video/mp4' %}
+            {{ alert.mimetype }}
+                {% if alert.mimetype == 'video/webm' %}
                     <video class="card-image-recenter"
                            controls
                            src="{{ url_for('get-resource', filename=alert.filename) }}"
@@ -119,7 +120,7 @@
                 requestModalBodyContainer.removeChild(requestModalBodyContainer.lastElementChild);
             }
 
-            if (type === 'video/mp4') {
+            if (type === 'video/webm') {
                 requestModalVideo.src = src;
                 requestModalBodyContainer.appendChild(requestModalVideo);
             } else {
@@ -147,7 +148,7 @@
 
         function createAlertContainer(alert) {
             let fileContainer;
-            if (alert.mimeType === 'video/mp4') {
+            if (alert.mimeType === 'video/webm') {
                 fileContainer = document.createElement('video');
                 fileContainer.controls = true;
                 setTimeout(() => {

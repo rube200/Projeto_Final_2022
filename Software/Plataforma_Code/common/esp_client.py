@@ -76,7 +76,7 @@ class EspClient(ClientSocket, ClientRecord):
     def __prepare_and_notify(self, alert_type: AlertType, duration: float) -> None:
         alert_time = time()
         if duration > 0.0:
-            filepath = path.join(self.__esp_files_path, secure_filename(f'{alert_time}.mp4'))
+            filepath = path.join(self.__esp_files_path, secure_filename(f'{alert_time}.webm'))
             filepath = self.start_record(filepath, monotonic() + duration)
             if not filepath:
                 return

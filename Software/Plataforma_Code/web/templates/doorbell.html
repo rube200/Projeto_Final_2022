@@ -81,7 +81,7 @@
         //Buttons
         function openUserRequestPopUp(title, filename, mimeType) {
             const fileUrl = baseResourceUrl.replace('filename', filename);
-            const currentTime = getTimeString(new Data());
+            const currentTime = getTimeString(new Date());
             openPopup('Picture taken.', currentTime, fileUrl, mimeType);
         }
 

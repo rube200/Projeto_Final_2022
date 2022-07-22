@@ -62,7 +62,7 @@
 
             let cpFile;
             const fileSrc = baseResourceUrl.replace('filename', capture.filename);
-            if (capture.mimetype === 'video/mp4') {
+            if (capture.mimetype === 'video/webm') {
                 cpFile = document.createElement('video');
                 cpFile.className = 'my-3 mx-auto';
                 cpFile.controls = true;
@@ -141,7 +141,7 @@
                 requestModalBodyContainer.removeChild(requestModalBodyContainer.lastElementChild);
             }
 
-            if (type === 'video/mp4') {
+            if (type === 'video/webm') {
                 requestModalVideo.src = src;
                 requestModalBodyContainer.appendChild(requestModalVideo);
             } else {
